@@ -1,0 +1,136 @@
+:root {
+  --gal-ink: #171a12;
+  --gal-ink-soft: #43473c;
+  --gal-ink-faint: #6f7366;
+  --gal-panel: #f2f4f3;
+  --gal-panel-2: #e9ece9;
+  --gal-white: #fbfcfa;
+  --gal-facade: #d7261d;
+  --gal-facade-deep: #a81a12;
+  --gal-facade-ink: #fff4ee;
+  --gal-tag: #ffc61a;
+  --gal-tag-ink: #1a1704;
+  --gal-fluo: #e7f1fb;
+  --gal-fluo-line: #c8dcf2;
+  --gal-line: #d7dcd6;
+  --gal-line-strong: #b9c0b8;
+  --gal-kraft: #c79a63;
+  --gal-kraft-ink: #33240f;
+  --gal-black: #101209;
+  --gal-focus: #d7261d;
+  --gal-selection: #ffc61a;
+
+  --font-sign: 'Anton', 'Arial Narrow', sans-serif;
+  --font-ui: 'Archivo', system-ui, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'IBM Plex Mono', 'Consolas', monospace;
+
+  --shadow-float:
+    0 1px 2px rgba(20, 22, 12, 0.06), 0 18px 40px -18px rgba(20, 22, 12, 0.35);
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--gal-ink);
+  background: var(--gal-panel);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+h1,
+h2,
+h3 {
+  color: var(--gal-ink);
+  text-wrap: balance;
+}
+
+h1,
+h2 {
+  font-family: var(--font-sign);
+  font-weight: 400;
+  letter-spacing: 0.01em;
+}
+
+button,
+input {
+  font-family: inherit;
+}
+
+button {
+  cursor: pointer;
+  border: 0;
+  background: none;
+  padding: 0;
+  color: inherit;
+}
+
+a {
+  color: inherit;
+}
+
+ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+:focus-visible {
+  outline: 2px solid var(--gal-focus);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: var(--gal-selection);
+  color: var(--gal-tag-ink);
+}
+
+::-moz-selection {
+  background: var(--gal-selection);
+  color: var(--gal-tag-ink);
+}
+
+input::placeholder {
+  color: var(--gal-ink-faint);
+  opacity: 1;
+}
+
+::marker {
+  color: var(--gal-facade);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -1,0 +1,110 @@
+import { useState } from 'react'
+import CartProvider from './context/CartProvider'
+import Header from './components/Header'
+import Footer from './components/Footer'
+import Toast from './components/Toast'
+import WhatsAppButton from './components/WhatsAppButton'
+import ProductCard from './components/ProductCard'
+import { IconSearchOff } from './components/Icons'
+import Home from './views/Home'
+import CartView from './views/CartView'
+import ProductDetail from './views/ProductDetail'
+import OrderStatus from './views/OrderStatus'
+import { products } from './data/products'
+import './App.css'
+
+function initialView() {
+  const params = new URLSearchParams(window.location.search)
+  const status = params.get('status') || params.get('collection_status')
+  if (status) {
+    return {
+      name: 'order-status',
+      payload: { status, orderId: params.get('external_reference') },
+    }
+  }
+  return { name: 'home' }
+}
+
+function App() {
+  const [view, setView] = useState(initialView)
+
+  const navigate = (name, payload) => setView({ name, payload })
+
+  const handleSearch = (query) => {
+    const q = query.trim().toLowerCase()
+    if (!q) {
+      navigate('home')
+      return
+    }
+    const results = products.filter((p) =>
+      (p.name + ' ' + p.brand + ' ' + p.category).toLowerCase().includes(q),
+    )
+    navigate('results', results)
+  }
+
+  const openProduct = (product) => navigate('product', product)
+  const openProductById = (id) => {
+    const p = products.find((x) => x.id === Number(id))
+    if (p) navigate('product', p)
+  }
+
+  let content
+  if (view.name === 'home') {
+    content = <Home onView={openProduct} />
+  } else if (view.name === 'product') {
+    content = (
+      <ProductDetail
+        product={view.payload}
+        onBack={() => navigate('home')}
+        onHome={openProductById}
+      />
+    )
+  } else if (view.name === 'cart') {
+    content = <CartView onNavigate={(n) => navigate(n)} />
+  } else if (view.name === 'order-status') {
+    content = (
+      <OrderStatus
+        status={view.payload.status}
+        orderId={view.payload.orderId}
+        onNavigate={navigate}
+      />
+    )
+  } else if (view.name === 'results') {
+    content = view.payload.length === 0 ? (
+      <main className="results results-empty">
+        <span className="empty-draw">
+          <IconSearchOff />
+        </span>
+        <h1>No encontramos nada</h1>
+        <p>Probalo con otra marca, categoría o una palabra más corta.</p>
+        <button type="button" className="primary-btn" onClick={() => navigate('home')}>
+          Volver al inicio
+        </button>
+      </main>
+    ) : (
+      <main className="results">
+        <div className="section-head">
+          <h1>Resultados de búsqueda ({view.payload.length})</h1>
+          <span className="count-tag">en la galería</span>
+        </div>
+        <div className="product-grid">
+          {view.payload.map((product) => (
+            <ProductCard key={product.id} product={product} onView={openProduct} />
+          ))}
+        </div>
+      </main>
+    )
+  }
+
+  return (
+    <CartProvider>
+      <Header onNavigate={(n) => navigate(n)} view={view.name} onSearch={handleSearch} />
+      {content}
+      <Footer onNavigate={(n) => navigate(n)} />
+      <Toast />
+      <WhatsAppButton />
+    </CartProvider>
+  )
+}
+
+export default App
