@@ -1,17 +1,35 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useCart } from '../context/useCart'
+import { apiConfirmOrder } from '../lib/api'
+import { subscribeToOrders } from '../lib/orderSocket'
 import { IconCheck, IconClose, IconClock } from '../components/Icons'
 
 const PENDING_STATUSES = new Set(['pending', 'in_process'])
 
 export default function OrderStatus({ status, orderId, onNavigate }) {
   const { clearCart } = useCart()
+  const [current, setCurrent] = useState(status)
 
   useEffect(() => {
-    if (status === 'approved') clearCart()
-  }, [status, clearCart])
+    if (!orderId) return
+    const unsubscribe = subscribeToOrders((data) => {
+      if (data.id === orderId && data.status) setCurrent(data.status)
+    })
+    apiConfirmOrder(orderId)
+      .then((data) => {
+        if (data.status) setCurrent(data.status)
+      })
+      .catch(() => {})
+    return () => {
+      unsubscribe()
+    }
+  }, [orderId])
 
-  if (status === 'approved') {
+  useEffect(() => {
+    if (current === 'approved') clearCart()
+  }, [current, clearCart])
+
+  if (current === 'approved') {
     return (
       <main className="cart cart-empty">
         <span className="empty-stamp">
@@ -29,7 +47,7 @@ export default function OrderStatus({ status, orderId, onNavigate }) {
     )
   }
 
-  if (PENDING_STATUSES.has(status)) {
+  if (PENDING_STATUSES.has(current)) {
     return (
       <main className="cart cart-empty">
         <span className="empty-draw">
