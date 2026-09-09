@@ -9,16 +9,25 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "server": "node server/index.js",
-    "server:dev": "node --watch server/index.js"
+    "server:dev": "node --watch server/index.js",
+    "seed": "node server/seed.js",
+    "seed:users": "node server/seed-users.js",
+    "seed:products": "node server/seed-products.js"
   },
   "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "cloudinary": "^2.11.0",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
     "mercadopago": "^3.6.0",
     "mongoose": "^9.9.5",
+    "multer": "^2.3.0",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react-dom": "^19.2.8",
+    "socket.io": "^4.8.3",
+    "socket.io-client": "^4.8.3"
   },
   "devDependencies": {
     "@babel/core": "^7.29.7",
