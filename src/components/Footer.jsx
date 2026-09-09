@@ -64,6 +64,9 @@ export default function Footer({ onNavigate }) {
 
       <div className="footer-bottom">
         <p>© 2026 TechStore. Todos los derechos reservados.</p>
+        <button type="button" className="footer-panel-link" onClick={() => onNavigate('dashboard')}>
+          Panel de ventas
+        </button>
       </div>
     </footer>
   )

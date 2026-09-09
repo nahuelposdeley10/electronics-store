@@ -59,6 +59,14 @@ export function IconBack(props) {
   )
 }
 
+export function IconLogout(props) {
+  return (
+    <svg {...S} {...props}>
+      <path d="M9 4h6a1.5 1.5 0 0 1 1.5 1.5v13A1.5 1.5 0 0 1 15 20H9M14 12H3.5m0 0 4-4m-4 4 4 4" />
+    </svg>
+  )
+}
+
 export function IconClose(props) {
   return (
     <svg {...S} {...props}>
@@ -223,11 +231,31 @@ export function IconStar(props) {
   )
 }
 
+export function IconChart(props) {
+  return (
+    <svg {...S} {...props}>
+      <path d="M4 20V4M4 20h16" />
+      <rect x="7" y="12" width="3" height="8" />
+      <rect x="12" y="8" width="3" height="12" />
+      <rect x="17" y="14" width="3" height="6" />
+    </svg>
+  )
+}
+
 export function IconSearchOff(props) {
   return (
     <svg {...S} {...props}>
       <circle cx="10.5" cy="10.5" r="6.5" />
       <path d="m15.5 15.5 5 4.5M7 12.2l7-7" />
+    </svg>
+  )
+}
+
+export function IconRefresh(props) {
+  return (
+    <svg {...S} {...props}>
+      <path d="M20 12a8 8 0 1 1-2.3-5.6" />
+      <path d="M20 3.5V7h-3.5" />
     </svg>
   )
 }

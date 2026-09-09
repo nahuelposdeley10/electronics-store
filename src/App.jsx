@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import CartProvider from './context/CartProvider'
 import Header from './components/Header'
 import Footer from './components/Footer'
@@ -10,10 +10,14 @@ import Home from './views/Home'
 import CartView from './views/CartView'
 import ProductDetail from './views/ProductDetail'
 import OrderStatus from './views/OrderStatus'
+import Dashboard from './views/Dashboard'
 import { products } from './data/products'
 import './App.css'
 
-function initialView() {
+function pathToView() {
+  if (window.location.pathname === '/admin') {
+    return { name: 'dashboard' }
+  }
   const params = new URLSearchParams(window.location.search)
   const status = params.get('status') || params.get('collection_status')
   if (status) {
@@ -22,13 +26,28 @@ function initialView() {
       payload: { status, orderId: params.get('external_reference') },
     }
   }
-  return { name: 'home' }
+  return null
 }
 
 function App() {
-  const [view, setView] = useState(initialView)
+  const [view, setView] = useState(() => pathToView() || { name: 'home' })
 
-  const navigate = (name, payload) => setView({ name, payload })
+  useEffect(() => {
+    const onPop = () => {
+      setView(pathToView() || { name: 'home' })
+    }
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [])
+
+  const navigate = (name, payload) => {
+    setView({ name, payload })
+    if (name === 'dashboard') {
+      window.history.pushState({}, '', '/admin')
+    } else if (window.location.pathname.startsWith('/admin')) {
+      window.history.pushState({}, '', '/')
+    }
+  }
 
   const handleSearch = (query) => {
     const q = query.trim().toLowerCase()
@@ -98,11 +117,17 @@ function App() {
 
   return (
     <CartProvider>
-      <Header onNavigate={(n) => navigate(n)} view={view.name} onSearch={handleSearch} />
-      {content}
-      <Footer onNavigate={(n) => navigate(n)} />
-      <Toast />
-      <WhatsAppButton />
+      {view.name === 'dashboard' ? (
+        <Dashboard onExit={() => navigate('home')} />
+      ) : (
+        <>
+          <Header onNavigate={(n) => navigate(n)} view={view.name} onSearch={handleSearch} />
+          {content}
+          <Footer onNavigate={(n) => navigate(n)} />
+          <Toast />
+          <WhatsAppButton />
+        </>
+      )}
     </CartProvider>
   )
 }
