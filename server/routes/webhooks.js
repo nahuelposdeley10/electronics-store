@@ -1,18 +1,9 @@
 import express from 'express'
 import { Order } from '../models/Order.js'
 import { paymentService } from '../services/mercadopago.js'
+import { orderStatusForPayment } from '../lib/order-status.js'
 
 const router = express.Router()
-
-const STATUS_MAP = {
-  approved: 'approved',
-  pending: 'pending',
-  in_process: 'in_process',
-  rejected: 'rejected',
-  cancelled: 'cancelled',
-  refunded: 'refunded',
-  charged_back: 'charged_back',
-}
 
 function extractPaymentId(req) {
   if (req.body?.type === 'payment') {
@@ -44,7 +35,7 @@ router.post('/webhooks/mercadopago', async (req, res) => {
       return res.sendStatus(200)
     }
 
-    order.status = STATUS_MAP[payment.status] || 'pending'
+    order.status = orderStatusForPayment(payment.status)
     if (payment.id) order.paymentId = payment.id
     if (payment.merchant_order_id) order.merchantOrderId = payment.merchant_order_id
     await order.save()

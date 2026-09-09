@@ -2,9 +2,44 @@ import express from 'express'
 import { Order } from '../models/Order.js'
 import { buildCart } from '../services/pricing.js'
 import { preferenceService } from '../services/mercadopago.js'
+import { verifyOrderPayment } from '../lib/order-verify.js'
+import { trackOrder } from '../lib/order-tracker.js'
 import { env } from '../config/env.js'
 
 const router = express.Router()
+
+router.post('/orders/:id/refresh', async (req, res) => {
+  try {
+    const order = await Order.findById(req.params.id)
+    if (!order) {
+      return res.status(404).json({ error: 'Orden no encontrada' })
+    }
+
+    if (order.status === 'approved') {
+      return res.json({
+        id: order._id,
+        status: order.status,
+        paymentId: order.paymentId,
+        total: order.total,
+      })
+    }
+
+    const updated = await verifyOrderPayment(order)
+    if (updated.status === 'pending' || updated.status === 'in_process') {
+      trackOrder(updated._id)
+    }
+
+    return res.json({
+      id: updated._id,
+      status: updated.status,
+      paymentId: updated.paymentId,
+      total: updated.total,
+    })
+  } catch (error) {
+    console.error('Order refresh error:', error)
+    return res.status(500).json({ error: 'No se pudo corroborar el pago' })
+  }
+})
 
 router.post('/checkout', async (req, res) => {
   try {
@@ -26,6 +61,8 @@ router.post('/checkout', async (req, res) => {
       shippingCost: cart.shippingCost,
       total: cart.total,
     })
+
+    trackOrder(order._id)
 
     const items = cart.lineItems.map((line) => ({
       id: String(line.product.id),
