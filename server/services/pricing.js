@@ -21,7 +21,9 @@ export function buildCart(items, coupon) {
   const discountRate = coupon && coupons[coupon] ? coupons[coupon] : 0
   const discount = Math.round((subtotal * discountRate) / 100)
 
-  const hasFreeShipping = subtotal >= FREE_SHIPPING_THRESHOLD
+  const hasFreeShipping =
+    lineItems.some((line) => line.product.freeShipping) ||
+    subtotal >= FREE_SHIPPING_THRESHOLD
   const shippingCost =
     lineItems.length === 0 ? 0 : hasFreeShipping ? 0 : SHIPPING_COST
 

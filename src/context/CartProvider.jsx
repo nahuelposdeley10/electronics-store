@@ -60,6 +60,7 @@ export default function CartProvider({ children }) {
           price: product.price,
           emoji: product.emoji,
           image: product.image,
+          freeShipping: product.freeShipping,
           quantity: 1,
         },
       ]
@@ -118,7 +119,9 @@ export default function CartProvider({ children }) {
   const discount = (subtotal * discountRate) / 100
 
   const freeShippingThreshold = 300000
-  const hasFreeShipping = subtotal >= freeShippingThreshold
+  const hasFreeShipping =
+    items.some((item) => item.freeShipping) ||
+    subtotal >= freeShippingThreshold
   const shippingCost = items.length === 0 ? 0 : hasFreeShipping ? 0 : 5999
 
   const total = subtotal - discount + shippingCost
