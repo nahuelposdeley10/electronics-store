@@ -21,6 +21,7 @@ const orderSchema = new mongoose.Schema(
     total: { type: Number, required: true },
     paymentId: { type: Number, default: null },
     merchantOrderId: { type: Number, default: null },
+    demo: { type: Boolean, default: false },
   },
   { timestamps: true },
 )
