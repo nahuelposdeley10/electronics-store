@@ -35,11 +35,6 @@ export default function Home({ onView }) {
     return newArrivals.length ? newArrivals : products.slice(2, 6)
   }, [products])
 
-  const featured = useMemo(
-    () => products.filter((p) => p.freeShipping).slice(0, 8),
-    [products],
-  )
-
   const shelf = topDeals.slice(0, 4)
 
   const subscribe = (e) => {
@@ -148,8 +143,6 @@ export default function Home({ onView }) {
           />
         </div>
       </section>
-
-      <Section title="Lo más vendido" items={featured} onView={onView} />
 
       <Section title="Toda la galería" items={products} onView={onView} />
 
