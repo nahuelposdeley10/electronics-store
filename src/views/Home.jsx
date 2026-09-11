@@ -151,6 +151,8 @@ export default function Home({ onView }) {
 
       <Section title="Lo más vendido" items={featured} onView={onView} />
 
+      <Section title="Toda la galería" items={products} onView={onView} />
+
       <section className="brands-strip" aria-label="Marcas oficiales">
         <h2>Marcas oficiales</h2>
         <div className="brands">
