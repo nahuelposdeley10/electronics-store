@@ -3,6 +3,7 @@ import { CatalogContext } from './catalogContext'
 
 export default function CatalogProvider({ children }) {
   const [products, setProducts] = useState([])
+  const [activeBrands, setActiveBrands] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
@@ -36,15 +37,27 @@ export default function CatalogProvider({ children }) {
       .finally(() => {
         if (alive) setLoading(false)
       })
+    fetch('/api/brands')
+      .then((res) => res.json())
+      .then((data) => {
+        if (alive) setActiveBrands(data.brands || [])
+      })
+      .catch(() => {})
     return () => {
       alive = false
     }
   }, [])
 
-  const brands = useMemo(
-    () => [...new Set(products.map((p) => p.brand))].sort((a, b) => a.localeCompare(b, 'es')),
-    [products],
-  )
+  const brands = useMemo(() => {
+    const fromProducts = [
+      ...new Set(products.map((p) => p.brand).filter(Boolean)),
+    ]
+    if (!activeBrands) return fromProducts.sort((a, b) => a.localeCompare(b, 'es'))
+    const byName = new Map(activeBrands.map((name) => [name.toLowerCase(), name]))
+    return fromProducts
+      .filter((brand) => byName.has(brand.toLowerCase()))
+      .sort((a, b) => a.localeCompare(b, 'es'))
+  }, [products, activeBrands])
 
   return (
     <CatalogContext.Provider value={{ products, brands, loading, error, reload }}>

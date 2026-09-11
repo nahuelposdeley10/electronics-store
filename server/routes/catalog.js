@@ -1,5 +1,7 @@
 import express from 'express'
 import { Product } from '../models/Product.js'
+import { Brand } from '../models/Brand.js'
+import { ensureCatalogMeta } from '../lib/catalog-meta.js'
 import { parsePagination, buildProductSearchFilter } from '../lib/catalog-query.js'
 
 const router = express.Router()
@@ -46,6 +48,17 @@ router.get('/products', async (req, res) => {
   } catch (error) {
     console.error('Catalog error:', error)
     return res.status(500).json({ error: 'No se pudo leer el catálogo' })
+  }
+})
+
+router.get('/brands', async (req, res) => {
+  try {
+    await ensureCatalogMeta()
+    const brands = await Brand.find({ active: true }).sort({ name: 1 }).lean()
+    return res.json({ brands: brands.map((b) => b.name) })
+  } catch (error) {
+    console.error('Brands error:', error)
+    return res.status(500).json({ error: 'No se pudieron leer las marcas' })
   }
 })
 
