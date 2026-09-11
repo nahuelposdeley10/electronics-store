@@ -1,7 +1,7 @@
 import 'dotenv/config'
 import mongoose from 'mongoose'
 import { Order } from './models/Order.js'
-import { seedProducts } from './data/products.js'
+import { Product } from './models/Product.js'
 import { coupons } from '../src/data/format.js'
 
 const FREE_SHIPPING_THRESHOLD = 300000
@@ -27,9 +27,9 @@ function pick(list) {
   return list[Math.floor(Math.random() * list.length)]
 }
 
-function randomItems() {
+function randomItems(catalog) {
   const count = 1 + Math.floor(Math.random() * 3)
-  const pool = [...seedProducts]
+  const pool = [...catalog]
   const chosen = []
   for (let i = 0; i < count && pool.length; i++) {
     chosen.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0])
@@ -50,9 +50,9 @@ function buildTotals(items, coupon) {
   return { subtotal, discount, shippingCost, total: subtotal - discount + shippingCost }
 }
 
-function demoOrders() {
+function demoOrders(catalog) {
   return STATUS_POOL.map((status, index) => {
-    const items = randomItems()
+    const items = randomItems(catalog)
     const coupon = pick(COUPON_POOL)
     const totals = buildTotals(items, coupon)
     const createdAt = new Date(
@@ -74,8 +74,14 @@ async function seed() {
   const existing = await Order.countDocuments()
   console.log(`Órdenes existentes: ${existing}`)
 
+  const catalog = await Product.find().lean()
+  if (catalog.length === 0) {
+    console.log('No hay productos en la DB; no se siembran órdenes demo.')
+    return
+  }
+
   await Order.deleteMany({ demo: true })
-  const docs = demoOrders()
+  const docs = demoOrders(catalog)
   await Order.insertMany(docs)
   console.log(`Sembradas ${docs.length} órdenes demo.`)
 }
