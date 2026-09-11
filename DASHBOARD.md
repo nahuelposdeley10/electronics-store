@@ -70,6 +70,6 @@ Objetivo a largo plazo del proyecto. La tienda actual (web + admin de productos/
 
 - Inicio: no existe aún.
 - Ventas: existe "Historial de ventas" en `Dashboard.jsx` (SalesScreen), con captura de datos del pagador (email, nombre, DNI).
-- Productos: existen "Productos" (CRUD con buscador y paginación server-side), "Categorías", "Marcas", "Variantes", "Precios" (edición inline + ajuste masivo) e "Importar productos" (JSON). Todo bajo `server/routes/catalog-admin.js` y el submenú de Productos en el Dashboard.
+- Productos: existen "Productos" (CRUD con buscador y paginación server-side, más ajuste masivo de precios por categoría), "Categorías", "Marcas", "Ofertas" (estantería de ofertas de la web, cableada a `onSale`) e "Importar productos" (JSON). No existen pantallas "Precios" ni "Variantes": los precios individuales se editan en Productos/Ofertas, el ajuste masivo vive en Productos, y las variantes quedaron afuera del admin (el modelo y endpoints siguen en el server, sin UI). Todo bajo `server/routes/catalog-admin.js` y el submenú de Productos en el Dashboard.
 - Configuración: existe "Usuarios" (roles superadmin/admin).
 - Inventario, Compras, Clientes, Caja, Reportes, Promociones: pendientes.

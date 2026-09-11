@@ -178,8 +178,6 @@ export default function Dashboard({ onExit }) {
           ? [
               { id: 'product-categories', label: 'Categorías' },
               { id: 'product-brands', label: 'Marcas' },
-              { id: 'product-variants', label: 'Variantes' },
-              { id: 'product-prices', label: 'Precios' },
               { id: 'product-offers', label: 'Ofertas' },
               { id: 'product-import', label: 'Importar productos' },
             ]
@@ -316,12 +314,6 @@ export default function Dashboard({ onExit }) {
             empty="Todavía no hay marcas."
             canManage={user?.role === 'superadmin'}
           />
-        )}
-        {gate === 'ready' && screen === 'product-variants' && (
-          <VariantsScreen canManage={user?.role === 'superadmin'} />
-        )}
-        {gate === 'ready' && screen === 'product-prices' && (
-          <PricesScreen canManage={user?.role === 'superadmin'} />
         )}
         {gate === 'ready' && screen === 'product-offers' && (
           <OffersScreen canManage={user?.role === 'superadmin'} />
@@ -506,6 +498,22 @@ function ProductsScreen({ canManage }) {
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState(null)
   const [note, setNote] = useState('')
+  const [cats, setCats] = useState([])
+  const [bulk, setBulk] = useState({ mode: 'percent', value: '', category: 'todas' })
+  const [bulkSaving, setBulkSaving] = useState(false)
+
+  useEffect(() => {
+    if (!canManage) return
+    let alive = true
+    apiGet('/api/admin/categories')
+      .then((res) => {
+        if (alive) setCats(res.items || [])
+      })
+      .catch(() => {})
+    return () => {
+      alive = false
+    }
+  }, [canManage])
 
   useEffect(() => {
     let alive = true
@@ -573,6 +581,27 @@ function ProductsScreen({ canManage }) {
     }
   }
 
+  const applyBulk = async (e) => {
+    e.preventDefault()
+    setBulkSaving(true)
+    setNote('')
+    try {
+      await apiPost('/api/admin/prices/bulk', {
+        mode: bulk.mode,
+        value: Number(bulk.value),
+        category: bulk.category,
+      })
+      const bucket = bulk.category === 'todas' ? 'todas las categorías' : bulk.category
+      setNote(`Ajuste masivo aplicado a ${bucket}`)
+      setBulk((b) => ({ ...b, value: '' }))
+      setParams((prev) => ({ ...prev }))
+    } catch (err) {
+      setNote(err.message)
+    } finally {
+      setBulkSaving(false)
+    }
+  }
+
   if (!data && !error) return <ScreenLoading label="Cargando la estantería…" />
   if (error) return <ScreenBlocked message={error} />
 
@@ -614,6 +643,56 @@ function ProductsScreen({ canManage }) {
           </button>
         )}
       </div>
+
+      {canManage && (
+        <form className="bulk-bar" onSubmit={applyBulk}>
+          <strong>Ajuste masivo</strong>
+          <label className="bulk-field">
+            <span>Categoría</span>
+            <select
+              value={bulk.category}
+              onChange={(e) => setBulk((b) => ({ ...b, category: e.target.value }))}
+            >
+              <option value="todas">Todas</option>
+              {cats.map((c) => (
+                <option key={c.key} value={c.key}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="bulk-field">
+            <span>Modo</span>
+            <select
+              value={bulk.mode}
+              onChange={(e) => setBulk((b) => ({ ...b, mode: e.target.value }))}
+            >
+              <option value="percent">Porcentaje (+/-)</option>
+              <option value="round">Redondear a</option>
+              <option value="set">Precio fijo</option>
+            </select>
+          </label>
+          <label className="bulk-field">
+            <span>{bulk.mode === 'round' ? 'Redondear a…' : 'Valor'}</span>
+            <input
+              type="number"
+              value={bulk.value}
+              onChange={(e) => setBulk((b) => ({ ...b, value: e.target.value }))}
+              placeholder={
+                bulk.mode === 'percent'
+                  ? 'Ej. 10 o -5'
+                  : bulk.mode === 'round'
+                    ? 'Ej. 100'
+                    : 'Ej. 50000'
+              }
+              required
+            />
+          </label>
+          <button type="submit" className="primary-btn" disabled={bulkSaving}>
+            {bulkSaving ? 'Aplicando…' : 'Aplicar ajuste'}
+          </button>
+        </form>
+      )}
 
       {note && <p className="sale-note">{note}</p>}
 
@@ -1413,645 +1492,6 @@ function MetaForm({ hasKey, item, noun, path, onClose, onSaved }) {
           </div>
         </form>
       </div>
-    </div>
-  )
-}
-
-function VariantsScreen({ canManage }) {
-  const [data, setData] = useState(null)
-  const [error, setError] = useState('')
-  const [query, setQuery] = useState('')
-  const [params, setParams] = useState({ q: '', page: 1 })
-  const [productOptions, setProductOptions] = useState([])
-  const [formOpen, setFormOpen] = useState(false)
-  const [editing, setEditing] = useState(null)
-  const [note, setNote] = useState('')
-
-  useEffect(() => {
-    let alive = true
-    apiGet('/api/admin/products?limit=100')
-      .then((res) => {
-        if (alive) setProductOptions(res.items || [])
-      })
-      .catch(() => {})
-    return () => {
-      alive = false
-    }
-  }, [])
-
-  useEffect(() => {
-    let alive = true
-    const qs = new URLSearchParams({
-      q: params.q,
-      page: String(params.page),
-      limit: '10',
-    })
-    apiGet(`/api/admin/variants?${qs}`)
-      .then((res) => {
-        if (!alive) return
-        if (res.items.length === 0 && res.page > 1) {
-          setParams((prev) => ({ ...prev, page: res.totalPages || 1 }))
-          return
-        }
-        setData(res)
-      })
-      .catch((err) => {
-        if (alive) setError(err.message)
-      })
-    return () => {
-      alive = false
-    }
-  }, [params])
-
-  const submitSearch = (e) => {
-    e.preventDefault()
-    setParams((prev) => ({ ...prev, q: query.trim(), page: 1 }))
-  }
-
-  const openForm = (variant = null) => {
-    setEditing(variant)
-    setFormOpen(true)
-  }
-
-  const closeForm = () => {
-    setFormOpen(false)
-    setEditing(null)
-  }
-
-  const handleSaved = (saved) => {
-    closeForm()
-    setNote(
-      editing
-        ? `Variante actualizada: ${saved.name}`
-        : `Variante creada: ${saved.name}`,
-    )
-    setParams((prev) => ({ ...prev, page: 1 }))
-  }
-
-  const handleDelete = async (variant) => {
-    if (!window.confirm(`¿Eliminar la variante "${variant.name}"?`)) return
-    try {
-      await apiDelete(`/api/admin/variants/${variant.id}`)
-      setNote(`Variante eliminada: ${variant.name}`)
-      if (data && data.items.length === 1 && data.page > 1) {
-        setParams((prev) => ({ ...prev, page: prev.page - 1 }))
-      } else {
-        setParams((prev) => ({ ...prev }))
-      }
-    } catch (err) {
-      setNote(err.message)
-    }
-  }
-
-  if (!data && !error) return <ScreenLoading label="Cargando variantes…" />
-  if (error) return <ScreenBlocked message={error} />
-
-  return (
-    <div className="dash-screen">
-      <header className="dash-head">
-        <div>
-          <span className="dash-eyebrow">Estantería</span>
-          <h1>Variantes</h1>
-        </div>
-        <div className="dash-head-today">
-          <strong className="mono">{data.total}</strong>
-          <em>en total</em>
-        </div>
-      </header>
-
-      <div className="dash-toolbar">
-        <form className="dash-search" role="search" onSubmit={submitSearch}>
-          <IconSearch />
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Buscá por producto, variante o SKU…"
-            aria-label="Buscar variantes"
-          />
-        </form>
-        <span className="count-tag mono">
-          {data.items.length} de {data.total}
-        </span>
-        {canManage && (
-          <button
-            type="button"
-            className="primary-btn dash-add"
-            onClick={() => openForm()}
-          >
-            <IconPlus />
-            Agregar variante
-          </button>
-        )}
-      </div>
-
-      {note && <p className="sale-note">{note}</p>}
-
-      {formOpen && (
-        <VariantForm
-          item={editing}
-          products={productOptions}
-          onClose={closeForm}
-          onSaved={handleSaved}
-        />
-      )}
-
-      <div className="table-wrap">
-        <table className="dash-table">
-          <thead>
-            <tr>
-              <th>Producto</th>
-              <th>Variante</th>
-              <th>SKU</th>
-              <th>Precio</th>
-              <th>Stock</th>
-              {canManage && <th>Acciones</th>}
-            </tr>
-          </thead>
-          <tbody>
-            {data.items.map((v) => (
-              <tr key={v.id}>
-                <td>
-                  <span className="t-cell-product">
-                    <span>
-                      <strong>{v.productName}</strong>
-                      <em>{v.productBrand}</em>
-                    </span>
-                  </span>
-                </td>
-                <td>
-                  <strong>{v.name}</strong>
-                </td>
-                <td className="mono t-cat">{v.sku || '—'}</td>
-                <td className="mono t-num">{v.price ? formatARS(v.price) : 'Base'}</td>
-                <td className="mono t-num">{v.stock}</td>
-                {canManage && (
-                  <td>
-                    <span className="row-actions">
-                      <button
-                        type="button"
-                        className="row-btn"
-                        aria-label={`Editar ${v.name}`}
-                        onClick={() => openForm(v)}
-                      >
-                        <IconEdit />
-                      </button>
-                      <button
-                        type="button"
-                        className="row-btn row-btn-danger"
-                        aria-label={`Eliminar ${v.name}`}
-                        onClick={() => handleDelete(v)}
-                      >
-                        <IconTrash />
-                      </button>
-                    </span>
-                  </td>
-                )}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {data.items.length === 0 && (
-          <EmptyNote text="Aún no hay variantes." />
-        )}
-      </div>
-
-      {data.totalPages > 1 && (
-        <div className="dash-pager">
-          <button
-            type="button"
-            onClick={() => setParams((prev) => ({ ...prev, page: prev.page - 1 }))}
-            disabled={data.page <= 1}
-          >
-            ← Anterior
-          </button>
-          <span className="mono">
-            Página {data.page} de {data.totalPages} · {data.total} variantes
-          </span>
-          <button
-            type="button"
-            onClick={() => setParams((prev) => ({ ...prev, page: prev.page + 1 }))}
-            disabled={data.page >= data.totalPages}
-          >
-            Siguiente →
-          </button>
-        </div>
-      )}
-    </div>
-  )
-}
-
-function VariantForm({ item, products, onClose, onSaved }) {
-  const [form, setForm] = useState(() => ({
-    product: item?.product ?? products[0]?.id ?? '',
-    name: item?.name || '',
-    sku: item?.sku || '',
-    price: item && item.price > 0 ? item.price : '',
-    stock: item?.stock ?? '',
-  }))
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
-
-  const set = (key) => (e) =>
-    setForm((f) => ({ ...f, [key]: e.target.value }))
-
-  const submit = async (e) => {
-    e.preventDefault()
-    setSaving(true)
-    setError('')
-    try {
-      const saved = item
-        ? await apiPut(`/api/admin/variants/${item.id}`, form)
-        : await apiPost('/api/admin/variants', form)
-      onSaved(saved)
-    } catch (err) {
-      setError(err.message)
-      setSaving(false)
-    }
-  }
-
-  return (
-    <div className="product-overlay" onMouseDown={saving ? undefined : onClose}>
-      <div
-        className="product-panel"
-        role="dialog"
-        aria-modal="true"
-        aria-label={item ? 'Editar variante' : 'Agregar variante'}
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        <header className="product-head">
-          <div>
-            <span className="dash-eyebrow">Estantería</span>
-            <h2>{item ? 'Editar variante' : 'Agregar variante'}</h2>
-          </div>
-          <button
-            type="button"
-            className="product-close"
-            onClick={onClose}
-            aria-label="Cerrar"
-          >
-            <IconCross />
-          </button>
-        </header>
-
-        <form onSubmit={submit}>
-          <div className="pf-grid">
-            <label className="pf-field pf-full">
-              <span>Producto</span>
-              <select value={form.product} onChange={set('product')} required>
-                {products.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name} · {p.brand}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="pf-field">
-              <span>Nombre de la variante</span>
-              <input
-                type="text"
-                value={form.name}
-                onChange={set('name')}
-                placeholder="Ej. Negro 128GB"
-                required
-              />
-            </label>
-
-            <label className="pf-field">
-              <span>SKU</span>
-              <input
-                type="text"
-                value={form.sku}
-                onChange={set('sku')}
-                placeholder="Opcional"
-              />
-            </label>
-
-            <label className="pf-field">
-              <span>Precio ($) — vacío usa el precio base</span>
-              <input
-                type="number"
-                min="1"
-                step="1"
-                value={form.price}
-                onChange={set('price')}
-                placeholder="Opcional"
-              />
-            </label>
-
-            <label className="pf-field">
-              <span>Stock</span>
-              <input
-                type="number"
-                min="0"
-                step="1"
-                value={form.stock}
-                onChange={set('stock')}
-                placeholder="Opcional"
-              />
-            </label>
-          </div>
-
-          {error && <em className="unlock-error">{error}</em>}
-
-          <div className="pf-actions">
-            <button type="button" className="ghost-btn" onClick={onClose} disabled={saving}>
-              Cancelar
-            </button>
-            <button type="submit" className="primary-btn" disabled={saving}>
-              {saving ? 'Guardando…' : 'Guardar'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  )
-}
-
-function PricesScreen({ canManage }) {
-  const [data, setData] = useState(null)
-  const [error, setError] = useState('')
-  const [query, setQuery] = useState('')
-  const [params, setParams] = useState({ q: '', page: 1 })
-  const [cats, setCats] = useState([])
-  const [note, setNote] = useState('')
-  const [edits, setEdits] = useState({})
-  const [savingId, setSavingId] = useState(null)
-  const [bulk, setBulk] = useState({ mode: 'percent', value: '', category: 'todas' })
-  const [bulkSaving, setBulkSaving] = useState(false)
-
-  useEffect(() => {
-    let alive = true
-    apiGet('/api/admin/categories')
-      .then((res) => {
-        if (alive) setCats(res.items || [])
-      })
-      .catch(() => {})
-    return () => {
-      alive = false
-    }
-  }, [])
-
-  useEffect(() => {
-    let alive = true
-    const qs = new URLSearchParams({
-      q: params.q,
-      page: String(params.page),
-      limit: '20',
-    })
-    apiGet(`/api/admin/prices?${qs}`)
-      .then((res) => {
-        if (!alive) return
-        if (res.items.length === 0 && res.page > 1) {
-          setParams((prev) => ({ ...prev, page: res.totalPages || 1 }))
-          return
-        }
-        setData(res)
-      })
-      .catch((err) => {
-        if (alive) setError(err.message)
-      })
-    return () => {
-      alive = false
-    }
-  }, [params])
-
-  const submitSearch = (e) => {
-    e.preventDefault()
-    setParams((prev) => ({ ...prev, q: query.trim(), page: 1 }))
-  }
-
-  const valueOf = (p, key) => {
-    const edit = edits[p.id]
-    if (!edit) return p[key] ?? ''
-    return edit[key] ?? ''
-  }
-
-  const setEdit = (p, key, value) =>
-    setEdits((prev) => ({
-      ...prev,
-      [p.id]: { ...(prev[p.id] || {}), [key]: value },
-    }))
-
-  const hasEdit = (p) => Boolean(edits[p.id])
-
-  const saveOne = async (p) => {
-    const edit = edits[p.id]
-    setSavingId(p.id)
-    setNote('')
-    try {
-      await apiPost('/api/admin/prices', {
-        productId: p.id,
-        price: edit.price !== undefined ? edit.price : p.price,
-        oldPrice: edit.oldPrice !== undefined ? edit.oldPrice : p.oldPrice ?? '',
-      })
-      setNote(`${p.name}: precio guardado`)
-      setEdits((prev) => {
-        const next = { ...prev }
-        delete next[p.id]
-        return next
-      })
-      setParams((prev) => ({ ...prev }))
-    } catch (err) {
-      setNote(err.message)
-    } finally {
-      setSavingId(null)
-    }
-  }
-
-  const applyBulk = async (e) => {
-    e.preventDefault()
-    setBulkSaving(true)
-    setNote('')
-    try {
-      const mode = bulk.mode
-      const value = Number(bulk.value)
-      await apiPost('/api/admin/prices/bulk', { mode, value, category: bulk.category })
-      const bucket = bulk.category === 'todas' ? 'todas las categorías' : bulk.category
-      setNote(`Ajuste aplicado a ${bucket}`)
-      setBulk({ ...bulk, value: '' })
-      setParams((prev) => ({ ...prev }))
-    } catch (err) {
-      setNote(err.message)
-    } finally {
-      setBulkSaving(false)
-    }
-  }
-
-  if (!data && !error) return <ScreenLoading label="Leyendo precios…" />
-  if (error) return <ScreenBlocked message={error} />
-
-  return (
-    <div className="dash-screen">
-      <header className="dash-head">
-        <div>
-          <span className="dash-eyebrow">Estantería</span>
-          <h1>Precios</h1>
-        </div>
-        <div className="dash-head-today">
-          <strong className="mono">{data.total}</strong>
-          <em>productos</em>
-        </div>
-      </header>
-
-      <div className="dash-toolbar">
-        <form className="dash-search" role="search" onSubmit={submitSearch}>
-          <IconSearch />
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Buscá producto, marca o categoría…"
-            aria-label="Buscar precios"
-          />
-        </form>
-        <span className="count-tag mono">
-          {data.items.length} de {data.total}
-        </span>
-      </div>
-
-      <form className="bulk-bar" onSubmit={applyBulk}>
-        <strong>Ajuste masivo</strong>
-        <label className="bulk-field">
-          <span>Categoría</span>
-          <select
-            value={bulk.category}
-            onChange={(e) => setBulk((b) => ({ ...b, category: e.target.value }))}
-          >
-            <option value="todas">Todas</option>
-            {cats.map((c) => (
-              <option key={c.key} value={c.key}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="bulk-field">
-          <span>Modo</span>
-          <select
-            value={bulk.mode}
-            onChange={(e) => setBulk((b) => ({ ...b, mode: e.target.value }))}
-          >
-            <option value="percent">Porcentaje (+/-)</option>
-            <option value="round">Redondear a</option>
-            <option value="set">Precio fijo</option>
-          </select>
-        </label>
-        <label className="bulk-field">
-          <span>{bulk.mode === 'round' ? 'Redondear a…' : 'Valor'}</span>
-          <input
-            type="number"
-            value={bulk.value}
-            onChange={(e) => setBulk((b) => ({ ...b, value: e.target.value }))}
-            placeholder={
-              bulk.mode === 'percent' ? 'Ej. 10 o -5' : bulk.mode === 'round' ? 'Ej. 100' : 'Ej. 50000'
-            }
-            required
-          />
-        </label>
-        <button type="submit" className="primary-btn" disabled={bulkSaving}>
-          {bulkSaving ? 'Aplicando…' : 'Aplicar ajuste'}
-        </button>
-      </form>
-
-      {note && <p className="sale-note">{note}</p>}
-
-      <div className="table-wrap">
-        <table className="dash-table">
-          <thead>
-            <tr>
-              <th>Producto</th>
-              <th>Categoría</th>
-              <th>Precio ($)</th>
-              <th>Antes ($)</th>
-              <th>Stock</th>
-              {canManage && <th>Guardar</th>}
-            </tr>
-          </thead>
-          <tbody>
-            {data.items.map((p) => (
-              <tr key={p.id}>
-                <td>
-                  <span className="t-cell-product">
-                    <img className="prod-thumb" src={p.image} alt="" loading="lazy" />
-                    <span>
-                      <strong>{p.name}</strong>
-                      <em>{p.brand}</em>
-                    </span>
-                  </span>
-                </td>
-                <td className="t-cat">
-                  {CATEGORY_LABELS[p.category] || p.category}
-                </td>
-                <td>
-                  <input
-                    className="price-input mono"
-                    type="number"
-                    min="1"
-                    step="1"
-                    value={valueOf(p, 'price')}
-                    onChange={(e) => setEdit(p, 'price', e.target.value)}
-                    disabled={!canManage}
-                    aria-label={`Precio de ${p.name}`}
-                  />
-                </td>
-                <td>
-                  <input
-                    className="price-input mono"
-                    type="number"
-                    min="1"
-                    step="1"
-                    value={valueOf(p, 'oldPrice')}
-                    onChange={(e) => setEdit(p, 'oldPrice', e.target.value)}
-                    disabled={!canManage}
-                    aria-label={`Precio anterior de ${p.name}`}
-                  />
-                </td>
-                <td className="mono t-num">{p.stock}</td>
-                {canManage && (
-                  <td>
-                    <button
-                      type="button"
-                      className="row-btn"
-                      disabled={!hasEdit(p) || savingId === p.id}
-                      onClick={() => saveOne(p)}
-                      aria-label={`Guardar precio de ${p.name}`}
-                    >
-                      <IconCheck />
-                    </button>
-                  </td>
-                )}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {data.items.length === 0 && (
-          <EmptyNote text="No encontramos productos con esa búsqueda." />
-        )}
-      </div>
-
-      {data.totalPages > 1 && (
-        <div className="dash-pager">
-          <button
-            type="button"
-            onClick={() => setParams((prev) => ({ ...prev, page: prev.page - 1 }))}
-            disabled={data.page <= 1}
-          >
-            ← Anterior
-          </button>
-          <span className="mono">
-            Página {data.page} de {data.totalPages} · {data.total} productos
-          </span>
-          <button
-            type="button"
-            onClick={() => setParams((prev) => ({ ...prev, page: prev.page + 1 }))}
-            disabled={data.page >= data.totalPages}
-          >
-            Siguiente →
-          </button>
-        </div>
-      )}
     </div>
   )
 }
