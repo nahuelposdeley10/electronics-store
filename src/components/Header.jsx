@@ -67,7 +67,6 @@ export default function Header({ onNavigate, view, onSearch }) {
           </button>
 
           <form className="search-bar" onSubmit={handleSearch} role="search">
-            <IconSearch className="search-icon" />
             <input
               type="text"
               placeholder="Buscá producto, marca o categoría…"

@@ -21,29 +21,14 @@ function Section({ title, items, onView, offer = false }) {
 }
 
 function GallerySection({ onView }) {
-  const [draft, setDraft] = useState('')
-  const [query, setQuery] = useState('')
   const [page, setPage] = useState(1)
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
   useEffect(() => {
-    const id = setTimeout(() => {
-      const next = draft.trim()
-      if (next !== query) {
-        setQuery(next)
-        setPage(1)
-      }
-    }, 350)
-    return () => clearTimeout(id)
-  }, [draft, query])
-
-  useEffect(() => {
     let alive = true
-    const params = new URLSearchParams({ page: String(page), limit: '12' })
-    if (query) params.set('q', query)
-    fetch(`/api/products?${params.toString()}`)
+    fetch(`/api/products?page=${page}&limit=12`)
       .then((res) => res.json())
       .then((result) => {
         if (alive) setData(result)
@@ -57,21 +42,12 @@ function GallerySection({ onView }) {
     return () => {
       alive = false
     }
-  }, [query, page])
+  }, [page])
 
   return (
     <section className="home-section gallery-section">
       <div className="section-head">
         <h2 id="section-galeria">Toda la galería</h2>
-        <form className="gallery-search" role="search" onSubmit={(e) => e.preventDefault()}>
-          <input
-            type="text"
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            placeholder="Buscar nombre, marca o categoría…"
-            aria-label="Buscar en la galería"
-          />
-        </form>
       </div>
 
       {error ? (
@@ -79,9 +55,7 @@ function GallerySection({ onView }) {
       ) : loading && !data ? (
         <p className="gallery-note">Cargando la galería…</p>
       ) : data.items.length === 0 ? (
-        <p className="gallery-note">
-          No encontramos productos que coincidan con «{query}».
-        </p>
+        <p className="gallery-note">La galería está vacía por ahora.</p>
       ) : (
         <>
           <div className="product-grid">
