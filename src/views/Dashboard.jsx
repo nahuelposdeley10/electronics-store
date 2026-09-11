@@ -925,8 +925,32 @@ function ProductForm({ product, onClose, onSaved }) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
+  const currentPrice = product?.price ?? 0
+
   const set = (key) => (e) =>
     setForm((f) => ({ ...f, [key]: e.target.value }))
+
+  const handlePrice = (e) => {
+    const value = e.target.value
+    const num = Number(value)
+    setForm((f) => {
+      let oldPrice = f.oldPrice
+      if (value !== '' && currentPrice > 0) {
+        const autoFilled = oldPrice === '' || Number(oldPrice) === currentPrice
+        if (autoFilled) {
+          oldPrice = num < currentPrice ? String(currentPrice) : ''
+        }
+      }
+      return { ...f, price: value, oldPrice }
+    })
+  }
+
+  const editFrom = Number(form.oldPrice) || currentPrice
+  const editTo = Number(form.price)
+  const editOff =
+    editFrom > editTo && editTo > 0
+      ? Math.round((1 - editTo / editFrom) * 100)
+      : 0
 
   const submit = async (e) => {
     e.preventDefault()
@@ -1015,30 +1039,69 @@ function ProductForm({ product, onClose, onSaved }) {
               </select>
             </label>
 
-            <label className="pf-field">
-              <span>Precio ($)</span>
-              <input
-                type="number"
-                min="1"
-                step="1"
-                value={form.price}
-                onChange={set('price')}
-                placeholder="Ej. 109990"
-                required
-              />
-            </label>
+            {product ? (
+              <>
+                <label className="pf-field">
+                  <span>Precio actual</span>
+                  <span className="price-static mono">{formatARS(currentPrice)}</span>
+                </label>
 
-            <label className="pf-field">
-              <span>Precio anterior ($)</span>
-              <input
-                type="number"
-                min="1"
-                step="1"
-                value={form.oldPrice}
-                onChange={set('oldPrice')}
-                placeholder="Opcional"
-              />
-            </label>
+                <label className="pf-field">
+                  <span>Nuevo precio ($)</span>
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={form.price}
+                    onChange={handlePrice}
+                    placeholder="Ej. 89990"
+                    required
+                  />
+                </label>
+              </>
+            ) : (
+              <>
+                <label className="pf-field">
+                  <span>Precio ($)</span>
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={form.price}
+                    onChange={set('price')}
+                    placeholder="Ej. 109990"
+                    required
+                  />
+                </label>
+
+                <label className="pf-field">
+                  <span>Precio anterior ($)</span>
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={form.oldPrice}
+                    onChange={set('oldPrice')}
+                    placeholder="Opcional"
+                  />
+                </label>
+              </>
+            )}
+
+            {product && editTo > 0 && (
+              <p className="list-note pf-full">
+                Queda en <strong className="mono">{formatARS(editTo)}</strong>
+                {editOff > 0 && (
+                  <>
+                    {' '}
+                    en vez de{' '}
+                    <span className="price-old">{formatARS(editFrom)}</span>
+                    {' '}
+                    · <span className="tag-discount inline">{editOff}% OFF</span>
+                  </>
+                )}
+              </p>
+            )}
 
             <label className="pf-field">
               <span>Stock</span>
@@ -2110,10 +2173,12 @@ function OffersScreen({ canManage }) {
 
   const oldPriceOf = (p) => edits[p.id]?.oldPrice ?? p.oldPrice ?? ''
 
-  const setOldPrice = (p, value) =>
+  const priceOf = (p) => edits[p.id]?.price ?? p.price ?? ''
+
+  const setField = (id, key) => (value) =>
     setEdits((prev) => ({
       ...prev,
-      [p.id]: { ...(prev[p.id] || {}), oldPrice: value },
+      [id]: { ...(prev[id] || {}), [key]: value },
     }))
 
   const hasEdit = (p) => Boolean(edits[p.id])
@@ -2125,6 +2190,7 @@ function OffersScreen({ canManage }) {
       await apiPost('/api/admin/offers', {
         productId: p.id,
         oldPrice: oldPriceOf(p),
+        price: priceOf(p),
       })
       setNote(`Oferta guardada: ${p.name}`)
       setEdits((prev) => {
@@ -2216,7 +2282,8 @@ function OffersScreen({ canManage }) {
             <tr>
               <th>Producto</th>
               <th>Precio</th>
-              <th>Antes ($)</th>
+              <th>Nuevo $</th>
+              <th>Antes $</th>
               <th>Descuento</th>
               <th>Stock</th>
               {canManage && <th>Acciones</th>}
@@ -2225,8 +2292,9 @@ function OffersScreen({ canManage }) {
           <tbody>
             {data.items.map((p) => {
               const old = Number(oldPriceOf(p))
+              const cur = Number(priceOf(p))
               const discount =
-                old > p.price ? Math.round((1 - p.price / old) * 100) : 0
+                old > cur && cur > 0 ? Math.round((1 - cur / old) * 100) : 0
               return (
                 <tr key={p.id}>
                   <td>
@@ -2245,8 +2313,20 @@ function OffersScreen({ canManage }) {
                       type="number"
                       min="1"
                       step="1"
+                      value={priceOf(p)}
+                      onChange={(e) => setField(p.id, 'price')(e.target.value)}
+                      disabled={!canManage}
+                      aria-label={`Nuevo precio de ${p.name}`}
+                    />
+                  </td>
+                  <td>
+                    <input
+                      className="price-input mono"
+                      type="number"
+                      min="1"
+                      step="1"
                       value={oldPriceOf(p)}
-                      onChange={(e) => setOldPrice(p, e.target.value)}
+                      onChange={(e) => setField(p.id, 'oldPrice')(e.target.value)}
                       disabled={!canManage}
                       aria-label={`Precio anterior de ${p.name}`}
                     />
@@ -2315,7 +2395,7 @@ function OffersScreen({ canManage }) {
 
 function OfferForm({ onClose, onSaved }) {
   const [products, setProducts] = useState([])
-  const [form, setForm] = useState({ productId: '', oldPrice: '' })
+  const [form, setForm] = useState({ productId: '', oldPrice: '', price: '' })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -2331,8 +2411,20 @@ function OfferForm({ onClose, onSaved }) {
     }
   }, [])
 
+  const selected = products.find((p) => String(p.id) === String(form.productId))
+
   const set = (key) => (e) =>
     setForm((f) => ({ ...f, [key]: e.target.value }))
+
+  const selectProduct = (e) => {
+    const id = e.target.value
+    const p = products.find((x) => String(x.id) === String(id))
+    setForm((f) => ({
+      ...f,
+      productId: id,
+      oldPrice: p ? String(p.price) : '',
+    }))
+  }
 
   const submit = async (e) => {
     e.preventDefault()
@@ -2342,6 +2434,7 @@ function OfferForm({ onClose, onSaved }) {
       const saved = await apiPost('/api/admin/offers', {
         productId: form.productId,
         oldPrice: form.oldPrice,
+        price: form.price,
       })
       onSaved(saved)
     } catch (err) {
@@ -2349,6 +2442,13 @@ function OfferForm({ onClose, onSaved }) {
       setSaving(false)
     }
   }
+
+  const newPrice = Number(form.price)
+  const oldPriceNum = Number(form.oldPrice)
+  const previewDiscount =
+    oldPriceNum > newPrice && newPrice > 0
+      ? Math.round((1 - newPrice / oldPriceNum) * 100)
+      : 0
 
   return (
     <div className="product-overlay" onMouseDown={saving ? undefined : onClose}>
@@ -2378,7 +2478,7 @@ function OfferForm({ onClose, onSaved }) {
           <div className="pf-grid">
             <label className="pf-field pf-full">
               <span>Producto</span>
-              <select value={form.productId} onChange={set('productId')} required>
+              <select value={form.productId} onChange={selectProduct} required>
                 <option value="">Elegí un producto…</option>
                 {products.map((p) => (
                   <option key={p.id} value={p.id}>
@@ -2388,18 +2488,49 @@ function OfferForm({ onClose, onSaved }) {
               </select>
             </label>
 
+            {selected && (
+              <p className="list-note pf-full">
+                Precio actual de {selected.name}:{' '}
+                <strong className="mono">{formatARS(selected.price)}</strong>
+              </p>
+            )}
+
             <label className="pf-field pf-full">
-              <span>Precio anterior ($) — debe ser mayor al precio actual</span>
+              <span>Nuevo precio ($)</span>
+              <input
+                type="number"
+                min="1"
+                step="1"
+                value={form.price}
+                onChange={set('price')}
+                placeholder={selected ? String(selected.price) : 'El precio con descuento'}
+                required
+              />
+            </label>
+
+            <label className="pf-field pf-full">
+              <span>Precio anterior ($) — para mostrar el % OFF</span>
               <input
                 type="number"
                 min="1"
                 step="1"
                 value={form.oldPrice}
                 onChange={set('oldPrice')}
-                placeholder="Ej. 249990"
-                required
+                placeholder="Precio de lista"
               />
             </label>
+
+            {selected && newPrice > 0 && (
+              <p className="list-note pf-full">
+                Queda en <strong className="mono">{formatARS(newPrice)}</strong>
+                {previewDiscount > 0 && (
+                  <>
+                    {' '}
+                    · <span className="tag-discount inline">{previewDiscount}% OFF</span>
+                  </>
+                )}
+              </p>
+            )}
           </div>
 
           {error && <em className="unlock-error">{error}</em>}
