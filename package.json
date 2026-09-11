@@ -8,6 +8,7 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
+    "start": "node server/index.js",
     "server": "node server/index.js",
     "server:dev": "node --watch server/index.js",
     "seed": "node server/seed.js",
