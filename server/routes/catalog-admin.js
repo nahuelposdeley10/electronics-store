@@ -535,18 +535,30 @@ router.get('/offers', requireRole('superadmin'), async (req, res) => {
 })
 
 router.post('/offers', requireRole('superadmin'), async (req, res) => {
-  const { productId, oldPrice } = req.body || {}
+  const { productId, oldPrice, price } = req.body || {}
   const product = await Product.findOne({ id: Number(productId) })
   if (!product) {
     return res.status(404).json({ error: 'Producto no encontrado' })
   }
 
-  if (oldPrice !== undefined && oldPrice !== '' && Number(oldPrice) <= product.price) {
-    return res.status(400).json({ error: 'El precio anterior debe ser mayor al precio actual' })
+  const newPrice = price !== undefined && price !== '' ? Number(price) : null
+  if (newPrice !== null && (!Number.isFinite(newPrice) || newPrice < 1)) {
+    return res.status(400).json({ error: 'El precio nuevo debe ser un número mayor a cero' })
+  }
+  const finalPrice = newPrice !== null ? newPrice : product.price
+
+  if (oldPrice !== undefined && oldPrice !== '') {
+    const old = Number(oldPrice)
+    if (!Number.isFinite(old) || old <= finalPrice) {
+      return res.status(400).json({ error: 'El precio anterior debe ser mayor al precio actual' })
+    }
   }
 
   try {
     product.onSale = true
+    if (newPrice !== null) {
+      product.price = newPrice
+    }
     if (oldPrice !== undefined && oldPrice !== '') {
       product.oldPrice = Number(oldPrice)
     }
