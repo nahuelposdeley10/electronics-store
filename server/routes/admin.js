@@ -260,7 +260,7 @@ router.put('/products/:id', requireRole('superadmin'), upload.single('image'), a
     brand: brand !== undefined ? String(brand).trim() : product.brand,
     category: category !== undefined ? category : product.category,
     price: price !== undefined && price !== '' ? Number(price) : product.price,
-    oldPrice: oldPrice !== undefined && oldPrice !== '' ? Number(oldPrice) : null,
+    oldPrice: oldPrice !== undefined && oldPrice !== '' ? Number(oldPrice) : product.oldPrice,
     stock: stock !== undefined && stock !== '' ? Number(stock) : product.stock,
     rating: rating !== undefined && rating !== '' ? Number(rating) : product.rating,
     freeShipping:

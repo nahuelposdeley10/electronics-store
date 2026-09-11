@@ -3337,20 +3337,6 @@
   color: var(--gal-ink-faint);
 }
 
-.price-static {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  height: 41px;
-  border: 1px dashed var(--gal-line-strong);
-  border-radius: 3px;
-  padding: 0 11px;
-  background: var(--gal-white);
-  font-size: 14px;
-  color: var(--gal-ink);
-}
-
 .pf-field input,
 .pf-field select,
 .pf-field textarea {

@@ -913,7 +913,6 @@ function ProductForm({ product, onClose, onSaved }) {
     brand: product?.brand || '',
     category: product?.category || 'audio',
     price: product?.price ?? '',
-    oldPrice: product?.oldPrice ?? '',
     stock: product?.stock ?? '',
     rating: product?.rating ?? '',
     freeShipping: product?.freeShipping ?? true,
@@ -925,32 +924,8 @@ function ProductForm({ product, onClose, onSaved }) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
-  const currentPrice = product?.price ?? 0
-
   const set = (key) => (e) =>
     setForm((f) => ({ ...f, [key]: e.target.value }))
-
-  const handlePrice = (e) => {
-    const value = e.target.value
-    const num = Number(value)
-    setForm((f) => {
-      let oldPrice = f.oldPrice
-      if (value !== '' && currentPrice > 0) {
-        const autoFilled = oldPrice === '' || Number(oldPrice) === currentPrice
-        if (autoFilled) {
-          oldPrice = num < currentPrice ? String(currentPrice) : ''
-        }
-      }
-      return { ...f, price: value, oldPrice }
-    })
-  }
-
-  const editFrom = Number(form.oldPrice) || currentPrice
-  const editTo = Number(form.price)
-  const editOff =
-    editFrom > editTo && editTo > 0
-      ? Math.round((1 - editTo / editFrom) * 100)
-      : 0
 
   const submit = async (e) => {
     e.preventDefault()
@@ -1039,69 +1014,18 @@ function ProductForm({ product, onClose, onSaved }) {
               </select>
             </label>
 
-            {product ? (
-              <>
-                <label className="pf-field">
-                  <span>Precio actual</span>
-                  <span className="price-static mono">{formatARS(currentPrice)}</span>
-                </label>
-
-                <label className="pf-field">
-                  <span>Nuevo precio ($)</span>
-                  <input
-                    type="number"
-                    min="1"
-                    step="1"
-                    value={form.price}
-                    onChange={handlePrice}
-                    placeholder="Ej. 89990"
-                    required
-                  />
-                </label>
-              </>
-            ) : (
-              <>
-                <label className="pf-field">
-                  <span>Precio ($)</span>
-                  <input
-                    type="number"
-                    min="1"
-                    step="1"
-                    value={form.price}
-                    onChange={set('price')}
-                    placeholder="Ej. 109990"
-                    required
-                  />
-                </label>
-
-                <label className="pf-field">
-                  <span>Precio anterior ($)</span>
-                  <input
-                    type="number"
-                    min="1"
-                    step="1"
-                    value={form.oldPrice}
-                    onChange={set('oldPrice')}
-                    placeholder="Opcional"
-                  />
-                </label>
-              </>
-            )}
-
-            {product && editTo > 0 && (
-              <p className="list-note pf-full">
-                Queda en <strong className="mono">{formatARS(editTo)}</strong>
-                {editOff > 0 && (
-                  <>
-                    {' '}
-                    en vez de{' '}
-                    <span className="price-old">{formatARS(editFrom)}</span>
-                    {' '}
-                    · <span className="tag-discount inline">{editOff}% OFF</span>
-                  </>
-                )}
-              </p>
-            )}
+            <label className="pf-field">
+              <span>Precio ($)</span>
+              <input
+                type="number"
+                min="1"
+                step="1"
+                value={form.price}
+                onChange={set('price')}
+                placeholder="Ej. 109990"
+                required
+              />
+            </label>
 
             <label className="pf-field">
               <span>Stock</span>
