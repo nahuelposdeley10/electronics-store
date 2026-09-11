@@ -3666,6 +3666,18 @@
   font-weight: 700;
 }
 
+.pos-item svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: var(--gal-facade);
+}
+
+.qty-controls button svg {
+  width: 13px;
+  height: 13px;
+}
+
 .pos-ticket {
   border: 1px solid var(--gal-line);
   border-radius: 5px;
