@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { formatARS } from '../data/format'
-import { apiConfirmOrder, apiDelete, apiGet, apiUpdate, apiUpload, clearSession, getSession, login as apiLogin } from '../lib/api'
+import { apiConfirmOrder, apiDelete, apiGet, apiPost, apiPut, apiUpdate, apiUpload, clearSession, getSession, login as apiLogin } from '../lib/api'
 import { useOrderEvents } from '../lib/useOrderEvents'
 import {
   IconBack,
@@ -168,7 +168,23 @@ export default function Dashboard({ onExit }) {
 
   const NAV = [
     { id: 'overview', label: 'Panel', icon: IconChart },
-    { id: 'products', label: 'Productos', icon: IconBox },
+    {
+      id: 'products',
+      label: 'Productos',
+      icon: IconBox,
+      children: [
+        { id: 'products', label: 'Productos' },
+        ...(user?.role === 'superadmin'
+          ? [
+              { id: 'product-categories', label: 'Categorías' },
+              { id: 'product-brands', label: 'Marcas' },
+              { id: 'product-variants', label: 'Variantes' },
+              { id: 'product-prices', label: 'Precios' },
+              { id: 'product-import', label: 'Importar productos' },
+            ]
+          : []),
+      ],
+    },
     { id: 'sales', label: 'Ventas', icon: IconCard },
   ]
 
@@ -186,17 +202,37 @@ export default function Dashboard({ onExit }) {
         </div>
 
         <nav className="dash-nav" aria-label="Panel de administración">
-          {NAV.map(({ id, label, icon: Icon }) => (
-            <button
-              key={id}
-              type="button"
-              className={`dash-nav-item${screen === id ? ' active' : ''}`}
-              onClick={() => changeScreen(id)}
-            >
-              <Icon />
-              {label}
-            </button>
-          ))}
+          {NAV.map((item) => {
+            const active = item.children
+              ? screen === 'products' || screen.startsWith('product-')
+              : screen === item.id
+            return (
+              <div key={item.id} className="dash-nav-group">
+                <button
+                  type="button"
+                  className={`dash-nav-item${active ? ' active' : ''}`}
+                  onClick={() => changeScreen(item.id)}
+                >
+                  <item.icon />
+                  {item.label}
+                </button>
+                {item.children && active && (
+                  <div className="dash-nav-sub">
+                    {item.children.map((child) => (
+                      <button
+                        key={child.id}
+                        type="button"
+                        className={`dash-nav-sub-item${screen === child.id ? ' active' : ''}`}
+                        onClick={() => changeScreen(child.id)}
+                      >
+                        {child.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )
+          })}
         </nav>
 
         {user && (
@@ -261,6 +297,33 @@ export default function Dashboard({ onExit }) {
         )}
         {gate === 'ready' && screen === 'products' && (
           <ProductsScreen canManage={user?.role === 'superadmin'} />
+        )}
+        {gate === 'ready' && screen === 'product-categories' && (
+          <MetaScreen
+            kind="categories"
+            title="Categorías"
+            eyebrow="Estantería"
+            empty="Todavía no hay categorías."
+            canManage={user?.role === 'superadmin'}
+          />
+        )}
+        {gate === 'ready' && screen === 'product-brands' && (
+          <MetaScreen
+            kind="brands"
+            title="Marcas"
+            eyebrow="Estantería"
+            empty="Todavía no hay marcas."
+            canManage={user?.role === 'superadmin'}
+          />
+        )}
+        {gate === 'ready' && screen === 'product-variants' && (
+          <VariantsScreen canManage={user?.role === 'superadmin'} />
+        )}
+        {gate === 'ready' && screen === 'product-prices' && (
+          <PricesScreen canManage={user?.role === 'superadmin'} />
+        )}
+        {gate === 'ready' && screen === 'product-import' && (
+          <ImportScreen canManage={user?.role === 'superadmin'} />
         )}
         {gate === 'ready' && screen === 'sales' && <SalesScreen />}
       </main>
@@ -1097,6 +1160,1036 @@ function ScreenBlocked({ message }) {
         <h1>No pudimos leer el panel</h1>
         <p>{message}.</p>
       </div>
+    </div>
+  )
+}
+
+function MetaScreen({ kind, title, eyebrow, empty, canManage }) {
+  const [items, setItems] = useState(null)
+  const [error, setError] = useState('')
+  const [note, setNote] = useState('')
+  const [editing, setEditing] = useState(null)
+  const [refresh, setRefresh] = useState(0)
+  const [formOpen, setFormOpen] = useState(false)
+
+  const hasKey = kind === 'categories'
+  const singular = hasKey ? 'categoría' : 'marca'
+  const plural = hasKey ? 'categorías' : 'marcas'
+
+  useEffect(() => {
+    let alive = true
+    apiGet(`/api/admin/${kind}`)
+      .then((data) => {
+        if (!alive) return
+        setItems(data.items || [])
+        setNote('')
+      })
+      .catch((err) => {
+        if (alive) setError(err.message)
+      })
+    return () => {
+      alive = false
+    }
+  }, [kind, refresh])
+
+  const openForm = (item = null) => {
+    setEditing(item)
+    setFormOpen(true)
+  }
+
+  const closeForm = () => {
+    setFormOpen(false)
+    setEditing(null)
+  }
+
+  const handleSaved = (saved) => {
+    closeForm()
+    setNote(
+      editing
+        ? `${singular} actualizada: ${saved.name}`
+        : `${singular} creada: ${saved.name}`,
+    )
+    setRefresh((n) => n + 1)
+  }
+
+  const handleDelete = async (item) => {
+    if (!window.confirm(`¿Eliminar ${singular} "${item.name}"?`)) return
+    try {
+      const target = hasKey ? item.key : encodeURIComponent(item.name)
+      await apiDelete(`/api/admin/${kind}/${target}`)
+      setNote(`${singular} eliminada: ${item.name}`)
+      setRefresh((n) => n + 1)
+    } catch (err) {
+      setNote(err.message)
+    }
+  }
+
+  if (!items && !error) return <ScreenLoading label="Cargando la estantería…" />
+  if (error) return <ScreenBlocked message={error} />
+
+  return (
+    <div className="dash-screen">
+      <header className="dash-head">
+        <div>
+          <span className="dash-eyebrow">{eyebrow}</span>
+          <h1>{title}</h1>
+        </div>
+        <div className="dash-head-today">
+          <strong className="mono">{items.length}</strong>
+          <em>en la estantería</em>
+        </div>
+      </header>
+
+      <div className="dash-toolbar">
+        <span className="count-tag mono">
+          {items.length} {plural}
+        </span>
+        {canManage && (
+          <button type="button" className="primary-btn dash-add" onClick={() => openForm()}>
+            <IconPlus />
+            Agregar {singular}
+          </button>
+        )}
+      </div>
+
+      {note && <p className="sale-note">{note}</p>}
+
+      {formOpen && (
+        <MetaForm
+          hasKey={hasKey}
+          item={editing}
+          noun={singular}
+          path={`/api/admin/${kind}`}
+          onClose={closeForm}
+          onSaved={handleSaved}
+        />
+      )}
+
+      <div className="table-wrap">
+        <table className="dash-table">
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              {hasKey && <th>Clave</th>}
+              <th>Productos</th>
+              <th>Estado</th>
+              {canManage && <th>Acciones</th>}
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((item) => (
+              <tr key={hasKey ? item.key : item.name}>
+                <td>
+                  <strong>{item.name}</strong>
+                </td>
+                {hasKey && <td className="mono t-cat">{item.key}</td>}
+                <td className="mono t-num">{item.productCount}</td>
+                <td>
+                  <span className={`status-tag${item.active ? ' on' : ' off'}`}>
+                    {item.active ? <IconCheck /> : <IconClock />}
+                    {item.active ? 'Activa' : 'Inactiva'}
+                  </span>
+                </td>
+                {canManage && (
+                  <td>
+                    <span className="row-actions">
+                      <button
+                        type="button"
+                        className="row-btn"
+                        aria-label={`Editar ${item.name}`}
+                        onClick={() => openForm(item)}
+                      >
+                        <IconEdit />
+                      </button>
+                      <button
+                        type="button"
+                        className="row-btn row-btn-danger"
+                        aria-label={`Eliminar ${item.name}`}
+                        onClick={() => handleDelete(item)}
+                      >
+                        <IconTrash />
+                      </button>
+                    </span>
+                  </td>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {items.length === 0 && <EmptyNote text={empty} />}
+      </div>
+    </div>
+  )
+}
+
+function MetaForm({ hasKey, item, noun, path, onClose, onSaved }) {
+  const [form, setForm] = useState(() => ({
+    name: item?.name || '',
+    key: item?.key || '',
+    active: item?.active !== false,
+  }))
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  const set = (key) => (e) =>
+    setForm((f) => ({
+      ...f,
+      [key]: e.target.type === 'checkbox' ? e.target.checked : e.target.value,
+    }))
+
+  const submit = async (e) => {
+    e.preventDefault()
+    setSaving(true)
+    setError('')
+    const body = hasKey ? form : { name: form.name, active: form.active }
+    try {
+      if (item) {
+        const target = hasKey ? item.key : encodeURIComponent(item.name)
+        const saved = await apiPut(`${path}/${target}`, body)
+        onSaved(saved)
+      } else {
+        const saved = await apiPost(path, body)
+        onSaved(saved)
+      }
+    } catch (err) {
+      setError(err.message)
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="product-overlay" onMouseDown={saving ? undefined : onClose}>
+      <div
+        className="product-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-label={item ? `Editar ${noun}` : `Agregar ${noun}`}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        <header className="product-head">
+          <div>
+            <span className="dash-eyebrow">Estantería</span>
+            <h2>{item ? `Editar ${noun}` : `Agregar ${noun}`}</h2>
+          </div>
+          <button
+            type="button"
+            className="product-close"
+            onClick={onClose}
+            aria-label="Cerrar"
+          >
+            <IconCross />
+          </button>
+        </header>
+
+        <form onSubmit={submit}>
+          <div className="pf-grid">
+            <label className="pf-field pf-full">
+              <span>Nombre</span>
+              <input
+                type="text"
+                value={form.name}
+                onChange={set('name')}
+                placeholder={hasKey ? 'Ej. Audio' : 'Ej. Logitech'}
+                required
+              />
+            </label>
+            {hasKey && (
+              <label className="pf-field pf-full">
+                <span>Clave (identificador)</span>
+                <input
+                  type="text"
+                  value={form.key}
+                  onChange={set('key')}
+                  placeholder="Ej. audio — se genera sola si la dejás vacía"
+                />
+              </label>
+            )}
+            <label className="pf-check pf-full">
+              <input type="checkbox" checked={form.active} onChange={set('active')} />
+              <span>{hasKey ? 'Categoría activa' : 'Marca activa'}</span>
+            </label>
+          </div>
+
+          {error && <em className="unlock-error">{error}</em>}
+
+          <div className="pf-actions">
+            <button type="button" className="ghost-btn" onClick={onClose} disabled={saving}>
+              Cancelar
+            </button>
+            <button type="submit" className="primary-btn" disabled={saving}>
+              {saving ? 'Guardando…' : 'Guardar'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+function VariantsScreen({ canManage }) {
+  const [data, setData] = useState(null)
+  const [error, setError] = useState('')
+  const [query, setQuery] = useState('')
+  const [params, setParams] = useState({ q: '', page: 1 })
+  const [productOptions, setProductOptions] = useState([])
+  const [formOpen, setFormOpen] = useState(false)
+  const [editing, setEditing] = useState(null)
+  const [note, setNote] = useState('')
+
+  useEffect(() => {
+    let alive = true
+    apiGet('/api/admin/products?limit=100')
+      .then((res) => {
+        if (alive) setProductOptions(res.items || [])
+      })
+      .catch(() => {})
+    return () => {
+      alive = false
+    }
+  }, [])
+
+  useEffect(() => {
+    let alive = true
+    const qs = new URLSearchParams({
+      q: params.q,
+      page: String(params.page),
+      limit: '10',
+    })
+    apiGet(`/api/admin/variants?${qs}`)
+      .then((res) => {
+        if (!alive) return
+        if (res.items.length === 0 && res.page > 1) {
+          setParams((prev) => ({ ...prev, page: res.totalPages || 1 }))
+          return
+        }
+        setData(res)
+      })
+      .catch((err) => {
+        if (alive) setError(err.message)
+      })
+    return () => {
+      alive = false
+    }
+  }, [params])
+
+  const submitSearch = (e) => {
+    e.preventDefault()
+    setParams((prev) => ({ ...prev, q: query.trim(), page: 1 }))
+  }
+
+  const openForm = (variant = null) => {
+    setEditing(variant)
+    setFormOpen(true)
+  }
+
+  const closeForm = () => {
+    setFormOpen(false)
+    setEditing(null)
+  }
+
+  const handleSaved = (saved) => {
+    closeForm()
+    setNote(
+      editing
+        ? `Variante actualizada: ${saved.name}`
+        : `Variante creada: ${saved.name}`,
+    )
+    setParams((prev) => ({ ...prev, page: 1 }))
+  }
+
+  const handleDelete = async (variant) => {
+    if (!window.confirm(`¿Eliminar la variante "${variant.name}"?`)) return
+    try {
+      await apiDelete(`/api/admin/variants/${variant.id}`)
+      setNote(`Variante eliminada: ${variant.name}`)
+      if (data && data.items.length === 1 && data.page > 1) {
+        setParams((prev) => ({ ...prev, page: prev.page - 1 }))
+      } else {
+        setParams((prev) => ({ ...prev }))
+      }
+    } catch (err) {
+      setNote(err.message)
+    }
+  }
+
+  if (!data && !error) return <ScreenLoading label="Cargando variantes…" />
+  if (error) return <ScreenBlocked message={error} />
+
+  return (
+    <div className="dash-screen">
+      <header className="dash-head">
+        <div>
+          <span className="dash-eyebrow">Estantería</span>
+          <h1>Variantes</h1>
+        </div>
+        <div className="dash-head-today">
+          <strong className="mono">{data.total}</strong>
+          <em>en total</em>
+        </div>
+      </header>
+
+      <div className="dash-toolbar">
+        <form className="dash-search" role="search" onSubmit={submitSearch}>
+          <IconSearch />
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Buscá por producto, variante o SKU…"
+            aria-label="Buscar variantes"
+          />
+        </form>
+        <span className="count-tag mono">
+          {data.items.length} de {data.total}
+        </span>
+        {canManage && (
+          <button
+            type="button"
+            className="primary-btn dash-add"
+            onClick={() => openForm()}
+          >
+            <IconPlus />
+            Agregar variante
+          </button>
+        )}
+      </div>
+
+      {note && <p className="sale-note">{note}</p>}
+
+      {formOpen && (
+        <VariantForm
+          item={editing}
+          products={productOptions}
+          onClose={closeForm}
+          onSaved={handleSaved}
+        />
+      )}
+
+      <div className="table-wrap">
+        <table className="dash-table">
+          <thead>
+            <tr>
+              <th>Producto</th>
+              <th>Variante</th>
+              <th>SKU</th>
+              <th>Precio</th>
+              <th>Stock</th>
+              {canManage && <th>Acciones</th>}
+            </tr>
+          </thead>
+          <tbody>
+            {data.items.map((v) => (
+              <tr key={v.id}>
+                <td>
+                  <span className="t-cell-product">
+                    <span>
+                      <strong>{v.productName}</strong>
+                      <em>{v.productBrand}</em>
+                    </span>
+                  </span>
+                </td>
+                <td>
+                  <strong>{v.name}</strong>
+                </td>
+                <td className="mono t-cat">{v.sku || '—'}</td>
+                <td className="mono t-num">{v.price ? formatARS(v.price) : 'Base'}</td>
+                <td className="mono t-num">{v.stock}</td>
+                {canManage && (
+                  <td>
+                    <span className="row-actions">
+                      <button
+                        type="button"
+                        className="row-btn"
+                        aria-label={`Editar ${v.name}`}
+                        onClick={() => openForm(v)}
+                      >
+                        <IconEdit />
+                      </button>
+                      <button
+                        type="button"
+                        className="row-btn row-btn-danger"
+                        aria-label={`Eliminar ${v.name}`}
+                        onClick={() => handleDelete(v)}
+                      >
+                        <IconTrash />
+                      </button>
+                    </span>
+                  </td>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {data.items.length === 0 && (
+          <EmptyNote text="Aún no hay variantes." />
+        )}
+      </div>
+
+      {data.totalPages > 1 && (
+        <div className="dash-pager">
+          <button
+            type="button"
+            onClick={() => setParams((prev) => ({ ...prev, page: prev.page - 1 }))}
+            disabled={data.page <= 1}
+          >
+            ← Anterior
+          </button>
+          <span className="mono">
+            Página {data.page} de {data.totalPages} · {data.total} variantes
+          </span>
+          <button
+            type="button"
+            onClick={() => setParams((prev) => ({ ...prev, page: prev.page + 1 }))}
+            disabled={data.page >= data.totalPages}
+          >
+            Siguiente →
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function VariantForm({ item, products, onClose, onSaved }) {
+  const [form, setForm] = useState(() => ({
+    product: item?.product ?? products[0]?.id ?? '',
+    name: item?.name || '',
+    sku: item?.sku || '',
+    price: item && item.price > 0 ? item.price : '',
+    stock: item?.stock ?? '',
+  }))
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  const set = (key) => (e) =>
+    setForm((f) => ({ ...f, [key]: e.target.value }))
+
+  const submit = async (e) => {
+    e.preventDefault()
+    setSaving(true)
+    setError('')
+    try {
+      const saved = item
+        ? await apiPut(`/api/admin/variants/${item.id}`, form)
+        : await apiPost('/api/admin/variants', form)
+      onSaved(saved)
+    } catch (err) {
+      setError(err.message)
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="product-overlay" onMouseDown={saving ? undefined : onClose}>
+      <div
+        className="product-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-label={item ? 'Editar variante' : 'Agregar variante'}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        <header className="product-head">
+          <div>
+            <span className="dash-eyebrow">Estantería</span>
+            <h2>{item ? 'Editar variante' : 'Agregar variante'}</h2>
+          </div>
+          <button
+            type="button"
+            className="product-close"
+            onClick={onClose}
+            aria-label="Cerrar"
+          >
+            <IconCross />
+          </button>
+        </header>
+
+        <form onSubmit={submit}>
+          <div className="pf-grid">
+            <label className="pf-field pf-full">
+              <span>Producto</span>
+              <select value={form.product} onChange={set('product')} required>
+                {products.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} · {p.brand}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="pf-field">
+              <span>Nombre de la variante</span>
+              <input
+                type="text"
+                value={form.name}
+                onChange={set('name')}
+                placeholder="Ej. Negro 128GB"
+                required
+              />
+            </label>
+
+            <label className="pf-field">
+              <span>SKU</span>
+              <input
+                type="text"
+                value={form.sku}
+                onChange={set('sku')}
+                placeholder="Opcional"
+              />
+            </label>
+
+            <label className="pf-field">
+              <span>Precio ($) — vacío usa el precio base</span>
+              <input
+                type="number"
+                min="1"
+                step="1"
+                value={form.price}
+                onChange={set('price')}
+                placeholder="Opcional"
+              />
+            </label>
+
+            <label className="pf-field">
+              <span>Stock</span>
+              <input
+                type="number"
+                min="0"
+                step="1"
+                value={form.stock}
+                onChange={set('stock')}
+                placeholder="Opcional"
+              />
+            </label>
+          </div>
+
+          {error && <em className="unlock-error">{error}</em>}
+
+          <div className="pf-actions">
+            <button type="button" className="ghost-btn" onClick={onClose} disabled={saving}>
+              Cancelar
+            </button>
+            <button type="submit" className="primary-btn" disabled={saving}>
+              {saving ? 'Guardando…' : 'Guardar'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+function PricesScreen({ canManage }) {
+  const [data, setData] = useState(null)
+  const [error, setError] = useState('')
+  const [query, setQuery] = useState('')
+  const [params, setParams] = useState({ q: '', page: 1 })
+  const [cats, setCats] = useState([])
+  const [note, setNote] = useState('')
+  const [edits, setEdits] = useState({})
+  const [savingId, setSavingId] = useState(null)
+  const [bulk, setBulk] = useState({ mode: 'percent', value: '', category: 'todas' })
+  const [bulkSaving, setBulkSaving] = useState(false)
+
+  useEffect(() => {
+    let alive = true
+    apiGet('/api/admin/categories')
+      .then((res) => {
+        if (alive) setCats(res.items || [])
+      })
+      .catch(() => {})
+    return () => {
+      alive = false
+    }
+  }, [])
+
+  useEffect(() => {
+    let alive = true
+    const qs = new URLSearchParams({
+      q: params.q,
+      page: String(params.page),
+      limit: '20',
+    })
+    apiGet(`/api/admin/prices?${qs}`)
+      .then((res) => {
+        if (!alive) return
+        if (res.items.length === 0 && res.page > 1) {
+          setParams((prev) => ({ ...prev, page: res.totalPages || 1 }))
+          return
+        }
+        setData(res)
+      })
+      .catch((err) => {
+        if (alive) setError(err.message)
+      })
+    return () => {
+      alive = false
+    }
+  }, [params])
+
+  const submitSearch = (e) => {
+    e.preventDefault()
+    setParams((prev) => ({ ...prev, q: query.trim(), page: 1 }))
+  }
+
+  const valueOf = (p, key) => {
+    const edit = edits[p.id]
+    if (!edit) return p[key] ?? ''
+    return edit[key] ?? ''
+  }
+
+  const setEdit = (p, key, value) =>
+    setEdits((prev) => ({
+      ...prev,
+      [p.id]: { ...(prev[p.id] || {}), [key]: value },
+    }))
+
+  const hasEdit = (p) => Boolean(edits[p.id])
+
+  const saveOne = async (p) => {
+    const edit = edits[p.id]
+    setSavingId(p.id)
+    setNote('')
+    try {
+      await apiPost('/api/admin/prices', {
+        productId: p.id,
+        price: edit.price !== undefined ? edit.price : p.price,
+        oldPrice: edit.oldPrice !== undefined ? edit.oldPrice : p.oldPrice ?? '',
+      })
+      setNote(`${p.name}: precio guardado`)
+      setEdits((prev) => {
+        const next = { ...prev }
+        delete next[p.id]
+        return next
+      })
+      setParams((prev) => ({ ...prev }))
+    } catch (err) {
+      setNote(err.message)
+    } finally {
+      setSavingId(null)
+    }
+  }
+
+  const applyBulk = async (e) => {
+    e.preventDefault()
+    setBulkSaving(true)
+    setNote('')
+    try {
+      const mode = bulk.mode
+      const value = Number(bulk.value)
+      await apiPost('/api/admin/prices/bulk', { mode, value, category: bulk.category })
+      const bucket = bulk.category === 'todas' ? 'todas las categorías' : bulk.category
+      setNote(`Ajuste aplicado a ${bucket}`)
+      setBulk({ ...bulk, value: '' })
+      setParams((prev) => ({ ...prev }))
+    } catch (err) {
+      setNote(err.message)
+    } finally {
+      setBulkSaving(false)
+    }
+  }
+
+  if (!data && !error) return <ScreenLoading label="Leyendo precios…" />
+  if (error) return <ScreenBlocked message={error} />
+
+  return (
+    <div className="dash-screen">
+      <header className="dash-head">
+        <div>
+          <span className="dash-eyebrow">Estantería</span>
+          <h1>Precios</h1>
+        </div>
+        <div className="dash-head-today">
+          <strong className="mono">{data.total}</strong>
+          <em>productos</em>
+        </div>
+      </header>
+
+      <div className="dash-toolbar">
+        <form className="dash-search" role="search" onSubmit={submitSearch}>
+          <IconSearch />
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Buscá producto, marca o categoría…"
+            aria-label="Buscar precios"
+          />
+        </form>
+        <span className="count-tag mono">
+          {data.items.length} de {data.total}
+        </span>
+      </div>
+
+      <form className="bulk-bar" onSubmit={applyBulk}>
+        <strong>Ajuste masivo</strong>
+        <label className="bulk-field">
+          <span>Categoría</span>
+          <select
+            value={bulk.category}
+            onChange={(e) => setBulk((b) => ({ ...b, category: e.target.value }))}
+          >
+            <option value="todas">Todas</option>
+            {cats.map((c) => (
+              <option key={c.key} value={c.key}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="bulk-field">
+          <span>Modo</span>
+          <select
+            value={bulk.mode}
+            onChange={(e) => setBulk((b) => ({ ...b, mode: e.target.value }))}
+          >
+            <option value="percent">Porcentaje (+/-)</option>
+            <option value="round">Redondear a</option>
+            <option value="set">Precio fijo</option>
+          </select>
+        </label>
+        <label className="bulk-field">
+          <span>{bulk.mode === 'round' ? 'Redondear a…' : 'Valor'}</span>
+          <input
+            type="number"
+            value={bulk.value}
+            onChange={(e) => setBulk((b) => ({ ...b, value: e.target.value }))}
+            placeholder={
+              bulk.mode === 'percent' ? 'Ej. 10 o -5' : bulk.mode === 'round' ? 'Ej. 100' : 'Ej. 50000'
+            }
+            required
+          />
+        </label>
+        <button type="submit" className="primary-btn" disabled={bulkSaving}>
+          {bulkSaving ? 'Aplicando…' : 'Aplicar ajuste'}
+        </button>
+      </form>
+
+      {note && <p className="sale-note">{note}</p>}
+
+      <div className="table-wrap">
+        <table className="dash-table">
+          <thead>
+            <tr>
+              <th>Producto</th>
+              <th>Categoría</th>
+              <th>Precio ($)</th>
+              <th>Antes ($)</th>
+              <th>Stock</th>
+              {canManage && <th>Guardar</th>}
+            </tr>
+          </thead>
+          <tbody>
+            {data.items.map((p) => (
+              <tr key={p.id}>
+                <td>
+                  <span className="t-cell-product">
+                    <img className="prod-thumb" src={p.image} alt="" loading="lazy" />
+                    <span>
+                      <strong>{p.name}</strong>
+                      <em>{p.brand}</em>
+                    </span>
+                  </span>
+                </td>
+                <td className="t-cat">
+                  {CATEGORY_LABELS[p.category] || p.category}
+                </td>
+                <td>
+                  <input
+                    className="price-input mono"
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={valueOf(p, 'price')}
+                    onChange={(e) => setEdit(p, 'price', e.target.value)}
+                    disabled={!canManage}
+                    aria-label={`Precio de ${p.name}`}
+                  />
+                </td>
+                <td>
+                  <input
+                    className="price-input mono"
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={valueOf(p, 'oldPrice')}
+                    onChange={(e) => setEdit(p, 'oldPrice', e.target.value)}
+                    disabled={!canManage}
+                    aria-label={`Precio anterior de ${p.name}`}
+                  />
+                </td>
+                <td className="mono t-num">{p.stock}</td>
+                {canManage && (
+                  <td>
+                    <button
+                      type="button"
+                      className="row-btn"
+                      disabled={!hasEdit(p) || savingId === p.id}
+                      onClick={() => saveOne(p)}
+                      aria-label={`Guardar precio de ${p.name}`}
+                    >
+                      <IconCheck />
+                    </button>
+                  </td>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {data.items.length === 0 && (
+          <EmptyNote text="No encontramos productos con esa búsqueda." />
+        )}
+      </div>
+
+      {data.totalPages > 1 && (
+        <div className="dash-pager">
+          <button
+            type="button"
+            onClick={() => setParams((prev) => ({ ...prev, page: prev.page - 1 }))}
+            disabled={data.page <= 1}
+          >
+            ← Anterior
+          </button>
+          <span className="mono">
+            Página {data.page} de {data.totalPages} · {data.total} productos
+          </span>
+          <button
+            type="button"
+            onClick={() => setParams((prev) => ({ ...prev, page: prev.page + 1 }))}
+            disabled={data.page >= data.totalPages}
+          >
+            Siguiente →
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+const IMPORT_EXAMPLE = [
+  {
+    name: 'Parlante Bluetooth Boom',
+    brand: 'Sony',
+    category: 'audio',
+    price: 75000,
+    stock: 12,
+    freeShipping: true,
+    badge: 'Nuevo',
+  },
+  {
+    name: 'Mouse Inalámbrico Lite',
+    brand: 'Logitech',
+    category: 'perifericos',
+    price: 18990,
+    oldPrice: 24990,
+    stock: 40,
+  },
+]
+
+function ImportScreen({ canManage }) {
+  const [text, setText] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [result, setResult] = useState(null)
+  const [error, setError] = useState('')
+
+  const loadExample = () => {
+    setText(JSON.stringify(IMPORT_EXAMPLE, null, 2))
+    setResult(null)
+    setError('')
+  }
+
+  const submit = async (e) => {
+    e.preventDefault()
+    setBusy(true)
+    setError('')
+    setResult(null)
+
+    let products
+    try {
+      products = JSON.parse(text)
+    } catch {
+      setError('El texto no es un JSON válido. Revisá comas, llaves y corchetes.')
+      setBusy(false)
+      return
+    }
+
+    try {
+      const res = await apiPost('/api/admin/import/products', { products })
+      setResult(res)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="dash-screen">
+      <header className="dash-head">
+        <div>
+          <span className="dash-eyebrow">Estantería</span>
+          <h1>Importar productos</h1>
+        </div>
+      </header>
+
+      {canManage ? (
+        <form onSubmit={submit} className="import-wrap">
+          <label className="pf-field">
+            <span>Productos en formato JSON</span>
+            <textarea
+              className="import-textarea"
+              rows={12}
+              value={text}
+              onChange={(e) => {
+                setText(e.target.value)
+                setResult(null)
+              }}
+              placeholder='[{"name":"Teclado Gamer RGB","brand":"Logitech","category":"perifericos","price":45000}]'
+            />
+          </label>
+
+          <p className="import-help">
+            Requeridos: <strong>name</strong>, <strong>brand</strong>,{' '}
+            <strong>category</strong> (clave válida) y <strong>price</strong>.
+            Opcionales: oldPrice, stock, rating, freeShipping, badge, image,
+            description y specs (arreglo o texto separado por coma).
+          </p>
+
+          <div className="pf-actions">
+            <button type="button" className="ghost-btn" onClick={loadExample}>
+              Cargar ejemplo
+            </button>
+            <button type="submit" className="primary-btn" disabled={busy}>
+              {busy ? 'Importando…' : 'Importar productos'}
+            </button>
+          </div>
+
+          {error && <em className="unlock-error">{error}</em>}
+
+          {result && (
+            <div className="import-result">
+              <p>
+                <strong>{result.created}</strong> producto(s) importado(s).
+              </p>
+              {result.skipped.length > 0 && (
+                <>
+                  <p>Se omitieron {result.skipped.length} fila(s):</p>
+                  <ul>
+                    {result.skipped.map((skip, index) => (
+                      <li key={index}>
+                        Línea {skip.index}: {skip.error}
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+            </div>
+          )}
+        </form>
+      ) : (
+        <div className="table-wrap">
+          <EmptyNote text="Solo superadmins pueden importar productos." />
+        </div>
+      )}
     </div>
   )
 }

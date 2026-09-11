@@ -5,6 +5,7 @@ import { Product } from '../models/Product.js'
 import { requireAuth, requireRole } from '../middleware/auth.js'
 import { uploadToCloudinary } from '../services/cloudinary.js'
 import { parsePagination, buildProductSearchFilter } from '../lib/catalog-query.js'
+import { getValidCategoryKeys } from '../lib/catalog-meta.js'
 
 const router = express.Router()
 
@@ -17,16 +18,6 @@ const upload = multer({
     cb(null, file.mimetype.startsWith('image/'))
   },
 })
-
-const CATEGORIES = new Set([
-  'audio',
-  'moviles',
-  'computacion',
-  'wearables',
-  'entretenimiento',
-  'perifericos',
-  'fotografia',
-])
 
 const PENDING_STATUSES = new Set(['pending', 'in_process'])
 const REJECTED_STATUSES = new Set(['rejected', 'cancelled', 'charged_back'])
@@ -198,7 +189,7 @@ router.post('/products', requireRole('superadmin'), upload.single('image'), asyn
   if (!name || !brand || !category || price === undefined || price === '') {
     return res.status(400).json({ error: 'Nombre, marca, categoría y precio son requeridos' })
   }
-  if (!CATEGORIES.has(category)) {
+  if (!(await getValidCategoryKeys()).has(category)) {
     return res.status(400).json({ error: 'Categoría inválida' })
   }
   if (!req.file) {
@@ -285,8 +276,11 @@ router.put('/products/:id', requireRole('superadmin'), upload.single('image'), a
         : product.specs,
   }
 
-  if (!patch.name || !patch.brand || !CATEGORIES.has(patch.category) || !patch.price) {
+  if (!patch.name || !patch.brand || !patch.price) {
     return res.status(400).json({ error: 'Nombre, marca, categoría y precio son requeridos' })
+  }
+  if (!(await getValidCategoryKeys()).has(patch.category)) {
+    return res.status(400).json({ error: 'Categoría inválida' })
   }
 
   try {

@@ -154,3 +154,37 @@ export async function apiDelete(path) {
   }
   return data
 }
+
+export async function apiPost(path, body) {
+  return apiJson(path, 'POST', body)
+}
+
+export async function apiPut(path, body) {
+  return apiJson(path, 'PUT', body)
+}
+
+async function apiJson(path, method, body) {
+  const headers = { 'Content-Type': 'application/json' }
+  const { token } = getSession()
+  if (token) headers.Authorization = `Bearer ${token}`
+
+  let res
+  try {
+    res = await fetch(path, { method, headers, body: JSON.stringify(body) })
+  } catch {
+    throw new ApiError('No se pudo conectar con el servidor', 'NETWORK')
+  }
+
+  const data = await res.json().catch(() => ({}))
+
+  if (res.status === 401) {
+    throw new ApiError('Sesión requerida', 'AUTH')
+  }
+  if (res.status === 403) {
+    throw new ApiError('No tenés permiso para esto', 'FORBIDDEN')
+  }
+  if (!res.ok) {
+    throw new ApiError(data.error || 'No se pudo guardar', 'ERROR')
+  }
+  return data
+}
