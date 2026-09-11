@@ -821,19 +821,160 @@ const PAYMENT_LABELS = {
 
 const PAYMENT_OPTIONS = ['all', 'web', 'efectivo', 'tarjeta', 'transferencia']
 
+function salePaymentLabel(order) {
+  return (order.payment && PAYMENT_LABELS[order.payment]) || 'Web (MP)'
+}
+
+function fullDate(value) {
+  return new Intl.DateTimeFormat('es-AR', {
+    dateStyle: 'long',
+    timeStyle: 'short',
+  }).format(new Date(value))
+}
+
+function idDoc(order) {
+  return [order.payer?.idType, order.payer?.idNumber].filter(Boolean).join(' ') || null
+}
+
+function SaleDetail({ order, onClose }) {
+  return (
+    <div className="product-overlay" role="dialog" aria-modal="true">
+      <div className="product-panel c-light sale-detail-panel">
+        <header className="panel-head">
+          <div>
+            <span className="dash-eyebrow">Detalle de venta</span>
+            <h2>Pedido #{shortId(order.id)}</h2>
+          </div>
+          <button type="button" className="x-btn" onClick={onClose} aria-label="Cerrar">
+            <IconCross />
+          </button>
+        </header>
+
+        <div className="detail-meta">
+          <StatusTag status={order.status} />
+          <span className={`payment-tag${order.source === 'web' && !order.payment ? ' web' : ''}`}>
+            {salePaymentLabel(order)}
+          </span>
+          {order.status === 'refunded' && order.returnedAt && (
+            <span className="quote-status cancelled">Devuelta · {shortDate(order.returnedAt)}</span>
+          )}
+          <em className="detail-date">{fullDate(order.createdAt)}</em>
+        </div>
+
+        {order.payer?.fullName && (
+          <div className="detail-block">
+            <h3 className="detail-title">Cliente</h3>
+            <div className="detail-grid">
+              <div>
+                <span className="detail-k">Nombre</span>
+                <strong>{order.payer.fullName}</strong>
+              </div>
+              {order.payer.email && (
+                <div>
+                  <span className="detail-k">Email</span>
+                  <strong>{order.payer.email}</strong>
+                </div>
+              )}
+              {idDoc(order) && (
+                <div>
+                  <span className="detail-k">Documento</span>
+                  <strong>{idDoc(order)}</strong>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        <div className="detail-block">
+          <h3 className="detail-title">Artículos</h3>
+          <ul className="detail-items">
+            {order.items.map((item) => (
+              <li key={item.productId}>
+                <span className="detail-item-name">
+                  <strong>{item.name}</strong>
+                  <em>
+                    {item.quantity} × {formatARS(item.unitPrice)}
+                  </em>
+                </span>
+                <span className="mono detail-item-total">{formatARS(item.unitPrice * item.quantity)}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="detail-block">
+          <h3 className="detail-title">Pago</h3>
+          <div className="detail-grid">
+            <div>
+              <span className="detail-k">Medio</span>
+              <strong>{salePaymentLabel(order)}</strong>
+            </div>
+            <div>
+              <span className="detail-k">Cupón</span>
+              <strong>{order.coupon || '—'}</strong>
+            </div>
+            {order.paymentId && (
+              <div>
+                <span className="detail-k">ID de pago (MP)</span>
+                <strong className="mono">{order.paymentId}</strong>
+              </div>
+            )}
+            {order.merchantOrderId && (
+              <div>
+                <span className="detail-k">Orden MP</span>
+                <strong className="mono">{order.merchantOrderId}</strong>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="ticket-totals detail-totals">
+          <div className="ticket-row">
+            <span>Subtotal</span>
+            <strong className="mono">{formatARS(order.subtotal)}</strong>
+          </div>
+          {Number(order.discount) > 0 && (
+            <div className="ticket-row">
+              <span>Descuento</span>
+              <strong className="mono">−{formatARS(order.discount)}</strong>
+            </div>
+          )}
+          <div className="ticket-row">
+            <span>Envío</span>
+            <strong className="mono">{Number(order.shippingCost) > 0 ? formatARS(order.shippingCost) : 'Gratis'}</strong>
+          </div>
+          <div className="ticket-row total">
+            <span>Total</span>
+            <strong className="mono">{formatARS(order.total)}</strong>
+          </div>
+        </div>
+
+        <footer className="panel-actions">
+          <button type="button" className="primary-btn" onClick={onClose}>
+            Cerrar
+          </button>
+        </footer>
+      </div>
+    </div>
+  )
+}
+
 function SalesScreen() {
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
-  const [params, setParams] = useState({ group: 'all', payment: 'all', q: '', page: 1 })
+  const [params, setParams] = useState({ group: 'all', payment: 'all', from: '', to: '', q: '', page: 1 })
   const [query, setQuery] = useState('')
   const [rechecking, setRechecking] = useState({})
   const [note, setNote] = useState('')
+  const [detail, setDetail] = useState(null)
 
   useEffect(() => {
     let alive = true
     const qs = new URLSearchParams({ page: String(params.page), limit: '11' })
     if (params.group !== 'all') qs.set('group', params.group)
     if (params.payment !== 'all') qs.set('payment', params.payment)
+    if (params.from) qs.set('from', params.from)
+    if (params.to) qs.set('to', params.to)
     if (params.q) qs.set('q', params.q)
     apiGet(`/api/admin/orders?${qs}`)
       .then((res) => {
@@ -851,9 +992,6 @@ function SalesScreen() {
     e.preventDefault()
     setParams((prev) => ({ ...prev, q: query.trim(), page: 1 }))
   }
-
-  const paymentLabel = (order) =>
-    (order.payment && PAYMENT_LABELS[order.payment]) || 'Web (MP)'
 
   const recheck = (order) => {
     setRechecking((m) => ({ ...m, [order.id]: true }))
@@ -931,19 +1069,41 @@ function SalesScreen() {
             aria-label="Buscar ventas"
           />
         </form>
-        <div className="dash-filter-field">
-          <label htmlFor="sales-payment-filter">Pago</label>
-          <select
-            id="sales-payment-filter"
-            value={params.payment}
-            onChange={(e) => setParams((prev) => ({ ...prev, payment: e.target.value, page: 1 }))}
-          >
-            {PAYMENT_OPTIONS.map((opt) => (
-              <option key={opt} value={opt}>
-                {opt === 'all' ? 'Todos los medios' : opt === 'web' ? 'Web (Mercado Pago)' : PAYMENT_LABELS[opt]}
-              </option>
-            ))}
-          </select>
+        <div className="dash-filters">
+          <div className="dash-filter-field">
+            <label htmlFor="sales-from">Desde</label>
+            <input
+              id="sales-from"
+              type="date"
+              value={params.from}
+              max={params.to || undefined}
+              onChange={(e) => setParams((prev) => ({ ...prev, from: e.target.value, page: 1 }))}
+            />
+          </div>
+          <div className="dash-filter-field">
+            <label htmlFor="sales-to">Hasta</label>
+            <input
+              id="sales-to"
+              type="date"
+              value={params.to}
+              min={params.from || undefined}
+              onChange={(e) => setParams((prev) => ({ ...prev, to: e.target.value, page: 1 }))}
+            />
+          </div>
+          <div className="dash-filter-field">
+            <label htmlFor="sales-payment-filter">Pago</label>
+            <select
+              id="sales-payment-filter"
+              value={params.payment}
+              onChange={(e) => setParams((prev) => ({ ...prev, payment: e.target.value, page: 1 }))}
+            >
+              {PAYMENT_OPTIONS.map((opt) => (
+                <option key={opt} value={opt}>
+                  {opt === 'all' ? 'Todos los medios' : opt === 'web' ? 'Web (Mercado Pago)' : PAYMENT_LABELS[opt]}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
         <span className="dash-count mono">{data.total} ventas</span>
       </div>
@@ -975,6 +1135,7 @@ function SalesScreen() {
               <th>Cupón</th>
               <th>Total</th>
               <th>Estado</th>
+              <th>Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -1002,7 +1163,7 @@ function SalesScreen() {
                 <td className="t-detail">{itemsSummary(order.items)}</td>
                 <td>
                   <span className={`payment-tag${order.source === 'web' && !order.payment ? ' web' : ''}`}>
-                    {paymentLabel(order)}
+                    {salePaymentLabel(order)}
                   </span>
                 </td>
                 <td className="mono t-coupon">
@@ -1022,6 +1183,11 @@ function SalesScreen() {
                       {rechecking[order.id] ? 'Verificando…' : 'Reintentar'}
                     </button>
                   )}
+                </td>
+                <td>
+                  <button type="button" className="view-btn" onClick={() => setDetail(order)}>
+                    Ver
+                  </button>
                 </td>
               </tr>
             ))}
@@ -1053,6 +1219,8 @@ function SalesScreen() {
           </button>
         </div>
       )}
+
+      {detail && <SaleDetail order={detail} onClose={() => setDetail(null)} />}
     </div>
   )
 }
@@ -1303,6 +1471,7 @@ function ReturnsScreen({ canManage }) {
   const [filter, setFilter] = useState('all')
   const [processing, setProcessing] = useState({})
   const [note, setNote] = useState('')
+  const [detail, setDetail] = useState(null)
 
   useEffect(() => {
     let alive = true
@@ -1400,7 +1569,7 @@ function ReturnsScreen({ canManage }) {
               <th>Detalle</th>
               <th>Total</th>
               <th>Estado</th>
-              {canManage && <th>Acciones</th>}
+              <th>Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -1423,9 +1592,12 @@ function ReturnsScreen({ canManage }) {
                 <td>
                   <StatusTag status={order.status} />
                 </td>
-                {canManage && (
-                  <td>
-                    {order.status === 'approved' && (
+                <td>
+                  <span className="row-actions">
+                    <button type="button" className="view-btn" onClick={() => setDetail(order)}>
+                      Ver
+                    </button>
+                    {canManage && order.status === 'approved' && (
                       <button
                         type="button"
                         className="row-btn"
@@ -1435,14 +1607,16 @@ function ReturnsScreen({ canManage }) {
                         {processing[order.id] ? 'Devolviendo…' : 'Devolver'}
                       </button>
                     )}
-                  </td>
-                )}
+                  </span>
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
         {filtered.length === 0 && <EmptyNote text="Sin ventas para mostrar." />}
       </div>
+
+      {detail && <SaleDetail order={detail} onClose={() => setDetail(null)} />}
     </div>
   )
 }

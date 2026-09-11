@@ -129,6 +129,15 @@ router.get('/orders', async (req, res) => {
       if (req.query.payment === 'web') contextFilter.source = 'web'
       else contextFilter.payment = req.query.payment
     }
+    const fromDate = req.query.from ? new Date(`${req.query.from}T00:00:00`) : null
+    const toDate = req.query.to ? new Date(`${req.query.to}T23:59:59.999`) : null
+    const hasFrom = fromDate && !Number.isNaN(fromDate.getTime())
+    const hasTo = toDate && !Number.isNaN(toDate.getTime())
+    if (hasFrom || hasTo) {
+      contextFilter.createdAt = {}
+      if (hasFrom) contextFilter.createdAt.$gte = fromDate
+      if (hasTo) contextFilter.createdAt.$lte = toDate
+    }
     const q = String(req.query.q || '').trim()
     if (q) {
       const regex = new RegExp(escapeRegex(q), 'i')
