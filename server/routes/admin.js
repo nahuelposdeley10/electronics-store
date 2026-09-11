@@ -5,7 +5,7 @@ import { Product } from '../models/Product.js'
 import { Quote } from '../models/Quote.js'
 import { requireAuth, requireRole } from '../middleware/auth.js'
 import { uploadToCloudinary } from '../services/cloudinary.js'
-import { parsePagination, buildProductSearchFilter } from '../lib/catalog-query.js'
+import { parsePagination, buildProductSearchFilter, escapeRegex } from '../lib/catalog-query.js'
 import { getValidCategoryKeys } from '../lib/catalog-meta.js'
 
 const router = express.Router()
@@ -99,16 +99,65 @@ router.get('/overview', async (req, res) => {
   }
 })
 
+const VALID_ORDER_STATUSES = new Set([
+  'approved',
+  'pending',
+  'in_process',
+  'rejected',
+  'cancelled',
+  'refunded',
+  'charged_back',
+])
+
 router.get('/orders', async (req, res) => {
   try {
-    const filter = req.query.status ? { status: req.query.status } : {}
-    const orders = await Order.find(filter)
-      .sort({ createdAt: -1 })
-      .limit(200)
-      .lean()
+    const { page, limit } = parsePagination(req.query)
 
-    return res.json(
-      orders.map((o) => ({
+    const statusFilter = {}
+    if (req.query.status && VALID_ORDER_STATUSES.has(req.query.status)) {
+      statusFilter.status = req.query.status
+    } else if (req.query.group === 'approved') {
+      statusFilter.status = 'approved'
+    } else if (req.query.group === 'pending') {
+      statusFilter.status = { $in: [...PENDING_STATUSES] }
+    } else if (req.query.group === 'rejected') {
+      statusFilter.status = { $in: [...REJECTED_STATUSES] }
+    }
+
+    const contextFilter = {}
+    if (req.query.payment && req.query.payment !== 'all') {
+      if (req.query.payment === 'web') contextFilter.source = 'web'
+      else contextFilter.payment = req.query.payment
+    }
+    const q = String(req.query.q || '').trim()
+    if (q) {
+      const regex = new RegExp(escapeRegex(q), 'i')
+      const or = [
+        { payerName: regex },
+        { payerSurname: regex },
+        { payerEmail: regex },
+        { 'items.name': regex },
+      ]
+      if (/^[0-9a-f]{1,12}$/i.test(q)) {
+        or.push({ $expr: { $regexMatch: { input: { $toString: '$_id' }, regex: `${q.toLowerCase()}$` } } })
+      }
+      contextFilter.$or = or
+    }
+
+    const [total, approved, pending, rejected, orders] = await Promise.all([
+      Order.countDocuments(contextFilter),
+      Order.countDocuments({ ...contextFilter, status: 'approved' }),
+      Order.countDocuments({ ...contextFilter, status: { $in: [...PENDING_STATUSES] } }),
+      Order.countDocuments({ ...contextFilter, status: { $in: [...REJECTED_STATUSES] } }),
+      Order.find({ ...contextFilter, ...statusFilter })
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean(),
+    ])
+
+    return res.json({
+      items: orders.map((o) => ({
         id: o._id,
         status: o.status,
         coupon: o.coupon,
@@ -131,7 +180,12 @@ router.get('/orders', async (req, res) => {
           idNumber: o.payerIdNumber,
         },
       })),
-    )
+      page,
+      limit,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+      counts: { all: total, approved, pending, rejected },
+    })
   } catch (error) {
     console.error('Orders error:', error)
     return res.status(500).json({ error: 'No se pudo leer las ventas' })

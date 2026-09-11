@@ -3600,6 +3600,59 @@
   margin-bottom: 12px;
 }
 
+.dash-filter-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.dash-filter-field label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--gal-ink-faint);
+}
+
+.dash-filter-field select {
+  border: 1px solid var(--gal-line-strong);
+  border-radius: 3px;
+  background: var(--gal-white);
+  color: var(--gal-ink);
+  padding: 8px 10px;
+  font-size: 13px;
+}
+
+.dash-filter-field select:focus {
+  outline: 0;
+  border-color: var(--gal-facade);
+}
+
+.dash-count {
+  font-size: 12px;
+  color: var(--gal-ink-faint);
+  white-space: nowrap;
+}
+
+.payment-tag {
+  display: inline-flex;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--gal-ink-soft);
+  border: 1px solid var(--gal-line-strong);
+  border-radius: 3px;
+  background: var(--gal-white);
+  padding: 4px 8px;
+  white-space: nowrap;
+}
+
+.payment-tag.web {
+  color: var(--gal-ink-soft);
+  border-color: var(--gal-fluo-line);
+  background: var(--gal-fluo);
+}
+
 .pos-item {
   display: flex;
   align-items: center;

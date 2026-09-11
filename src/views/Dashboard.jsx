@@ -43,7 +43,6 @@ const CATEGORY_LABELS = {
 }
 
 const PENDING_GROUP = new Set(['pending', 'in_process'])
-const REJECTED_GROUP = new Set(['rejected', 'cancelled', 'charged_back'])
 
 function shortDate(value) {
   return new Intl.DateTimeFormat('es-AR', {
@@ -814,18 +813,31 @@ function ProductsScreen({ canManage }) {
   )
 }
 
+const PAYMENT_LABELS = {
+  efectivo: 'Efectivo',
+  tarjeta: 'Tarjeta',
+  transferencia: 'Transferencia',
+}
+
+const PAYMENT_OPTIONS = ['all', 'web', 'efectivo', 'tarjeta', 'transferencia']
+
 function SalesScreen() {
-  const [orders, setOrders] = useState(null)
+  const [data, setData] = useState(null)
   const [error, setError] = useState('')
-  const [filter, setFilter] = useState('all')
+  const [params, setParams] = useState({ group: 'all', payment: 'all', q: '', page: 1 })
+  const [query, setQuery] = useState('')
   const [rechecking, setRechecking] = useState({})
   const [note, setNote] = useState('')
 
   useEffect(() => {
     let alive = true
-    apiGet('/api/admin/orders')
-      .then((data) => {
-        if (alive) setOrders(data)
+    const qs = new URLSearchParams({ page: String(params.page), limit: '25' })
+    if (params.group !== 'all') qs.set('group', params.group)
+    if (params.payment !== 'all') qs.set('payment', params.payment)
+    if (params.q) qs.set('q', params.q)
+    apiGet(`/api/admin/orders?${qs}`)
+      .then((res) => {
+        if (alive) setData(res)
       })
       .catch((err) => {
         if (alive) setError(err.message)
@@ -833,78 +845,66 @@ function SalesScreen() {
     return () => {
       alive = false
     }
-  }, [])
+  }, [params])
 
-  const recheck = async (order) => {
-    setRechecking((m) => ({ ...m, [order.id]: true }))
-    try {
-      const data = await apiConfirmOrder(order.id)
-      const changed = data.status !== order.status
-      setOrders((list) =>
-        list.map((o) =>
-          o.id === data.id
-            ? { ...o, status: data.status, paymentId: data.paymentId, payer: data.payer }
-            : o,
-        ),
-      )
-      setNote(
-        changed
-          ? `Pedido #${shortId(order.id)} verificado: ${order.status} → ${data.status}`
-          : `Pedido #${shortId(order.id)} verificado: sigue ${data.status}`,
-      )
-    } catch (err) {
-      setNote(err.message)
-    } finally {
-      setRechecking((m) => ({ ...m, [order.id]: false }))
-    }
+  const submitSearch = (e) => {
+    e.preventDefault()
+    setParams((prev) => ({ ...prev, q: query.trim(), page: 1 }))
   }
 
-  useOrderEvents((data) => {
-    setOrders((list) =>
-      list
-        ? list.map((o) =>
-            o.id === data.id
-              ? { ...o, status: data.status, paymentId: data.paymentId, payer: data.payer || o.payer }
-              : o,
-          )
-        : list,
+  const paymentLabel = (order) =>
+    (order.payment && PAYMENT_LABELS[order.payment]) || 'Web (MP)'
+
+  const recheck = (order) => {
+    setRechecking((m) => ({ ...m, [order.id]: true }))
+    apiConfirmOrder(order.id)
+      .then((updated) => {
+        const changed = updated.status !== order.status
+        setData((d) =>
+          d
+            ? {
+                ...d,
+                items: d.items.map((o) =>
+                  o.id === updated.id
+                    ? { ...o, status: updated.status, paymentId: updated.paymentId, payer: updated.payer }
+                    : o,
+                ),
+              }
+            : d,
+        )
+        setNote(
+          changed
+            ? `Pedido #${shortId(order.id)} verificado: ${order.status} → ${updated.status}`
+            : `Pedido #${shortId(order.id)} verificado: sigue ${updated.status}`,
+        )
+      })
+      .catch((err) => setNote(err.message))
+      .finally(() => setRechecking((m) => ({ ...m, [order.id]: false })))
+  }
+
+  useOrderEvents((event) => {
+    setData((d) =>
+      d
+        ? {
+            ...d,
+            items: d.items.map((o) =>
+              o.id === event.id
+                ? { ...o, status: event.status, paymentId: event.paymentId, payer: event.payer || o.payer }
+                : o,
+            ),
+          }
+        : d,
     )
   })
 
-  const groups = useMemo(() => {
-    const counts = {
-      all: 0,
-      approved: 0,
-      pending: 0,
-      rejected: 0,
-    }
-    const list = orders || []
-    for (const order of list) {
-      counts.all += 1
-      if (order.status === 'approved') counts.approved += 1
-      if (PENDING_GROUP.has(order.status)) counts.pending += 1
-      if (REJECTED_GROUP.has(order.status)) counts.rejected += 1
-    }
-    return counts
-  }, [orders])
-
-  const filtered = useMemo(() => {
-    const list = orders || []
-    if (filter === 'all') return list
-    if (filter === 'pending') return list.filter((o) => PENDING_GROUP.has(o.status))
-    if (filter === 'rejected')
-      return list.filter((o) => REJECTED_GROUP.has(o.status))
-    return list.filter((o) => o.status === filter)
-  }, [orders, filter])
-
-  if (!orders && !error) return <ScreenLoading label="Contando las ventas…" />
+  if (!data && !error) return <ScreenLoading label="Contando las ventas…" />
   if (error) return <ScreenBlocked message={error} />
 
   const chips = [
-    { id: 'all', label: 'Todas', count: groups.all },
-    { id: 'approved', label: 'Aprobadas', count: groups.approved },
-    { id: 'pending', label: 'Pendientes', count: groups.pending },
-    { id: 'rejected', label: 'Rechazadas', count: groups.rejected },
+    { id: 'all', label: 'Todas', count: data.counts.all },
+    { id: 'approved', label: 'Aprobadas', count: data.counts.approved },
+    { id: 'pending', label: 'Pendientes', count: data.counts.pending },
+    { id: 'rejected', label: 'Rechazadas', count: data.counts.rejected },
   ]
 
   return (
@@ -915,18 +915,46 @@ function SalesScreen() {
           <h1>Ventas</h1>
         </div>
         <div className="dash-head-today">
-          <strong className="mono">{groups.all}</strong>
+          <strong className="mono">{data.counts.all}</strong>
           <em>pedidos registrados</em>
         </div>
       </header>
+
+      <div className="dash-toolbar">
+        <form className="dash-search" role="search" onSubmit={submitSearch}>
+          <IconSearch />
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Buscar por nombre, email o código de pedido…"
+            aria-label="Buscar ventas"
+          />
+        </form>
+        <div className="dash-filter-field">
+          <label htmlFor="sales-payment-filter">Pago</label>
+          <select
+            id="sales-payment-filter"
+            value={params.payment}
+            onChange={(e) => setParams((prev) => ({ ...prev, payment: e.target.value, page: 1 }))}
+          >
+            {PAYMENT_OPTIONS.map((opt) => (
+              <option key={opt} value={opt}>
+                {opt === 'all' ? 'Todos los medios' : opt === 'web' ? 'Web (Mercado Pago)' : PAYMENT_LABELS[opt]}
+              </option>
+            ))}
+          </select>
+        </div>
+        <span className="dash-count mono">{data.total} ventas</span>
+      </div>
 
       <div className="sale-chips" role="group" aria-label="Filtrar por estado">
         {chips.map((chip) => (
           <button
             key={chip.id}
             type="button"
-            className={`sale-chip mono${filter === chip.id ? ' active' : ''}`}
-            onClick={() => setFilter(chip.id)}
+            className={`sale-chip mono${params.group === chip.id ? ' active' : ''}`}
+            onClick={() => setParams((prev) => ({ ...prev, group: chip.id, page: 1 }))}
           >
             {chip.label} <span>{chip.count}</span>
           </button>
@@ -943,13 +971,14 @@ function SalesScreen() {
               <th>Fecha</th>
               <th>Cliente</th>
               <th>Detalle</th>
+              <th>Pago</th>
               <th>Cupón</th>
               <th>Total</th>
               <th>Estado</th>
             </tr>
           </thead>
           <tbody>
-            {filtered.map((order) => (
+            {data.items.map((order) => (
               <tr key={order.id}>
                 <td className="mono t-id">#{shortId(order.id)}</td>
                 <td className="t-date">{shortDate(order.createdAt)}</td>
@@ -971,6 +1000,11 @@ function SalesScreen() {
                   )}
                 </td>
                 <td className="t-detail">{itemsSummary(order.items)}</td>
+                <td>
+                  <span className={`payment-tag${order.source === 'web' && !order.payment ? ' web' : ''}`}>
+                    {paymentLabel(order)}
+                  </span>
+                </td>
                 <td className="mono t-coupon">
                   {order.coupon || <span className="t-dim">—</span>}
                 </td>
@@ -993,10 +1027,32 @@ function SalesScreen() {
             ))}
           </tbody>
         </table>
-        {filtered.length === 0 && (
-          <EmptyNote text="Aún no hay ventas con ese estado." />
+        {data.items.length === 0 && (
+          <EmptyNote text="Aún no hay ventas con esos filtros." />
         )}
       </div>
+
+      {data.totalPages > 1 && (
+        <div className="dash-pager">
+          <button
+            type="button"
+            disabled={data.page <= 1}
+            onClick={() => setParams((prev) => ({ ...prev, page: prev.page - 1 }))}
+          >
+            ← Anterior
+          </button>
+          <span className="mono">
+            página {data.page} de {data.totalPages}
+          </span>
+          <button
+            type="button"
+            disabled={data.page >= data.totalPages}
+            onClick={() => setParams((prev) => ({ ...prev, page: prev.page + 1 }))}
+          >
+            Siguiente →
+          </button>
+        </div>
+      )}
     </div>
   )
 }
@@ -1250,9 +1306,9 @@ function ReturnsScreen({ canManage }) {
 
   useEffect(() => {
     let alive = true
-    apiGet('/api/admin/orders')
+    apiGet('/api/admin/orders?limit=100')
       .then((data) => {
-        if (alive) setOrders(data)
+        if (alive) setOrders(data.items || [])
       })
       .catch((err) => {
         if (alive) setError(err.message)
