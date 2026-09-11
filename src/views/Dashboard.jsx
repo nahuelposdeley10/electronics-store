@@ -831,7 +831,7 @@ function SalesScreen() {
 
   useEffect(() => {
     let alive = true
-    const qs = new URLSearchParams({ page: String(params.page), limit: '25' })
+    const qs = new URLSearchParams({ page: String(params.page), limit: '11' })
     if (params.group !== 'all') qs.set('group', params.group)
     if (params.payment !== 'all') qs.set('payment', params.payment)
     if (params.q) qs.set('q', params.q)
@@ -1032,7 +1032,7 @@ function SalesScreen() {
         )}
       </div>
 
-      {data.total > 0 && (
+      {data.total > 11 && (
         <div className="dash-pager">
           <button
             type="button"
