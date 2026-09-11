@@ -27,6 +27,9 @@ const orderSchema = new mongoose.Schema(
     payerIdType: { type: String, default: null },
     payerIdNumber: { type: String, default: null },
     demo: { type: Boolean, default: false },
+    source: { type: String, default: 'web' },
+    payment: { type: String, default: null },
+    returnedAt: { type: Date, default: null },
   },
   { timestamps: true },
 )

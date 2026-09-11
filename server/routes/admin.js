@@ -2,6 +2,7 @@ import express from 'express'
 import multer from 'multer'
 import { Order } from '../models/Order.js'
 import { Product } from '../models/Product.js'
+import { Quote } from '../models/Quote.js'
 import { requireAuth, requireRole } from '../middleware/auth.js'
 import { uploadToCloudinary } from '../services/cloudinary.js'
 import { parsePagination, buildProductSearchFilter } from '../lib/catalog-query.js'
@@ -118,6 +119,9 @@ router.get('/orders', async (req, res) => {
         paymentId: o.paymentId,
         items: o.items,
         createdAt: o.createdAt,
+        source: o.source,
+        payment: o.payment,
+        returnedAt: o.returnedAt,
         payer: {
           email: o.payerEmail,
           name: o.payerName,
@@ -321,6 +325,248 @@ router.delete('/products/:id', requireRole('superadmin'), async (req, res) => {
   } catch (error) {
     console.error('Products delete error:', error)
     return res.status(500).json({ error: 'No se pudo eliminar el producto' })
+  }
+})
+
+const POS_PAYMENTS = new Set(['efectivo', 'tarjeta', 'transferencia'])
+
+router.post('/pos', async (req, res) => {
+  const { items, discount = 0, customer, payment } = req.body || {}
+
+  const rows = (items || [])
+    .map((row) => ({
+      id: Number(row?.id),
+      quantity: Math.floor(Number(row?.quantity)),
+    }))
+    .filter((row) => Number.isFinite(row.id) && row.quantity > 0)
+
+  if (rows.length === 0) {
+    return res.status(400).json({ error: 'Agregá al menos un producto a la venta' })
+  }
+
+  try {
+    const ids = [...new Set(rows.map((row) => row.id))]
+    const dbProducts = await Product.find({ id: { $in: ids } }).lean()
+    const byId = new Map(dbProducts.map((p) => [p.id, p]))
+
+    const lines = []
+    for (const row of rows) {
+      const product = byId.get(row.id)
+      if (!product) {
+        return res.status(400).json({ error: 'Algún producto ya no existe' })
+      }
+      if (product.stock < row.quantity) {
+        return res.status(400).json({ error: `Stock insuficiente de "${product.name}" (queda ${product.stock})` })
+      }
+      lines.push({ product, quantity: row.quantity })
+    }
+
+    const subtotal = lines.reduce((sum, line) => sum + line.product.price * line.quantity, 0)
+    const parsedDiscount = Math.max(0, Math.min(Number(discount) || 0, subtotal))
+    const total = subtotal - parsedDiscount
+
+    const order = await Order.create({
+      items: lines.map((line) => ({
+        productId: line.product.id,
+        name: line.product.name,
+        unitPrice: line.product.price,
+        quantity: line.quantity,
+      })),
+      status: 'approved',
+      source: 'pos',
+      payment: POS_PAYMENTS.has(payment) ? payment : 'efectivo',
+      subtotal,
+      discount: parsedDiscount,
+      shippingCost: 0,
+      total,
+      payerName: customer?.name || null,
+    })
+
+    for (const line of lines) {
+      await Product.updateOne({ _id: line.product._id }, { $inc: { stock: -line.quantity } })
+    }
+
+    return res.json({
+      id: order._id,
+      status: order.status,
+      source: order.source,
+      payment: order.payment,
+      total: order.total,
+      createdAt: order.createdAt,
+    })
+  } catch (error) {
+    console.error('POS error:', error)
+    return res.status(500).json({ error: 'No se pudo registrar la venta' })
+  }
+})
+
+router.post('/orders/:id/return', requireRole('superadmin'), async (req, res) => {
+  try {
+    const order = await Order.findById(req.params.id)
+    if (!order) {
+      return res.status(404).json({ error: 'Venta no encontrada' })
+    }
+    if (order.status !== 'approved') {
+      return res.status(400).json({ error: 'Solo se pueden devolver ventas aprobadas' })
+    }
+
+    order.status = 'refunded'
+    order.returnedAt = new Date()
+    await order.save()
+
+    if (order.source === 'pos') {
+      for (const item of order.items) {
+        await Product.updateOne({ id: item.productId }, { $inc: { stock: item.quantity } })
+      }
+    }
+
+    return res.json({ id: order._id, status: order.status, returnedAt: order.returnedAt })
+  } catch (error) {
+    console.error('Return error:', error)
+    return res.status(500).json({ error: 'No se pudo registrar la devolución' })
+  }
+})
+
+const QUOTE_STATUSES = new Set(['draft', 'confirmed', 'cancelled'])
+
+router.get('/quotes', async (req, res) => {
+  try {
+    const { page, limit } = parsePagination(req.query)
+    const filter = {}
+    if (req.query.status && QUOTE_STATUSES.has(req.query.status)) {
+      filter.status = req.query.status
+    }
+    if (req.query.q) {
+      const safe = String(req.query.q).trim()
+      if (safe) {
+        const regex = new RegExp(safe.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i')
+        filter.$or = [{ 'customer.name': regex }, { 'items.name': regex }, { note: regex }]
+      }
+    }
+
+    const [total, quotes] = await Promise.all([
+      Quote.countDocuments(filter),
+      Quote.find(filter).sort({ number: -1 }).skip((page - 1) * limit).limit(limit).lean(),
+    ])
+
+    return res.json({
+      items: quotes,
+      page,
+      limit,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+    })
+  } catch (error) {
+    console.error('Quotes error:', error)
+    return res.status(500).json({ error: 'No se pudieron leer los presupuestos' })
+  }
+})
+
+router.post('/quotes', async (req, res) => {
+  const { items, customer, discount = 0, note } = req.body || {}
+
+  const rows = (items || [])
+    .map((row) => ({
+      id: Number(row?.id),
+      quantity: Math.floor(Number(row?.quantity)),
+    }))
+    .filter((row) => Number.isFinite(row.id) && row.quantity > 0)
+
+  if (rows.length === 0) {
+    return res.status(400).json({ error: 'Agregá al menos un producto al presupuesto' })
+  }
+
+  try {
+    const ids = [...new Set(rows.map((row) => row.id))]
+    const dbProducts = await Product.find({ id: { $in: ids } }).lean()
+    const byId = new Map(dbProducts.map((p) => [p.id, p]))
+
+    const lineItems = rows
+      .map((row) => ({ product: byId.get(row.id), quantity: row.quantity }))
+      .filter((line) => line.product)
+
+    if (lineItems.length === 0) {
+      return res.status(400).json({ error: 'Algún producto ya no existe' })
+    }
+
+    const subtotal = lineItems.reduce((sum, line) => sum + line.product.price * line.quantity, 0)
+    const parsedDiscount = Math.max(0, Math.min(Number(discount) || 0, subtotal))
+    const total = subtotal - parsedDiscount
+
+    const last = await Quote.findOne().sort({ number: -1 }).select('number').lean()
+    const number = (last?.number || 1000) + 1
+
+    const quote = await Quote.create({
+      number,
+      status: 'draft',
+      customer: {
+        name: String(customer?.name || '').trim(),
+        phone: String(customer?.phone || '').trim(),
+        email: String(customer?.email || '').trim(),
+      },
+      items: lineItems.map((line) => ({
+        productId: line.product.id,
+        name: line.product.name,
+        unitPrice: line.product.price,
+        quantity: line.quantity,
+      })),
+      subtotal,
+      discount: parsedDiscount,
+      total,
+      note: String(note || '').trim(),
+    })
+
+    return res.json(quote)
+  } catch (error) {
+    console.error('Quotes create error:', error)
+    return res.status(500).json({ error: 'No se pudo crear el presupuesto' })
+  }
+})
+
+router.put('/quotes/:id', async (req, res) => {
+  const { status, customer, discount, note } = req.body || {}
+  try {
+    const quote = await Quote.findById(req.params.id)
+    if (!quote) {
+      return res.status(404).json({ error: 'Presupuesto no encontrado' })
+    }
+
+    if (status !== undefined) {
+      if (!QUOTE_STATUSES.has(status)) {
+        return res.status(400).json({ error: 'Estado inválido' })
+      }
+      quote.status = status
+    }
+    if (customer !== undefined) {
+      quote.customer.name = String(customer.name ?? quote.customer.name ?? '')
+      quote.customer.phone = String(customer.phone ?? quote.customer.phone ?? '')
+      quote.customer.email = String(customer.email ?? quote.customer.email ?? '')
+    }
+    if (note !== undefined) quote.note = String(note).trim()
+    if (discount !== undefined) {
+      const parsed = Math.max(0, Math.min(Number(discount) || 0, quote.subtotal))
+      quote.discount = parsed
+      quote.total = quote.subtotal - parsed
+    }
+
+    await quote.save()
+    return res.json(quote)
+  } catch (error) {
+    console.error('Quotes update error:', error)
+    return res.status(500).json({ error: 'No se pudo actualizar el presupuesto' })
+  }
+})
+
+router.delete('/quotes/:id', requireRole('superadmin'), async (req, res) => {
+  try {
+    const quote = await Quote.findByIdAndDelete(req.params.id)
+    if (!quote) {
+      return res.status(404).json({ error: 'Presupuesto no encontrado' })
+    }
+    return res.json({ ok: true, id: quote._id })
+  } catch (error) {
+    console.error('Quotes delete error:', error)
+    return res.status(500).json({ error: 'No se pudo eliminar el presupuesto' })
   }
 })
 

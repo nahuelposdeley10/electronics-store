@@ -14,6 +14,7 @@ import {
   IconEdit,
   IconLock,
   IconLogout,
+  IconMinus,
   IconPlus,
   IconRefresh,
   IconSearch,
@@ -172,6 +173,7 @@ export default function Dashboard({ onExit }) {
       id: 'products',
       label: 'Productos',
       icon: IconBox,
+      prefix: 'product-',
       children: [
         { id: 'products', label: 'Productos' },
         ...(user?.role === 'superadmin'
@@ -184,7 +186,18 @@ export default function Dashboard({ onExit }) {
           : []),
       ],
     },
-    { id: 'sales', label: 'Ventas', icon: IconCard },
+    {
+      id: 'sales',
+      label: 'Ventas',
+      icon: IconCard,
+      prefix: 'sales-',
+      children: [
+        { id: 'sales-pos', label: 'Nueva venta / POS' },
+        { id: 'sales-history', label: 'Historial de ventas' },
+        { id: 'sales-returns', label: 'Devoluciones' },
+        { id: 'sales-quotes', label: 'Presupuestos' },
+      ],
+    },
   ]
 
   return (
@@ -203,14 +216,14 @@ export default function Dashboard({ onExit }) {
         <nav className="dash-nav" aria-label="Panel de administración">
           {NAV.map((item) => {
             const active = item.children
-              ? screen === 'products' || screen.startsWith('product-')
+              ? screen === item.id || screen.startsWith(item.prefix || '')
               : screen === item.id
             return (
               <div key={item.id} className="dash-nav-group">
                 <button
                   type="button"
                   className={`dash-nav-item${active ? ' active' : ''}`}
-                  onClick={() => changeScreen(item.id)}
+                  onClick={() => changeScreen(item.children ? item.children[0].id : item.id)}
                 >
                   <item.icon />
                   {item.label}
@@ -321,7 +334,16 @@ export default function Dashboard({ onExit }) {
         {gate === 'ready' && screen === 'product-import' && (
           <ImportScreen canManage={user?.role === 'superadmin'} />
         )}
-        {gate === 'ready' && screen === 'sales' && <SalesScreen />}
+        {gate === 'ready' && screen === 'sales-pos' && (
+          <PosScreen canManage={user?.role === 'superadmin'} />
+        )}
+        {gate === 'ready' && screen === 'sales-history' && <SalesScreen />}
+        {gate === 'ready' && screen === 'sales-returns' && (
+          <ReturnsScreen canManage={user?.role === 'superadmin'} />
+        )}
+        {gate === 'ready' && screen === 'sales-quotes' && (
+          <QuotesScreen canManage={user?.role === 'superadmin'} />
+        )}
       </main>
     </div>
   )
@@ -461,7 +483,7 @@ function OverviewScreen({ data, onView }) {
         <section className="dash-card">
           <div className="dash-card-head">
             <h2>Movimientos recientes</h2>
-            <button type="button" onClick={() => onView('sales')}>
+            <button type="button" onClick={() => onView('sales-history')}>
               Ver ventas
             </button>
           </div>
@@ -984,6 +1006,755 @@ function itemsSummary(items) {
   if (names.length === 0) return '—'
   if (names.length <= 2) return names.join(' · ')
   return `${names.slice(0, 2).join(' · ')} +${names.length - 2} más`
+}
+
+const QUOTE_STATUS_LABELS = { draft: 'Borrador', confirmed: 'Confirmado', cancelled: 'Cancelado' }
+
+function PosScreen({ canManage }) {
+  const [products, setProducts] = useState([])
+  const [query, setQuery] = useState('')
+  const [lines, setLines] = useState([])
+  const [discount, setDiscount] = useState('')
+  const [customer, setCustomer] = useState('')
+  const [payment, setPayment] = useState('efectivo')
+  const [saving, setSaving] = useState(false)
+  const [note, setNote] = useState('')
+  const [lastSale, setLastSale] = useState(null)
+
+  useEffect(() => {
+    let alive = true
+    apiGet('/api/admin/products?limit=100')
+      .then((res) => {
+        if (alive) setProducts(res.items || [])
+      })
+      .catch((err) => {
+        if (alive) setNote(err.message)
+      })
+    return () => {
+      alive = false
+    }
+  }, [])
+
+  const filtered = useMemo(
+    () => {
+      const q = query.trim().toLowerCase()
+      if (!q) return products
+      return products.filter((p) => `${p.name} ${p.brand} ${p.category}`.toLowerCase().includes(q))
+    },
+    [products, query],
+  )
+
+  const add = (product) => {
+    if (product.stock <= 0) return
+    setLines((prev) => {
+      const existing = prev.find((l) => l.product.id === product.id)
+      if (existing) {
+        if (existing.quantity >= product.stock) return prev
+        return prev.map((l) => (l.product.id === product.id ? { ...l, quantity: l.quantity + 1 } : l))
+      }
+      return [...prev, { product, quantity: 1 }]
+    })
+  }
+
+  const changeQty = (id, delta) => {
+    setLines((prev) =>
+      prev.flatMap((l) => {
+        if (l.product.id !== id) return [l]
+        const next = l.quantity + delta
+        if (next <= 0) return []
+        if (next > l.product.stock) return [l]
+        return [{ ...l, quantity: next }]
+      }),
+    )
+  }
+
+  const removeLine = (id) => setLines((prev) => prev.filter((l) => l.product.id !== id))
+
+  const subtotal = lines.reduce((sum, l) => sum + l.product.price * l.quantity, 0)
+  const discountNum = Math.min(Math.max(Number(discount) || 0, 0), subtotal)
+  const total = subtotal - discountNum
+
+  const checkout = () => {
+    if (lines.length === 0 || saving) return
+    setSaving(true)
+    setNote('')
+    apiPost('/api/admin/pos', {
+      items: lines.map((l) => ({ id: l.product.id, quantity: l.quantity })),
+      discount: discountNum,
+      customer: customer.trim() ? { name: customer.trim() } : {},
+      payment,
+    })
+      .then((sale) => {
+        setProducts((list) =>
+          list.map((p) => {
+            const line = lines.find((l) => l.product.id === p.id)
+            return line ? { ...p, stock: p.stock - line.quantity } : p
+          }),
+        )
+        setLastSale(sale)
+        setLines([])
+        setDiscount('')
+        setCustomer('')
+      })
+      .catch((err) => setNote(err.message))
+      .finally(() => setSaving(false))
+  }
+
+  return (
+    <div className="dash-screen">
+      <header className="dash-head">
+        <div>
+          <span className="dash-eyebrow">Caja · mostrador</span>
+          <h1>Nueva venta / POS</h1>
+        </div>
+        <div className="dash-head-today">
+          <strong className="mono">{lines.length}</strong>
+          <em>líneas</em>
+        </div>
+      </header>
+
+      {lastSale && (
+        <p className="sale-note sale-note-ok">
+          <IconCheck /> Venta #{shortId(lastSale.id)} registrada por {formatARS(lastSale.total)} — {lastSale.payment}
+        </p>
+      )}
+      {note && <p className="sale-note">{note}</p>}
+
+      <div className="pos-layout">
+        <section className="pos-catalog">
+          <div className="dash-search pos-search">
+            <IconSearch />
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Buscá en el catálogo…"
+              aria-label="Buscar productos"
+            />
+          </div>
+          <div className="pos-list">
+            {filtered.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                className="pos-item"
+                disabled={!canManage || p.stock <= 0}
+                onClick={() => add(p)}
+              >
+                <img className="prod-thumb" src={p.image} alt="" loading="lazy" />
+                <span className="pos-item-meta">
+                  <strong>{p.name}</strong>
+                  <em>{p.brand}</em>
+                </span>
+                <span className="pos-item-price mono">{formatARS(p.price)}</span>
+                <span className={`pos-item-stock mono${p.stock <= 0 ? ' out' : ''}`}>
+                  {p.stock <= 0 ? 'agotado' : `${p.stock} u.`}
+                </span>
+                <IconPlus />
+              </button>
+            ))}
+            {filtered.length === 0 && <EmptyNote text="Sin productos para esa búsqueda." />}
+          </div>
+        </section>
+
+        <section className="pos-ticket">
+          <h2 className="ticket-title">Ticket</h2>
+          <ul className="ticket-lines">
+            {lines.map((l) => (
+              <li key={l.product.id} className="ticket-line">
+                <span className="ticket-name">
+                  <strong>{l.product.name}</strong>
+                  <em>{formatARS(l.product.price)} c/u</em>
+                </span>
+                <span className="qty-controls">
+                  <button type="button" onClick={() => changeQty(l.product.id, -1)} aria-label="Quitar uno">
+                    <IconMinus />
+                  </button>
+                  <span className="mono">{l.quantity}</span>
+                  <button type="button" onClick={() => changeQty(l.product.id, 1)} aria-label="Sumar uno">
+                    <IconPlus />
+                  </button>
+                </span>
+                <span className="ticket-line-total mono">{formatARS(l.product.price * l.quantity)}</span>
+                <button type="button" className="row-btn row-btn-danger" onClick={() => removeLine(l.product.id)} aria-label="Quitar línea">
+                  <IconTrash />
+                </button>
+              </li>
+            ))}
+            {lines.length === 0 && <li className="ticket-empty mono">El ticket está vacío</li>}
+          </ul>
+
+          <div className="ticket-totals">
+            <div className="ticket-row">
+              <span>Subtotal</span>
+              <strong className="mono">{formatARS(subtotal)}</strong>
+            </div>
+            <div className="ticket-row">
+              <span>Descuento</span>
+              <input
+                className="price-input mono"
+                type="number"
+                min="0"
+                step="1"
+                value={discount}
+                onChange={(e) => setDiscount(e.target.value)}
+                aria-label="Descuento"
+                placeholder="$ 0"
+              />
+            </div>
+            <div className="ticket-row total">
+              <span>Total</span>
+              <strong className="mono">{formatARS(total)}</strong>
+            </div>
+          </div>
+
+          <div className="pay-box">
+            <label className="pf-field">
+              <span>Cliente (opcional)</span>
+              <input
+                type="text"
+                value={customer}
+                onChange={(e) => setCustomer(e.target.value)}
+                placeholder="Nombre del cliente"
+              />
+            </label>
+            <label className="pf-field">
+              <span>Pago</span>
+              <select value={payment} onChange={(e) => setPayment(e.target.value)}>
+                <option value="efectivo">Efectivo</option>
+                <option value="tarjeta">Tarjeta</option>
+                <option value="transferencia">Transferencia</option>
+              </select>
+            </label>
+            <button
+              type="button"
+              className="primary-btn pay-btn"
+              disabled={!canManage || lines.length === 0 || saving}
+              onClick={checkout}
+            >
+              {saving ? 'Cobrando…' : `Cobrar ${formatARS(total)}`}
+            </button>
+          </div>
+        </section>
+      </div>
+    </div>
+  )
+}
+
+function ReturnsScreen({ canManage }) {
+  const [orders, setOrders] = useState(null)
+  const [error, setError] = useState('')
+  const [filter, setFilter] = useState('all')
+  const [processing, setProcessing] = useState({})
+  const [note, setNote] = useState('')
+
+  useEffect(() => {
+    let alive = true
+    apiGet('/api/admin/orders')
+      .then((data) => {
+        if (alive) setOrders(data)
+      })
+      .catch((err) => {
+        if (alive) setError(err.message)
+      })
+    return () => {
+      alive = false
+    }
+  }, [])
+
+  const groups = useMemo(
+    () => {
+      const list = orders || []
+      return {
+        all: list.length,
+        approved: list.filter((o) => o.status === 'approved').length,
+        refunded: list.filter((o) => o.status === 'refunded').length,
+      }
+    },
+    [orders],
+  )
+
+  const filtered = useMemo(
+    () => {
+      const list = orders || []
+      if (filter === 'approved') return list.filter((o) => o.status === 'approved')
+      if (filter === 'refunded') return list.filter((o) => o.status === 'refunded')
+      return list
+    },
+    [orders, filter],
+  )
+
+  const doReturn = (order) => {
+    if (!window.confirm(`¿Registrar la devolución de "#${shortId(order.id)}"? Saldrá ${formatARS(order.total)} del stock de caja.`)) return
+    setProcessing((m) => ({ ...m, [order.id]: true }))
+    setNote('')
+    apiPost(`/api/admin/orders/${order.id}/return`, {})
+      .then((data) => {
+        setOrders((list) => list.map((o) => (o.id === order.id ? { ...o, status: data.status, returnedAt: data.returnedAt } : o)))
+        setNote(`Devolución de "#${shortId(order.id)}" registrada.`)
+      })
+      .catch((err) => setNote(err.message))
+      .finally(() => setProcessing((m) => ({ ...m, [order.id]: false })))
+  }
+
+  if (!orders && !error) return <ScreenLoading label="Leyendo devoluciones…" />
+  if (error) return <ScreenBlocked message={error} />
+
+  const chips = [
+    { id: 'all', label: 'Todas', count: groups.all },
+    { id: 'approved', label: 'Aprobadas', count: groups.approved },
+    { id: 'refunded', label: 'Devueltas', count: groups.refunded },
+  ]
+
+  return (
+    <div className="dash-screen">
+      <header className="dash-head">
+        <div>
+          <span className="dash-eyebrow">Libro de caja</span>
+          <h1>Devoluciones</h1>
+        </div>
+        <div className="dash-head-today">
+          <strong className="mono">{groups.refunded}</strong>
+          <em>devueltas</em>
+        </div>
+      </header>
+
+      <div className="sale-chips" role="group" aria-label="Filtrar devoluciones">
+        {chips.map((chip) => (
+          <button
+            key={chip.id}
+            type="button"
+            className={`sale-chip mono${filter === chip.id ? ' active' : ''}`}
+            onClick={() => setFilter(chip.id)}
+          >
+            {chip.label} <span>{chip.count}</span>
+          </button>
+        ))}
+      </div>
+
+      {note && <p className="sale-note">{note}</p>}
+
+      <div className="table-wrap">
+        <table className="dash-table">
+          <thead>
+            <tr>
+              <th>Venta</th>
+              <th>Fecha</th>
+              <th>Cliente</th>
+              <th>Detalle</th>
+              <th>Total</th>
+              <th>Estado</th>
+              {canManage && <th>Acciones</th>}
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map((order) => (
+              <tr key={order.id}>
+                <td className="mono t-id">#{shortId(order.id)}</td>
+                <td className="t-date">{shortDate(order.createdAt)}</td>
+                <td className="t-payer">
+                  {order.payer?.fullName ? (
+                    <>
+                      <strong>{order.payer.fullName}</strong>
+                      {order.payer.email && <span className="t-dim">{order.payer.email}</span>}
+                    </>
+                  ) : (
+                    <span className="t-dim">—</span>
+                  )}
+                </td>
+                <td className="t-detail">{itemsSummary(order.items)}</td>
+                <td className="mono t-num t-money">{formatARS(order.total)}</td>
+                <td>
+                  <StatusTag status={order.status} />
+                </td>
+                {canManage && (
+                  <td>
+                    {order.status === 'approved' && (
+                      <button
+                        type="button"
+                        className="row-btn"
+                        onClick={() => doReturn(order)}
+                        disabled={processing[order.id]}
+                      >
+                        {processing[order.id] ? 'Devolviendo…' : 'Devolver'}
+                      </button>
+                    )}
+                  </td>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {filtered.length === 0 && <EmptyNote text="Sin ventas para mostrar." />}
+      </div>
+    </div>
+  )
+}
+
+function QuotesScreen({ canManage }) {
+  const [data, setData] = useState(null)
+  const [error, setError] = useState('')
+  const [note, setNote] = useState('')
+  const [formOpen, setFormOpen] = useState(false)
+  const [params, setParams] = useState({ status: 'all', q: '', page: 1 })
+  const [query, setQuery] = useState('')
+
+  useEffect(() => {
+    let alive = true
+    const qs = new URLSearchParams({ page: String(params.page), limit: '10' })
+    if (params.status !== 'all') qs.set('status', params.status)
+    if (params.q) qs.set('q', params.q)
+    apiGet(`/api/admin/quotes?${qs}`)
+      .then((res) => {
+        if (alive) setData(res)
+      })
+      .catch((err) => {
+        if (alive) setError(err.message)
+      })
+    return () => {
+      alive = false
+    }
+  }, [params])
+
+  const submitSearch = (e) => {
+    e.preventDefault()
+    setParams((prev) => ({ ...prev, q: query.trim(), page: 1 }))
+  }
+
+  const updateStatus = (quote, status) => {
+    apiPut(`/api/admin/quotes/${quote._id}`, { status })
+      .then((updated) => {
+        setData((d) => ({ ...d, items: d.items.map((q) => (q._id === updated._id ? updated : q)) }))
+        setNote(`Presupuesto #${quote.number} ${status === 'confirmed' ? 'confirmado' : 'cancelado'}.`)
+      })
+      .catch((err) => setNote(err.message))
+  }
+
+  const deleteQuote = (quote) => {
+    if (!window.confirm(`¿Eliminar el presupuesto #${quote.number}?`)) return
+    apiDelete(`/api/admin/quotes/${quote._id}`)
+      .then(() => {
+        setData((d) => ({ ...d, items: d.items.filter((q) => q._id !== quote._id), total: d.total - 1 }))
+        setNote(`Presupuesto #${quote.number} eliminado.`)
+      })
+      .catch((err) => setNote(err.message))
+  }
+
+  if (!data && !error) return <ScreenLoading label="Leyendo presupuestos…" />
+  if (error) return <ScreenBlocked message={error} />
+
+  const chips = [
+    { id: 'all', label: 'Todos', count: data.total },
+    { id: 'draft', label: 'Borradores', count: data.items.filter((q) => q.status === 'draft').length },
+    { id: 'confirmed', label: 'Confirmados', count: data.items.filter((q) => q.status === 'confirmed').length },
+    { id: 'cancelled', label: 'Cancelados', count: data.items.filter((q) => q.status === 'cancelled').length },
+  ]
+
+  return (
+    <div className="dash-screen">
+      <header className="dash-head">
+        <div>
+          <span className="dash-eyebrow">Cotización a medida</span>
+          <h1>Presupuestos</h1>
+        </div>
+        <button type="button" className="primary-btn" onClick={() => setFormOpen(true)} disabled={!canManage}>
+          <IconPlus /> Nuevo presupuesto
+        </button>
+      </header>
+
+      <div className="dash-toolbar">
+        <form className="dash-search" role="search" onSubmit={submitSearch}>
+          <IconSearch />
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Buscá por cliente, producto o nota…"
+            aria-label="Buscar presupuestos"
+          />
+        </form>
+        <span className="dash-count mono">{data.total} presupuestos</span>
+      </div>
+
+      <div className="sale-chips" role="group" aria-label="Filtrar presupuestos">
+        {chips.map((chip) => (
+          <button
+            key={chip.id}
+            type="button"
+            className={`sale-chip mono${params.status === chip.id ? ' active' : ''}`}
+            onClick={() => setParams((prev) => ({ ...prev, status: chip.id, page: 1 }))}
+          >
+            {chip.label} <span>{chip.count}</span>
+          </button>
+        ))}
+      </div>
+
+      {note && <p className="sale-note">{note}</p>}
+
+      <div className="table-wrap">
+        <table className="dash-table">
+          <thead>
+            <tr>
+              <th>Nº</th>
+              <th>Cliente</th>
+              <th>Detalle</th>
+              <th>Total</th>
+              <th>Estado</th>
+              <th>Fecha</th>
+              {canManage && <th>Acciones</th>}
+            </tr>
+          </thead>
+          <tbody>
+            {data.items.map((quote) => (
+              <tr key={quote._id}>
+                <td className="mono t-id">#{quote.number}</td>
+                <td className="t-payer">
+                  {quote.customer?.name ? (
+                    <>
+                      <strong>{quote.customer.name}</strong>
+                      {(quote.customer.phone || quote.customer.email) && (
+                        <span className="t-dim">{quote.customer.phone || quote.customer.email}</span>
+                      )}
+                      {quote.note && <span className="t-dim">{quote.note}</span>}
+                    </>
+                  ) : (
+                    <span className="t-dim">—</span>
+                  )}
+                </td>
+                <td className="t-detail">{itemsSummary(quote.items)}</td>
+                <td className="mono t-num t-money">{formatARS(quote.total)}</td>
+                <td>
+                  <span className={`quote-status ${quote.status}`}>{QUOTE_STATUS_LABELS[quote.status] || quote.status}</span>
+                </td>
+                <td className="t-date">{shortDate(quote.createdAt)}</td>
+                {canManage && (
+                  <td>
+                    <span className="row-actions">
+                      {quote.status === 'draft' && (
+                        <>
+                          <button type="button" className="row-btn" onClick={() => updateStatus(quote, 'confirmed')}>
+                            Confirmar
+                          </button>
+                          <button type="button" className="row-btn" onClick={() => updateStatus(quote, 'cancelled')}>
+                            Cancelar
+                          </button>
+                        </>
+                      )}
+                      <button
+                        type="button"
+                        className="row-btn row-btn-danger"
+                        onClick={() => deleteQuote(quote)}
+                        aria-label="Eliminar presupuesto"
+                      >
+                        <IconTrash />
+                      </button>
+                    </span>
+                  </td>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {data.items.length === 0 && <EmptyNote text="Sin presupuestos para mostrar." />}
+      </div>
+
+      {data.totalPages > 1 && (
+        <div className="dash-pager">
+          <button
+            type="button"
+            disabled={params.page <= 1}
+            onClick={() => setParams((prev) => ({ ...prev, page: prev.page - 1 }))}
+          >
+            ← Anterior
+          </button>
+          <span className="mono">
+            página {params.page} de {data.totalPages}
+          </span>
+          <button
+            type="button"
+            disabled={params.page >= data.totalPages}
+            onClick={() => setParams((prev) => ({ ...prev, page: prev.page + 1 }))}
+          >
+            Siguiente →
+          </button>
+        </div>
+      )}
+
+      {formOpen && <QuoteForm onClose={() => setFormOpen(false)} onSaved={() => setParams((prev) => ({ ...prev, page: 1 }))} />}
+    </div>
+  )
+}
+
+function QuoteForm({ onClose, onSaved }) {
+  const [products, setProducts] = useState([])
+  const [form, setForm] = useState({
+    productId: '',
+    qty: '1',
+    customerName: '',
+    customerPhone: '',
+    customerEmail: '',
+    discount: '',
+    note: '',
+  })
+  const [lines, setLines] = useState([])
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    let alive = true
+    apiGet('/api/admin/products?limit=100')
+      .then((res) => {
+        if (alive) setProducts(res.items || [])
+      })
+      .catch(() => {})
+    return () => {
+      alive = false
+    }
+  }, [])
+
+  const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }))
+
+  const addLine = () => {
+    const product = products.find((p) => String(p.id) === String(form.productId))
+    const qty = Math.max(1, Math.floor(Number(form.qty) || 1))
+    if (!product) return
+    setLines((prev) => {
+      const existing = prev.find((l) => l.product.id === product.id)
+      if (existing) return prev.map((l) => (l.product.id === product.id ? { ...l, quantity: l.quantity + qty } : l))
+      return [...prev, { product, quantity: qty }]
+    })
+  }
+
+  const removeLine = (id) => setLines((prev) => prev.filter((l) => l.product.id !== id))
+
+  const subtotal = lines.reduce((sum, l) => sum + l.product.price * l.quantity, 0)
+  const discountNum = Math.min(Math.max(Number(form.discount) || 0, 0), subtotal)
+  const total = subtotal - discountNum
+
+  const submit = (e) => {
+    e.preventDefault()
+    if (lines.length === 0 || saving) return
+    setSaving(true)
+    setError('')
+    apiPost('/api/admin/quotes', {
+      items: lines.map((l) => ({ id: l.product.id, quantity: l.quantity })),
+      discount: discountNum,
+      customer: {
+        name: form.customerName,
+        phone: form.customerPhone,
+        email: form.customerEmail,
+      },
+      note: form.note,
+    })
+      .then(() => {
+        onSaved()
+        onClose()
+      })
+      .catch((err) => {
+        setError(err.message)
+        setSaving(false)
+      })
+  }
+
+  return (
+    <div className="product-overlay" role="dialog" aria-modal="true">
+      <div className="product-panel c-light">
+        <header className="panel-head">
+          <div>
+            <span className="dash-eyebrow">Cotización</span>
+            <h2>Nuevo presupuesto</h2>
+          </div>
+          <button type="button" className="x-btn" onClick={onClose} aria-label="Cerrar">
+            <IconCross />
+          </button>
+        </header>
+
+        <form onSubmit={submit}>
+          <div className="pf-row">
+            <label className="pf-field pf-grow">
+              <span>Producto</span>
+              <select value={form.productId} onChange={set('productId')}>
+                <option value="">Seleccioná…</option>
+                {products.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} — {formatARS(p.price)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="pf-field">
+              <span>Cantidad</span>
+              <input type="number" min="1" value={form.qty} onChange={set('qty')} />
+            </label>
+            <button type="button" className="row-btn" style={{ alignSelf: 'flex-end' }} onClick={addLine}>
+              <IconPlus /> Agregar
+            </button>
+          </div>
+
+          <ul className="ticket-lines">
+            {lines.map((l) => (
+              <li key={l.product.id} className="ticket-line">
+                <span className="ticket-name">
+                  <strong>{l.product.name}</strong>
+                  <em>
+                    {l.quantity} × {formatARS(l.product.price)}
+                  </em>
+                </span>
+                <span className="ticket-line-total mono">{formatARS(l.product.price * l.quantity)}</span>
+                <button type="button" className="row-btn row-btn-danger" onClick={() => removeLine(l.product.id)} aria-label="Quitar línea">
+                  <IconTrash />
+                </button>
+              </li>
+            ))}
+            {lines.length === 0 && <li className="ticket-empty mono">Agregá productos al presupuesto</li>}
+          </ul>
+
+          <div className="pf-row">
+            <label className="pf-field pf-grow">
+              <span>Cliente</span>
+              <input type="text" value={form.customerName} onChange={set('customerName')} placeholder="Nombre y apellido" />
+            </label>
+            <label className="pf-field">
+              <span>Teléfono</span>
+              <input type="text" value={form.customerPhone} onChange={set('customerPhone')} placeholder="Ej. 351 555-1234" />
+            </label>
+          </div>
+          <div className="pf-row">
+            <label className="pf-field pf-grow">
+              <span>Email</span>
+              <input type="email" value={form.customerEmail} onChange={set('customerEmail')} placeholder="cliente@mail.com" />
+            </label>
+            <label className="pf-field">
+              <span>Descuento ($)</span>
+              <input className="mono" type="number" min="0" value={form.discount} onChange={set('discount')} placeholder="0" />
+            </label>
+          </div>
+          <label className="pf-field">
+            <span>Nota</span>
+            <input type="text" value={form.note} onChange={set('note')} placeholder="Ej. válido por 7 días, incluye instalación" />
+          </label>
+
+          <div className="panel-summary">
+            <div>
+              <span>Total</span>
+              <strong className="mono">{formatARS(total)}</strong>
+            </div>
+          </div>
+
+          {error && <p className="panel-error">{error}</p>}
+
+          <footer className="panel-actions">
+            <button type="button" className="secondary-btn" onClick={onClose}>
+              Cancelar
+            </button>
+            <button type="submit" className="primary-btn" disabled={saving || lines.length === 0}>
+              {saving ? 'Guardando…' : 'Guardar presupuesto'}
+            </button>
+          </footer>
+        </form>
+      </div>
+    </div>
+  )
 }
 
 function ProductForm({ product, onClose, onSaved }) {

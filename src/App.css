@@ -3576,3 +3576,263 @@
   font-size: 13px;
   color: var(--gal-ink-soft);
 }
+
+/* ---- POS : Nueva venta ---- */
+
+.pos-layout {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 16px;
+  align-items: start;
+}
+
+.pos-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 620px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.pos-search {
+  max-width: none;
+  margin-bottom: 12px;
+}
+
+.pos-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  padding: 8px 10px;
+  border: 1px solid var(--gal-line);
+  border-radius: 5px;
+  background: var(--gal-white);
+  cursor: pointer;
+  color: var(--gal-ink);
+}
+
+.pos-item:hover:not(:disabled) {
+  border-color: var(--gal-facade);
+}
+
+.pos-item:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pos-item .prod-thumb {
+  width: 34px;
+  height: 34px;
+}
+
+.pos-item-meta {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.pos-item-meta strong {
+  font-size: 13.5px;
+  color: var(--gal-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pos-item-meta em {
+  font-size: 11.5px;
+  color: var(--gal-ink-faint);
+}
+
+.pos-item-price {
+  font-size: 13px;
+  color: var(--gal-facade);
+  white-space: nowrap;
+}
+
+.pos-item-stock {
+  font-size: 11.5px;
+  color: var(--gal-ink-faint);
+  min-width: 54px;
+  text-align: right;
+}
+
+.pos-item-stock.out {
+  color: var(--gal-facade);
+  font-weight: 700;
+}
+
+.pos-ticket {
+  border: 1px solid var(--gal-line);
+  border-radius: 5px;
+  background: var(--gal-panel);
+  padding: 14px;
+  position: sticky;
+  top: 14px;
+}
+
+.ticket-title {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--gal-ink-faint);
+  margin: 0 0 10px;
+}
+
+.ticket-lines {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.ticket-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--gal-line);
+  border-radius: 4px;
+  background: var(--gal-white);
+}
+
+.ticket-name {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.ticket-name strong {
+  font-size: 13px;
+  color: var(--gal-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ticket-name em {
+  font-size: 11px;
+  color: var(--gal-ink-faint);
+}
+
+.qty-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.qty-controls button {
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--gal-line-strong);
+  background: var(--gal-white);
+  border-radius: 3px;
+  color: var(--gal-ink);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.qty-controls button:hover {
+  border-color: var(--gal-facade);
+}
+
+.ticket-line-total {
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+
+.ticket-empty {
+  font-size: 12.5px;
+  color: var(--gal-ink-faint);
+  padding: 12px;
+  text-align: center;
+}
+
+.ticket-totals {
+  margin: 14px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ticket-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--gal-ink);
+}
+
+.ticket-row .price-input {
+  width: 110px;
+}
+
+.ticket-row.total {
+  border-top: 1px dashed var(--gal-line-strong);
+  padding-top: 8px;
+  font-size: 15px;
+}
+
+.pay-box {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pay-btn {
+  width: 100%;
+}
+
+.sale-note-ok {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #2e7d32;
+}
+
+.sale-note-ok svg {
+  width: 14px;
+  height: 14px;
+}
+
+.quote-status {
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 3px 9px;
+  border: 1px solid var(--gal-line-strong);
+  border-radius: 20px;
+  white-space: nowrap;
+  color: var(--gal-ink-soft);
+}
+
+.quote-status.draft {
+  color: var(--gal-ink-faint);
+  background: var(--gal-panel);
+}
+
+.quote-status.confirmed {
+  color: #2e7d32;
+  border-color: #b6dcb8;
+  background: #eef7ef;
+}
+
+.quote-status.cancelled {
+  color: var(--gal-facade);
+  border-color: #eeb5b1;
+  background: #fdf0ef;
+}
