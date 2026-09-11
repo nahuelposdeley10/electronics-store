@@ -286,36 +286,66 @@
 .hero-bay {
   position: relative;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: clamp(480px, 68vh, 680px);
   border: 1px solid var(--gal-line-strong);
-  background: var(--gal-white);
+  background: var(--gal-black);
+  color: var(--gal-white);
 }
 
-.bay-light {
+.bay-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 70% center;
+}
+
+.bay-shade {
   position: absolute;
   inset: 0;
   pointer-events: none;
   background:
-    radial-gradient(60% 120% at 15% 0%, rgba(255, 232, 160, 0.5), transparent 55%),
-    radial-gradient(120% 90% at 100% 100%, rgba(199, 202, 208, 0.5), transparent 60%);
+    linear-gradient(90deg, rgba(16, 18, 9, 0.92) 0%, rgba(16, 18, 9, 0.78) 46%, rgba(16, 18, 9, 0.32) 100%),
+    linear-gradient(0deg, rgba(16, 18, 9, 0.72), transparent 32%);
+}
+
+.bay-inner,
+.bay-stats {
+  position: relative;
+  width: 100%;
+  max-width: min(1240px, 100%);
+  margin: 0 auto;
+  padding-left: clamp(24px, 5vw, 72px);
+  padding-right: clamp(24px, 5vw, 72px);
+  box-sizing: border-box;
 }
 
 .bay-inner {
-  position: relative;
-  display: grid;
-  grid-template-columns: 1.1fr 1fr;
-  gap: 16px;
-  padding: clamp(32px, 5vw, 72px);
-  align-items: center;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding-top: clamp(40px, 6vw, 80px);
+  padding-bottom: clamp(40px, 6vw, 80px);
 }
 
 .bay-copy h1 {
   font-size: clamp(44px, 6vw, 76px);
   line-height: 0.95;
-  color: var(--gal-ink);
+  color: var(--gal-white);
 }
 
 .h1-tail {
-  color: var(--gal-facade);
+  display: inline-block;
+  background: var(--gal-tag);
+  color: var(--gal-tag-ink);
+  padding: 0.02em 0.18em;
+  border-radius: 2px;
+  box-shadow: inset 0 -3px 0 rgba(26, 23, 4, 0.28);
 }
 
 .bay-eyebrow {
@@ -326,21 +356,22 @@
   font-size: 11px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--gal-ink-faint);
+  color: rgba(251, 252, 250, 0.66);
   margin-bottom: 18px;
 }
 
 .bay-eyebrow svg {
   width: 13px;
   height: 13px;
-  color: var(--gal-facade);
+  fill: var(--gal-tag);
+  color: var(--gal-tag);
 }
 
 .bay-lead {
   font-size: 17px;
   line-height: 1.6;
-  color: var(--gal-ink-soft);
-  max-width: 44ch;
+  color: rgba(251, 252, 250, 0.8);
+  max-width: 46ch;
   margin-top: 20px;
   text-wrap: pretty;
 }
@@ -399,134 +430,55 @@
   align-items: center;
   gap: 8px;
   font-size: 13px;
-  color: var(--gal-ink-soft);
+  color: rgba(251, 252, 250, 0.78);
 }
 
 .bay-trust svg {
   width: 15px;
   height: 15px;
-  color: var(--gal-facade);
+  color: var(--gal-tag);
 }
 
-/* ---------------- Shelf (recinto / estantería) ---------------- */
+/* ---------------- Raya de datos del hero ---------------- */
 
-.bay-shelf {
-  position: relative;
-  padding-top: 26px;
-}
-
-.shelf-light {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  color: var(--gal-tag-ink);
-  margin: 0 auto 14px;
-}
-
-.shelf-light svg {
-  width: 15px;
-  height: 15px;
-  fill: var(--gal-tag);
-}
-
-.shelf-cases {
+.bay-stats {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
-  align-items: end;
-  padding: 0 8px;
-}
-
-.shelf-item {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  background: #fff;
-  border: 1px solid var(--gal-line);
+  grid-template-columns: repeat(3, auto);
+  justify-content: start;
+  margin-bottom: clamp(24px, 4vw, 56px);
+  border: 1px solid rgba(251, 252, 250, 0.16);
   border-radius: 4px;
-  padding: 12px 10px 14px;
-  transition: transform 0.18s var(--ease-out), box-shadow 0.18s;
-  text-align: left;
+  background: rgba(16, 18, 9, 0.52);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  overflow: hidden;
 }
 
-.shelf-item:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-float);
-}
-
-.shelf-num {
-  position: absolute;
-  top: 8px;
-  left: 10px;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  color: var(--gal-ink-faint);
-}
-
-.shelf-img {
-  width: 100%;
-  aspect-ratio: 1;
-  object-fit: cover;
-  border-radius: 3px;
-  margin-bottom: 10px;
-  background: var(--gal-panel-2);
-}
-
-.shelf-tag {
-  position: relative;
-  display: inline-flex;
-  flex-direction: column;
-  background: var(--gal-tag);
-  color: var(--gal-tag-ink);
-  padding: 5px 7px 6px;
-  border-radius: 2px;
-  font-family: var(--font-mono);
-  font-weight: 700;
-  align-self: flex-start;
-}
-
-.shelf-tag::after {
-  content: '';
-  position: absolute;
-  left: 90px;
-  top: 6px;
-  height: 1px;
-  width: 18px;
-  background: rgba(26, 23, 4, 0.4);
-  transform: rotate(-14deg);
-}
-
-.shelf-tag strong {
-  font-size: 13px;
-  line-height: 1.2;
-}
-
-.shelf-plank {
-  height: 10px;
-  margin: 0 6px;
-  background: linear-gradient(180deg, #c9b17f, #9a7f4f);
-  border-radius: 2px;
-  box-shadow: 0 6px 0 -2px #7d6c42;
-}
-
-.shelf-note {
-  margin-top: 16px;
+.bay-stat {
   display: flex;
-  align-items: center;
-  gap: 7px;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--gal-ink-faint);
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 18px;
 }
 
-.shelf-note svg {
-  width: 13px;
-  height: 13px;
-  fill: var(--gal-facade);
-  color: var(--gal-facade);
+.bay-stat + .bay-stat {
+  border-left: 1px solid rgba(251, 252, 250, 0.16);
+}
+
+.bay-stat strong {
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--gal-white);
+  white-space: nowrap;
+}
+
+.bay-stat span {
+  font-size: 10.5px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: rgba(251, 252, 250, 0.55);
+  white-space: nowrap;
 }
 
 .anchor {
@@ -2009,14 +1961,6 @@
 }
 
 @media (max-width: 900px) {
-  .bay-inner {
-    grid-template-columns: 1fr;
-  }
-
-  .shelf-cases {
-    grid-template-columns: repeat(4, 1fr);
-  }
-
   .gaming-bay {
     grid-template-columns: 1fr;
   }
@@ -2124,8 +2068,17 @@
     width: 100%;
   }
 
-  .shelf-cases {
-    grid-template-columns: repeat(2, 1fr);
+.bay-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .bay-stat + .bay-stat {
+    border-left: 0;
+    border-top: 1px solid rgba(251, 252, 250, 0.16);
+  }
+
+  .bay-bg {
+    object-position: 62% center;
   }
 
   .cart-item {
@@ -2175,12 +2128,8 @@
     overflow-x: auto;
   }
 
-  .product-grid {
+.product-grid {
     grid-template-columns: repeat(1, 1fr);
-  }
-
-  .shelf-cases {
-    grid-template-columns: repeat(2, 1fr);
   }
 
   .footer-grid {

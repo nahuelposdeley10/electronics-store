@@ -109,8 +109,6 @@ export default function Home({ onView }) {
     return newArrivals.length ? newArrivals : products.slice(2, 6)
   }, [products])
 
-  const shelf = topDeals.slice(0, 4)
-
   const subscribe = (e) => {
     e.preventDefault()
     if (email) {
@@ -123,9 +121,21 @@ export default function Home({ onView }) {
   return (
     <main className="home">
       <section className="hero-bay">
-        <div className="bay-light" aria-hidden="true" />
+        <img
+          className="bay-bg"
+          src="https://images.unsplash.com/photo-1531297484001-80022131f5a1?auto=format&fit=crop&w=2000&q=80"
+          alt=""
+          aria-hidden="true"
+          loading="eager"
+          fetchPriority="high"
+        />
+        <div className="bay-shade" aria-hidden="true" />
         <div className="bay-inner">
           <div className="bay-copy">
+            <span className="bay-eyebrow">
+              <IconBolt />
+              Galería de tecnología · Villa Urquiza
+            </span>
             <h1>
               Tecnología de galería.<br />
               <span className="h1-tail">Precio de mostrador.</span>
@@ -153,32 +163,19 @@ export default function Home({ onView }) {
               </ul>
             </div>
           </div>
-
-          <div className="bay-shelf">
-            <div className="shelf-light" aria-hidden="true">
-              <IconBolt />
-            </div>
-            <div className="shelf-cases">
-              {shelf.map((product) => (
-                <button
-                  key={product.id}
-                  type="button"
-                  className="shelf-item"
-                  onClick={() => onView(product)}
-                  aria-label={`Ver ${product.name}`}
-                >
-                  <span className="shelf-num">0{product.id}</span>
-                  <img className="shelf-img" src={product.image} alt="" loading="lazy" />
-                  <span className="shelf-tag">
-                    <strong>{formatARS(product.price)}</strong>
-                  </span>
-                </button>
-              ))}
-            </div>
-            <div className="shelf-plank" aria-hidden="true" />
-            <div className="shelf-note" aria-hidden="true">
-              <IconBolt /> Ofertas de la semana · verificadas por el técnico
-            </div>
+        </div>
+        <div className="bay-stats" aria-hidden="true">
+          <div className="bay-stat">
+            <strong>Hasta 12 cuotas</strong>
+            <span>sin interés</span>
+          </div>
+          <div className="bay-stat">
+            <strong>Envío gratis</strong>
+            <span>en compras +$300.000</span>
+          </div>
+          <div className="bay-stat">
+            <strong>Garantía oficial</strong>
+            <span>y servicio técnico propio</span>
           </div>
         </div>
       </section>
