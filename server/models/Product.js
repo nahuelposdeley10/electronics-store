@@ -12,6 +12,7 @@ const productSchema = new mongoose.Schema(
     freeShipping: { type: Boolean, default: false },
     rating: { type: Number, default: 0 },
     stock: { type: Number, default: 0 },
+    minStock: { type: Number, default: 0 },
     badge: { type: String, default: null },
     image: { type: String, default: '' },
     description: { type: String, default: '' },

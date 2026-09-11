@@ -268,3 +268,12 @@ export function IconRefresh(props) {
     </svg>
   )
 }
+
+export function IconInventory(props) {
+  return (
+    <svg {...S} {...props}>
+      <path d="M3 7.5 12 3l9 4.5v9L12 21l-9-4.5v-9Z" />
+      <path d="M3 7.5 12 12l9-4.5M12 12v9" />
+    </svg>
+  )
+}

@@ -12,6 +12,7 @@ import {
   IconClock,
   IconCross,
   IconEdit,
+  IconInventory,
   IconLock,
   IconLogout,
   IconMinus,
@@ -197,6 +198,19 @@ export default function Dashboard({ onExit }) {
         { id: 'sales-quotes', label: 'Presupuestos' },
       ],
     },
+    {
+      id: 'inventory',
+      label: 'Inventario',
+      icon: IconInventory,
+      prefix: 'stock-',
+      children: [
+        { id: 'stock-overview', label: 'Stock' },
+        { id: 'stock-movements', label: 'Movimientos' },
+        { id: 'stock-adjustments', label: 'Ajustes' },
+        { id: 'stock-min', label: 'Stock mínimo' },
+        { id: 'stock-physical', label: 'Inventario físico' },
+      ],
+    },
   ]
 
   return (
@@ -342,6 +356,19 @@ export default function Dashboard({ onExit }) {
         )}
         {gate === 'ready' && screen === 'sales-quotes' && (
           <QuotesScreen canManage={user?.role === 'superadmin'} />
+        )}
+        {gate === 'ready' && screen === 'stock-overview' && (
+          <StockScreen canManage={user?.role === 'superadmin'} />
+        )}
+        {gate === 'ready' && screen === 'stock-movements' && <MovementsScreen />}
+        {gate === 'ready' && screen === 'stock-adjustments' && (
+          <AdjustmentsScreen canManage={user?.role === 'superadmin'} />
+        )}
+        {gate === 'ready' && screen === 'stock-min' && (
+          <MinStockScreen canManage={user?.role === 'superadmin'} />
+        )}
+        {gate === 'ready' && screen === 'stock-physical' && (
+          <PhysicalInventoryScreen canManage={user?.role === 'superadmin'} />
         )}
       </main>
     </div>
@@ -2210,6 +2237,769 @@ function ProductForm({ product, onClose, onSaved }) {
           </div>
         </form>
       </div>
+    </div>
+  )
+}
+
+const MOVEMENT_TYPE_LABELS = {
+  venta: 'Venta',
+  compra: 'Compra',
+  ajuste: 'Ajuste',
+  devolucion: 'Devolución',
+  inventario: 'Inventario físico',
+}
+
+const STOCK_STATUS_LABELS = {
+  ok: 'OK',
+  bajo: 'Bajo',
+  sin: 'Sin stock',
+}
+
+const MOVEMENT_CHIPS = [
+  { id: '', label: 'Todos' },
+  { id: 'venta', label: 'Ventas' },
+  { id: 'compra', label: 'Compras' },
+  { id: 'ajuste', label: 'Ajustes' },
+  { id: 'devolucion', label: 'Devoluciones' },
+  { id: 'inventario', label: 'Inventario físico' },
+]
+
+function StockBadge({ status }) {
+  return (
+    <span className={`stock-badge ${status}`}>{STOCK_STATUS_LABELS[status] || status}</span>
+  )
+}
+
+function StockScreen() {
+  const [data, setData] = useState(null)
+  const [error, setError] = useState('')
+  const [query, setQuery] = useState('')
+  const [params, setParams] = useState({ q: '', low: '', page: 1 })
+
+  useEffect(() => {
+    let alive = true
+    const paramsString = new URLSearchParams({
+      q: params.q,
+      low: params.low,
+      page: String(params.page),
+      limit: '50',
+    })
+    apiGet(`/api/admin/inventory/stock?${paramsString}`)
+      .then((res) => {
+        if (!alive) return
+        if (res.items.length === 0 && res.page > 1) {
+          setParams((prev) => ({ ...prev, page: res.totalPages || 1 }))
+          return
+        }
+        setData(res)
+      })
+      .catch((err) => {
+        if (alive) setError(err.message)
+      })
+    return () => {
+      alive = false
+    }
+  }, [params])
+
+  const submitSearch = (e) => {
+    e.preventDefault()
+    setParams((prev) => ({ ...prev, q: query.trim(), page: 1 }))
+  }
+
+  const toggleLow = () => {
+    setParams((prev) => ({ ...prev, low: prev.low ? '' : '1', page: 1 }))
+  }
+
+  if (!data && !error) return <ScreenLoading label="Contando el stock…" />
+  if (error) return <ScreenBlocked message={error} />
+
+  const lowCount = data.items.filter((p) => p.status !== 'ok').length
+
+  return (
+    <div className="dash-screen">
+      <header className="dash-head">
+        <div>
+          <span className="dash-eyebrow">Inventario</span>
+          <h1>Stock actual</h1>
+        </div>
+        <div className="dash-head-today">
+          <strong className="mono">{data.total}</strong>
+          <em>productos en el depósito</em>
+        </div>
+      </header>
+
+      <div className="dash-toolbar">
+        <form className="dash-search" role="search" onSubmit={submitSearch}>
+          <IconSearch />
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Buscá producto, marca o categoría…"
+            aria-label="Buscar en stock"
+          />
+        </form>
+        <span className="count-tag mono">
+          {data.items.length} de {data.total}
+        </span>
+        <div className="sale-chips">
+          <button
+            type="button"
+            className={`sale-chip mono${params.low ? ' active' : ''}`}
+            onClick={toggleLow}
+          >
+            Solo stock bajo <span>{lowCount}</span>
+          </button>
+        </div>
+      </div>
+
+      <div className="table-wrap">
+        <table className="dash-table">
+          <thead>
+            <tr>
+              <th>Producto</th>
+              <th>Categoría</th>
+              <th>Precio</th>
+              <th>Stock</th>
+              <th>Mínimo</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.items.map((p) => (
+              <tr key={p.id}>
+                <td>
+                  <span className="t-cell-product">
+                    {p.image ? <img className="prod-thumb" src={p.image} alt="" loading="lazy" /> : <span className="prod-thumb empty" />}
+                    <span>
+                      <strong>{p.name}</strong>
+                      <em>{p.brand}</em>
+                    </span>
+                  </span>
+                </td>
+                <td className="t-cat">{CATEGORY_LABELS[p.category] || p.category}</td>
+                <td className="mono t-num t-money">{formatARS(p.price)}</td>
+                <td>
+                  <span className="stock-cell">
+                    <strong className="mono">{p.stock}</strong>
+                    <StockBadge status={p.status} />
+                  </span>
+                </td>
+                <td className="mono t-num">{p.minStock}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {data.items.length === 0 && <EmptyNote text="No hay productos que coincidan con el filtro." />}
+      </div>
+
+      {data.total > data.pageSize && (
+        <div className="dash-pager">
+          <button
+            type="button"
+            disabled={data.page <= 1}
+            onClick={() => setParams((prev) => ({ ...prev, page: prev.page - 1 }))}
+          >
+            ← Anterior
+          </button>
+          <span className="mono">
+            página {data.page} de {data.totalPages}
+          </span>
+          <button
+            type="button"
+            disabled={data.page >= data.totalPages}
+            onClick={() => setParams((prev) => ({ ...prev, page: prev.page + 1 }))}
+          >
+            Siguiente →
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function MovementsScreen() {
+  const [data, setData] = useState(null)
+  const [error, setError] = useState('')
+  const [query, setQuery] = useState('')
+  const [params, setParams] = useState({ type: '', q: '', page: 1 })
+
+  useEffect(() => {
+    let alive = true
+    const paramsString = new URLSearchParams({
+      type: params.type,
+      q: params.q,
+      page: String(params.page),
+      limit: '20',
+    })
+    apiGet(`/api/admin/inventory/movements?${paramsString}`)
+      .then((res) => {
+        if (!alive) return
+        if (res.items.length === 0 && res.page > 1) {
+          setParams((prev) => ({ ...prev, page: res.totalPages || 1 }))
+          return
+        }
+        setData(res)
+      })
+      .catch((err) => {
+        if (alive) setError(err.message)
+      })
+    return () => {
+      alive = false
+    }
+  }, [params])
+
+  const submitSearch = (e) => {
+    e.preventDefault()
+    setParams((prev) => ({ ...prev, q: query.trim(), page: 1 }))
+  }
+
+  if (!data && !error) return <ScreenLoading label="Leyendo los movimientos…" />
+  if (error) return <ScreenBlocked message={error} />
+
+  return (
+    <div className="dash-screen">
+      <header className="dash-head">
+        <div>
+          <span className="dash-eyebrow">Inventario</span>
+          <h1>Movimientos</h1>
+        </div>
+        <div className="dash-head-today">
+          <strong className="mono">{data.total}</strong>
+          <em>anotaciones de stock</em>
+        </div>
+      </header>
+
+      <div className="dash-toolbar">
+        <form className="dash-search" role="search" onSubmit={submitSearch}>
+          <IconSearch />
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Buscá por producto…"
+            aria-label="Buscar movimientos"
+          />
+        </form>
+        <span className="count-tag mono">
+          {data.items.length} de {data.total}
+        </span>
+      </div>
+
+      <div className="sale-chips" role="group" aria-label="Filtrar movimientos">
+        {MOVEMENT_CHIPS.map((chip) => (
+          <button
+            key={chip.id}
+            type="button"
+            className={`sale-chip mono${params.type === chip.id ? ' active' : ''}`}
+            onClick={() => setParams((prev) => ({ ...prev, type: chip.id, page: 1 }))}
+          >
+            {chip.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="table-wrap">
+        <table className="dash-table">
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Producto</th>
+              <th>Tipo</th>
+              <th>Variación</th>
+              <th>Antes → Después</th>
+              <th>Motivo</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.items.map((m) => (
+              <tr key={m.id}>
+                <td className="t-date" title={fullDate(m.createdAt)}>
+                  {shortDate(m.createdAt)}
+                </td>
+                <td>
+                  <span className="t-cell-name">
+                    <strong>{m.productName}</strong>
+                    <em>#{m.productId}</em>
+                  </span>
+                </td>
+                <td>
+                  <span className={`mv-type ${m.type}`}>{MOVEMENT_TYPE_LABELS[m.type] || m.type}</span>
+                </td>
+                <td className="mono">
+                  <span className={`mv-delta ${m.delta >= 0 ? 'up' : 'down'}`}>
+                    {m.delta >= 0 ? `+${m.delta}` : m.delta}
+                  </span>
+                </td>
+                <td className="mono t-num">
+                  {m.stockBefore} → {m.stockAfter}
+                </td>
+                <td className="t-dim">{m.reason || '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {data.items.length === 0 && <EmptyNote text="Todavía no hay movimientos con esos filtros." />}
+      </div>
+
+      {data.total > data.pageSize && (
+        <div className="dash-pager">
+          <button
+            type="button"
+            disabled={data.page <= 1}
+            onClick={() => setParams((prev) => ({ ...prev, page: prev.page - 1 }))}
+          >
+            ← Anterior
+          </button>
+          <span className="mono">
+            página {data.page} de {data.totalPages}
+          </span>
+          <button
+            type="button"
+            disabled={data.page >= data.totalPages}
+            onClick={() => setParams((prev) => ({ ...prev, page: prev.page + 1 }))}
+          >
+            Siguiente →
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function AdjustmentsScreen({ canManage }) {
+  const [products, setProducts] = useState([])
+  const [movements, setMovements] = useState(null)
+  const [params, setParams] = useState({ type: 'ajuste', q: '', page: 1 })
+  const [form, setForm] = useState({ productId: '', delta: '', reason: '' })
+  const [saving, setSaving] = useState(false)
+  const [note, setNote] = useState('')
+
+  useEffect(() => {
+    let alive = true
+    apiGet('/api/admin/products?limit=100')
+      .then((res) => {
+        if (alive) setProducts(res.items || [])
+      })
+      .catch(() => {})
+    return () => {
+      alive = false
+    }
+  }, [])
+
+  useEffect(() => {
+    let alive = true
+    const paramsString = new URLSearchParams({
+      type: params.type,
+      q: params.q,
+      page: String(params.page),
+      limit: '10',
+    })
+    apiGet(`/api/admin/inventory/movements?${paramsString}`)
+      .then((res) => {
+        if (alive) setMovements(res)
+      })
+      .catch(() => {})
+    return () => {
+      alive = false
+    }
+  }, [params])
+
+  const submitAdjustment = async (e) => {
+    e.preventDefault()
+    setSaving(true)
+    setNote('')
+    try {
+      const res = await apiPost('/api/admin/inventory/adjustments', {
+        productId: Number(form.productId),
+        delta: Number(form.delta),
+        reason: form.reason.trim(),
+      })
+      const product = products.find((p) => p.id === Number(form.productId))
+      setNote(`Ajuste aplicado en "${product?.name || res.movement.productName}" → stock ${res.stock}`)
+      setForm((f) => ({ ...f, delta: '', reason: '' }))
+      setMovements((prev) => (prev ? { ...prev } : prev))
+      setParams((prev) => ({ ...prev }))
+    } catch (err) {
+      setNote(err.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (!movements) return <ScreenLoading label="Preparando ajustes…" />
+
+  return (
+    <div className="dash-screen">
+      <header className="dash-head">
+        <div>
+          <span className="dash-eyebrow">Inventario</span>
+          <h1>Ajustes de stock</h1>
+        </div>
+        <div className="dash-head-today">
+          <strong className="mono">{movements.total}</strong>
+          <em>ajustes registrados</em>
+        </div>
+      </header>
+
+      {note && <p className="sale-note">{note}</p>}
+      {!canManage && (
+        <p className="sale-note">Solo el superadmin puede aplicar ajustes.</p>
+      )}
+
+      <div className="inv-grid">
+        <form className="inv-panel" onSubmit={submitAdjustment}>
+          <h2>Ajustar stock manualmente</h2>
+          <label className="inv-field">
+            <span>Producto</span>
+            <select
+              value={form.productId}
+              onChange={(e) => setForm((f) => ({ ...f, productId: e.target.value }))}
+              required
+            >
+              <option value="">Elegí un producto…</option>
+              {products.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name} · {p.brand} (stock {p.stock})
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="inv-field">
+            <span>Cantidad (+o −)</span>
+            <input
+              type="number"
+              value={form.delta}
+              onChange={(e) => setForm((f) => ({ ...f, delta: e.target.value }))}
+              placeholder="Ej. 5 suma, -3 resta"
+              required
+            />
+          </label>
+          <label className="inv-field">
+            <span>Motivo</span>
+            <input
+              type="text"
+              value={form.reason}
+              onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))}
+              placeholder="Ej. Se encontró mercadería en depósito"
+              required
+            />
+          </label>
+          <button type="submit" className="primary-btn" disabled={saving || !canManage}>
+            {saving ? 'Aplicando…' : 'Aplicar ajuste'}
+          </button>
+        </form>
+
+        <div className="inv-panel">
+          <h2>Últimos ajustes</h2>
+          <div className="inv-mov-list">
+            {movements.items.length === 0 && <p className="inv-empty">Todavía no hay ajustes.</p>}
+            {movements.items.slice(0, 10).map((m) => (
+              <div key={m.id} className="inv-mov-item">
+                <div className="inv-mov-top">
+                  <strong>{m.productName}</strong>
+                  <span className={`mv-delta ${m.delta >= 0 ? 'up' : 'down'}`}>
+                    {m.delta >= 0 ? `+${m.delta}` : m.delta}
+                  </span>
+                </div>
+                <div className="inv-mov-sub">
+                  <span>{m.reason || '—'}</span>
+                  <em>{shortDate(m.createdAt)}</em>
+                </div>
+                <div className="inv-mov-stock mono">{m.stockBefore} → {m.stockAfter}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function MinStockScreen({ canManage }) {
+  const [data, setData] = useState(null)
+  const [error, setError] = useState('')
+  const [drafts, setDrafts] = useState({})
+  const [savingId, setSavingId] = useState(null)
+  const [note, setNote] = useState('')
+  const [version, setVersion] = useState(0)
+
+  useEffect(() => {
+    let alive = true
+    apiGet('/api/admin/inventory/stock?limit=100')
+      .then((res) => {
+        if (!alive) return
+        setData(res)
+        setDrafts((prev) => {
+          const next = { ...prev }
+          for (const p of res.items) {
+            if (next[p.id] === undefined) next[p.id] = String(p.minStock)
+          }
+          return next
+        })
+      })
+      .catch((err) => {
+        if (alive) setError(err.message)
+      })
+    return () => {
+      alive = false
+    }
+  }, [version])
+
+  const saveMin = async (product) => {
+    setSavingId(product.id)
+    setNote('')
+    try {
+      const res = await apiPut('/api/admin/inventory/min-stock', {
+        productId: product.id,
+        minStock: Number(drafts[product.id]),
+      })
+      setNote(`Mínimo guardado: "${product.name}" ≥ ${res.minStock}`)
+      setVersion((v) => v + 1)
+    } catch (err) {
+      setNote(err.message)
+    } finally {
+      setSavingId(null)
+    }
+  }
+
+  if (!data && !error) return <ScreenLoading label="Leyendo los mínimos…" />
+  if (error) return <ScreenBlocked message={error} />
+
+  const lowCount = data.items.filter((p) => p.status !== 'ok').length
+
+  return (
+    <div className="dash-screen">
+      <header className="dash-head">
+        <div>
+          <span className="dash-eyebrow">Inventario</span>
+          <h1>Stock mínimo</h1>
+        </div>
+        <div className="dash-head-today">
+          <strong className="mono">{lowCount}</strong>
+          <em>productos bajo el mínimo</em>
+        </div>
+      </header>
+
+      {note && <p className="sale-note">{note}</p>}
+      {!canManage && (
+        <p className="sale-note">Solo el administrador puede cambiar los mínimos.</p>
+      )}
+
+      <div className="table-wrap">
+        <table className="dash-table">
+          <thead>
+            <tr>
+              <th>Producto</th>
+              <th>Stock</th>
+              <th>Mínimo</th>
+              {canManage && <th>Guardar</th>}
+            </tr>
+          </thead>
+          <tbody>
+            {data.items.map((p) => (
+              <tr key={p.id} className={p.status !== 'ok' ? 'inv-alert-row' : ''}>
+                <td>
+                  <span className="t-cell-name">
+                    <strong>{p.name}</strong>
+                    <em>{p.brand}</em>
+                  </span>
+                </td>
+                <td>
+                  <span className="stock-cell">
+                    <strong className="mono">{p.stock}</strong>
+                    <StockBadge status={p.status} />
+                  </span>
+                </td>
+                <td>
+                  {canManage ? (
+                    <input
+                      className="inv-min-input mono"
+                      type="number"
+                      min="0"
+                      value={drafts[p.id] ?? String(p.minStock)}
+                      onChange={(e) => setDrafts((d) => ({ ...d, [p.id]: e.target.value }))}
+                      aria-label={`Mínimo de ${p.name}`}
+                    />
+                  ) : (
+                    <span className="mono">{p.minStock}</span>
+                  )}
+                </td>
+                {canManage && (
+                  <td>
+                    <button
+                      type="button"
+                      className="row-btn"
+                      disabled={savingId === p.id}
+                      onClick={() => saveMin(p)}
+                    >
+                      {savingId === p.id ? '…' : 'Guardar'}
+                    </button>
+                  </td>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {data.items.length === 0 && <EmptyNote text="No hay productos para configurar." />}
+      </div>
+    </div>
+  )
+}
+
+function PhysicalInventoryScreen({ canManage }) {
+  const [data, setData] = useState(null)
+  const [error, setError] = useState('')
+  const [counts, setCounts] = useState({})
+  const [note, setNote] = useState('')
+  const [result, setResult] = useState(null)
+  const [saving, setSaving] = useState(false)
+  const [version, setVersion] = useState(0)
+
+  useEffect(() => {
+    let alive = true
+    apiGet('/api/admin/inventory/stock?limit=100')
+      .then((res) => {
+        if (!alive) return
+        setData(res)
+        setCounts((prev) => {
+          const next = { ...prev }
+          for (const p of res.items) {
+            if (next[p.id] === undefined) next[p.id] = String(p.stock)
+          }
+          return next
+        })
+      })
+      .catch((err) => {
+        if (alive) setError(err.message)
+      })
+    return () => {
+      alive = false
+    }
+  }, [version])
+
+  const submitCount = async (e) => {
+    e.preventDefault()
+    setSaving(true)
+    setNote('')
+    setResult(null)
+    try {
+      const countsBody = (data.items || [])
+        .map((p) => ({ productId: p.id, units: Number(counts[p.id]) }))
+        .filter((row) => Number.isFinite(row.units) && row.units >= 0)
+      if (countsBody.length === 0) {
+        setNote('Cargá al menos un conteo.')
+        setSaving(false)
+        return
+      }
+      const res = await apiPost('/api/admin/inventory/physical', { counts: countsBody })
+      setResult(res)
+      setNote(`Inventario guardado: ${res.updated} producto${res.updated === 1 ? '' : 's'} actualizado${res.updated === 1 ? '' : 's'}.`)
+      setVersion((v) => v + 1)
+    } catch (err) {
+      setNote(err.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (!data && !error) return <ScreenLoading label="Preparando el conteo…" />
+  if (error) return <ScreenBlocked message={error} />
+
+  const diffFor = (product) => {
+    const counted = Number(counts[product.id])
+    return Number.isFinite(counted) ? counted - product.stock : 0
+  }
+
+  return (
+    <div className="dash-screen">
+      <header className="dash-head">
+        <div>
+          <span className="dash-eyebrow">Inventario</span>
+          <h1>Inventario físico</h1>
+        </div>
+        <div className="dash-head-today">
+          <strong className="mono">{data.total}</strong>
+          <em>productos por contar</em>
+        </div>
+      </header>
+
+      {note && <p className="sale-note">{note}</p>}
+      {!canManage && (
+        <p className="sale-note">Solo el administrador puede guardar el conteo.
+        </p>
+      )}
+
+      <form onSubmit={submitCount}>
+        <div className="table-wrap">
+          <table className="dash-table">
+            <thead>
+              <tr>
+                <th>Producto</th>
+                <th>Stock actual</th>
+                <th>Conteo físico</th>
+                <th>Diferencia</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.items.map((p) => {
+                const diff = diffFor(p)
+                return (
+                  <tr key={p.id} className={diff !== 0 ? 'inv-alert-row' : ''}>
+                    <td>
+                      <span className="t-cell-name">
+                        <strong>{p.name}</strong>
+                        <em>{p.brand || ''}</em>
+                      </span>
+                    </td>
+                    <td className="mono t-num">{p.stock}</td>
+                    <td>
+                      <input
+                        className="inv-count-input mono"
+                        type="number"
+                        min="0"
+                        value={counts[p.id] ?? ''}
+                        onChange={(e) => setCounts((c) => ({ ...c, [p.id]: e.target.value }))}
+                        aria-label={`Conteo de ${p.name}`}
+                      />
+                    </td>
+                    <td>
+                      <span className={`mv-delta ${diff > 0 ? 'up' : diff < 0 ? 'down' : 'flat'}`}>
+                        {diff > 0 ? `+${diff}` : diff}
+                      </span>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+          {data.items.length === 0 && <EmptyNote text="No hay productos para contar." />}
+        </div>
+
+        {result && (
+          <div className="inv-result">
+            <h3>Resultado del conteo</h3>
+            <ul>
+              {result.results.map((r) =>
+                r.status === 'igual' ? null : (
+                  <li key={r.productId}>
+                    <span>{r.name}</span>
+                    <em className="mono">
+                      era {r.stockBefore} → {r.units} ({r.delta > 0 ? `+${r.delta}` : r.delta})
+                    </em>
+                  </li>
+                ),
+              )}
+            </ul>
+            {result.updated === 0 && <p className="inv-empty">Todo cuadró: el conteo coincide con el stock.</p>}
+          </div>
+        )}
+
+        <div className="inv-submit">
+          <button type="submit" className="primary-btn" disabled={saving || !canManage}>
+            {saving ? 'Guardando…' : 'Guardar inventario físico'}
+          </button>
+        </div>
+      </form>
     </div>
   )
 }

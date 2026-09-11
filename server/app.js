@@ -9,6 +9,7 @@ import webhooksRouter from './routes/webhooks.js'
 import catalogRouter from './routes/catalog.js'
 import adminRouter from './routes/admin.js'
 import catalogAdminRouter from './routes/catalog-admin.js'
+import inventoryRouter from './routes/inventory.js'
 import usersRouter from './routes/users.js'
 import authRouter from './routes/auth.js'
 
@@ -36,6 +37,7 @@ export function createApp() {
   app.use('/api/auth', authRouter)
   app.use('/api/admin', adminRouter)
   app.use('/api/admin', catalogAdminRouter)
+  app.use('/api/admin/inventory', inventoryRouter)
   app.use('/api/admin/users', usersRouter)
 
   if (fs.existsSync(DIST_DIR)) {

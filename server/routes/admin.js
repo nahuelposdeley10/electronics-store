@@ -7,6 +7,7 @@ import { requireAuth, requireRole } from '../middleware/auth.js'
 import { uploadToCloudinary } from '../services/cloudinary.js'
 import { parsePagination, buildProductSearchFilter, escapeRegex } from '../lib/catalog-query.js'
 import { getValidCategoryKeys } from '../lib/catalog-meta.js'
+import { changeStock } from '../lib/stock.js'
 
 const router = express.Router()
 
@@ -230,6 +231,7 @@ router.get('/products', async (req, res) => {
         price: p.price,
         oldPrice: p.oldPrice,
         stock: p.stock,
+        minStock: p.minStock || 0,
         rating: p.rating,
         freeShipping: p.freeShipping,
         badge: p.badge,
@@ -251,7 +253,7 @@ router.get('/products', async (req, res) => {
 })
 
 router.post('/products', requireRole('superadmin'), upload.single('image'), async (req, res) => {
-  const { name, brand, category, price, oldPrice, stock, rating, freeShipping, badge, description, specs } = req.body || {}
+  const { name, brand, category, price, oldPrice, stock, minStock, rating, freeShipping, badge, description, specs } = req.body || {}
 
   if (!name || !brand || !category || price === undefined || price === '') {
     return res.status(400).json({ error: 'Nombre, marca, categoría y precio son requeridos' })
@@ -274,6 +276,7 @@ router.post('/products', requireRole('superadmin'), upload.single('image'), asyn
       price: Number(price),
       oldPrice: oldPrice ? Number(oldPrice) : null,
       stock: stock !== '' ? Number(stock) : 0,
+      minStock: minStock !== '' ? Number(minStock) : 0,
       rating: rating !== '' ? Number(rating) : 0,
       freeShipping: freeShipping === 'true' || freeShipping === true,
       badge: badge ? String(badge).trim() : null,
@@ -310,6 +313,7 @@ router.put('/products/:id', requireRole('superadmin'), upload.single('image'), a
     price,
     oldPrice,
     stock,
+    minStock,
     rating,
     freeShipping,
     badge,
@@ -329,6 +333,7 @@ router.put('/products/:id', requireRole('superadmin'), upload.single('image'), a
     price: price !== undefined && price !== '' ? Number(price) : product.price,
     oldPrice: oldPrice !== undefined && oldPrice !== '' ? Number(oldPrice) : product.oldPrice,
     stock: stock !== undefined && stock !== '' ? Number(stock) : product.stock,
+    minStock: minStock !== undefined && minStock !== '' ? Math.max(0, Number(minStock)) : product.minStock,
     rating: rating !== undefined && rating !== '' ? Number(rating) : product.rating,
     freeShipping:
       freeShipping === 'true' || freeShipping === true || (freeShipping === undefined && product.freeShipping),
@@ -363,6 +368,7 @@ router.put('/products/:id', requireRole('superadmin'), upload.single('image'), a
       price: product.price,
       oldPrice: product.oldPrice,
       stock: product.stock,
+      minStock: product.minStock || 0,
       rating: product.rating,
       freeShipping: product.freeShipping,
       badge: product.badge,
@@ -446,7 +452,14 @@ router.post('/pos', async (req, res) => {
     })
 
     for (const line of lines) {
-      await Product.updateOne({ _id: line.product._id }, { $inc: { stock: -line.quantity } })
+      await changeStock({
+        productId: line.product.id,
+        delta: -line.quantity,
+        type: 'venta',
+        reason: 'Venta en mostrador (POS)',
+        ref: String(order._id),
+        createdBy: req.user?.email || null,
+      })
     }
 
     return res.json({
@@ -479,7 +492,14 @@ router.post('/orders/:id/return', requireRole('superadmin'), async (req, res) =>
 
     if (order.source === 'pos') {
       for (const item of order.items) {
-        await Product.updateOne({ id: item.productId }, { $inc: { stock: item.quantity } })
+        await changeStock({
+          productId: item.productId,
+          delta: item.quantity,
+          type: 'devolucion',
+          reason: 'Devolución de venta',
+          ref: String(order._id),
+          createdBy: req.user?.email || null,
+        })
       }
     }
 
