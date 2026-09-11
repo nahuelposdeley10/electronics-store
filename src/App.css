@@ -2811,16 +2811,14 @@
   min-width: 200px;
 }
 
-.prod-emoji {
+.prod-thumb {
   width: 36px;
   height: 36px;
   flex-shrink: 0;
-  display: grid;
-  place-items: center;
+  object-fit: cover;
   background: var(--gal-panel-2);
   border: 1px solid var(--gal-line);
   border-radius: 4px;
-  font-size: 18px;
 }
 
 .t-cell-product strong {

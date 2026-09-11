@@ -59,7 +59,6 @@ export default function CartProvider({ children }) {
           id: product.id,
           name: product.name,
           price: product.price,
-          emoji: product.emoji,
           image: product.image,
           freeShipping: product.freeShipping,
           quantity: 1,

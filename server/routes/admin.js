@@ -71,7 +71,6 @@ router.get('/overview', async (req, res) => {
           productId,
           name: product.name,
           brand: product.brand,
-          emoji: product.emoji,
         }
       })
       .filter(Boolean)
@@ -168,7 +167,6 @@ router.get('/products', async (req, res) => {
         rating: p.rating,
         freeShipping: p.freeShipping,
         badge: p.badge,
-        emoji: p.emoji,
         image: p.image,
         description: p.description,
         specs: p.specs,
@@ -183,7 +181,7 @@ router.get('/products', async (req, res) => {
 })
 
 router.post('/products', requireRole('superadmin'), upload.single('image'), async (req, res) => {
-  const { name, brand, category, price, oldPrice, stock, rating, freeShipping, badge, emoji, description, specs } = req.body || {}
+  const { name, brand, category, price, oldPrice, stock, rating, freeShipping, badge, description, specs } = req.body || {}
 
   if (!name || !brand || !category || price === undefined || price === '') {
     return res.status(400).json({ error: 'Nombre, marca, categoría y precio son requeridos' })
@@ -209,7 +207,6 @@ router.post('/products', requireRole('superadmin'), upload.single('image'), asyn
       rating: rating !== '' ? Number(rating) : 0,
       freeShipping: freeShipping === 'true' || freeShipping === true,
       badge: badge ? String(badge).trim() : null,
-      emoji: emoji ? String(emoji).trim() : null,
       image,
       description: description ? String(description).trim() : '',
       specs: specs
@@ -246,7 +243,6 @@ router.put('/products/:id', requireRole('superadmin'), upload.single('image'), a
     rating,
     freeShipping,
     badge,
-    emoji,
     description,
     specs,
   } = req.body || {}
@@ -267,7 +263,6 @@ router.put('/products/:id', requireRole('superadmin'), upload.single('image'), a
     freeShipping:
       freeShipping === 'true' || freeShipping === true || (freeShipping === undefined && product.freeShipping),
     badge: badge !== undefined ? String(badge).trim() || null : product.badge,
-    emoji: emoji !== undefined ? String(emoji).trim() : product.emoji,
     description: description !== undefined ? String(description).trim() : product.description,
     specs:
       specs !== undefined
@@ -298,7 +293,6 @@ router.put('/products/:id', requireRole('superadmin'), upload.single('image'), a
       rating: product.rating,
       freeShipping: product.freeShipping,
       badge: product.badge,
-      emoji: product.emoji,
       image: product.image,
       description: product.description,
       specs: product.specs,

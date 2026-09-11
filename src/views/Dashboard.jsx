@@ -384,7 +384,7 @@ function OverviewScreen({ data, onView }) {
                 <li key={product.productId}>
                   <span className="best-rank mono">0{index + 1}</span>
                   <span className="best-name">
-                    {product.emoji} {product.name}
+                    {product.name}
                     <em>{product.brand}</em>
                   </span>
                   <span className="best-units mono">
@@ -566,7 +566,7 @@ function ProductsScreen({ canManage }) {
               <tr key={p.id}>
                 <td>
                   <span className="t-cell-product">
-                    <span className="prod-emoji">{p.emoji}</span>
+                    <img className="prod-thumb" src={p.image} alt="" loading="lazy" />
                     <span>
                       <strong>{p.name}</strong>
                       <em>{p.brand}</em>
@@ -819,7 +819,6 @@ function ProductForm({ product, onClose, onSaved }) {
     rating: product?.rating ?? '',
     freeShipping: product?.freeShipping ?? true,
     badge: product?.badge || '',
-    emoji: product?.emoji || '',
     description: product?.description || '',
     specs: product?.specs?.join(', ') || '',
   }))
@@ -964,16 +963,6 @@ function ProductForm({ product, onClose, onSaved }) {
                 value={form.rating}
                 onChange={set('rating')}
                 placeholder="Opcional"
-              />
-            </label>
-
-            <label className="pf-field">
-              <span>Emoji</span>
-              <input
-                type="text"
-                value={form.emoji}
-                onChange={set('emoji')}
-                placeholder="Ej. ⌨️"
               />
             </label>
 

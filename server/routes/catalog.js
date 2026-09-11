@@ -18,7 +18,6 @@ router.get('/products', async (req, res) => {
         rating: p.rating,
         stock: p.stock,
         badge: p.badge,
-        emoji: p.emoji,
         image: p.image,
         description: p.description,
         specs: p.specs,

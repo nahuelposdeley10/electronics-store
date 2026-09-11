@@ -1,4 +1,4 @@
-export const seedProducts = [
+﻿export const seedProducts = [
   {
     id: 1,
     name: 'Auriculares Inalámbricos Pro Max',
@@ -10,7 +10,6 @@ export const seedProducts = [
     rating: 4.8,
     stock: 14,
     badge: 'Top ventas',
-    emoji: '🎧',
     image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&h=600&fit=crop',
     description:
       'Auriculares over-ear con cancelación activa de ruido líder en el mercado, 40h de batería y carga rápida.',
@@ -26,7 +25,6 @@ export const seedProducts = [
     freeShipping: true,
     rating: 4.7,
     stock: 8,
-    emoji: '📱',
     image: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=600&h=600&fit=crop',
     description:
       'Pantalla AMOLED 6.7" 120Hz, cámara triple 108MP, carga rápida 65W y 5G dual SIM.',
@@ -43,7 +41,6 @@ export const seedProducts = [
     rating: 4.9,
     stock: 6,
     badge: 'Nuevo',
-    emoji: '💻',
     image: 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?w=600&h=600&fit=crop',
     description:
       'Ultrabook con procesador de última generación, 16GB RAM, SSD 512GB y pantalla 2.2K.',
@@ -59,7 +56,6 @@ export const seedProducts = [
     freeShipping: false,
     rating: 4.5,
     stock: 20,
-    emoji: '⌚',
     image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&h=600&fit=crop',
     description:
       'Reloj inteligente con GPS, medidor de ritmo cardíaco, SpO2 y 14 días de batería.',
@@ -75,7 +71,6 @@ export const seedProducts = [
     freeShipping: false,
     rating: 4.6,
     stock: 32,
-    emoji: '🎵',
     image: 'https://images.unsplash.com/photo-1590658268037-6bf12f032f55?w=600&h=600&fit=crop',
     description:
       'Buds con cancelación de ruido activa, estuche de carga inalámbrica y resistencia IPX5.',
@@ -91,7 +86,6 @@ export const seedProducts = [
     freeShipping: true,
     rating: 4.7,
     stock: 12,
-    emoji: '📲',
     image: 'https://images.unsplash.com/photo-1544244015-0df4b3ffc6b0?w=600&h=600&fit=crop',
     description:
       'Tablet 11" 2K con lápiz incluido, ideal para productividad, estudio y entretenimiento.',
@@ -107,7 +101,6 @@ export const seedProducts = [
     freeShipping: true,
     rating: 4.8,
     stock: 5,
-    emoji: '📺',
     image: 'https://images.unsplash.com/photo-1593359677879-a4bb92f829d1?w=600&h=600&fit=crop',
     description:
       'Televisor 4K UHD con HDR10+, Smart TV webOS, Dolby Atmos y actualización 60Hz.',
@@ -123,7 +116,6 @@ export const seedProducts = [
     freeShipping: false,
     rating: 4.6,
     stock: 25,
-    emoji: '⌨️',
     image: 'https://images.unsplash.com/photo-1541140532154-b024d705b90a?w=600&h=600&fit=crop',
     description:
       'Teclado mecánico hot-swap con switches táctiles, retro iluminación RGB y layout full.',
@@ -139,7 +131,6 @@ export const seedProducts = [
     rating: 4.7,
     stock: 40,
     badge: 'Precio de prueba',
-    emoji: '🖱️',
     image: 'https://images.unsplash.com/photo-1527814050087-3793815479db?w=600&h=600&fit=crop',
     description:
       'Mouse ergonómico con sensor óptico de alta precisión, 7 botones programables y RGB.',
@@ -156,7 +147,6 @@ export const seedProducts = [
     rating: 4.5,
     stock: 18,
     badge: 'Oferta',
-    emoji: '🔊',
     image: 'https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=600&h=600&fit=crop',
     description:
       'Altavoz portátil con graves potentes, 24h de batería, resistencia al agua IPX7 y modo fiesta.',
@@ -173,7 +163,6 @@ export const seedProducts = [
     rating: 4.9,
     stock: 3,
     badge: 'Agotándose',
-    emoji: '🎮',
     image: 'https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?w=600&h=600&fit=crop',
     description:
       'Consola de videojuegos 4K con SSD ultrarrápido, mando inalámbrico y 1TB de almacenamiento.',
@@ -189,7 +178,6 @@ export const seedProducts = [
     freeShipping: true,
     rating: 4.8,
     stock: 4,
-    emoji: '📷',
     image: 'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=600&h=600&fit=crop',
     description:
       'Cámara sin espejo full-frame con enfoque híbrido, estabilización de 5 ejes y 4K.',
