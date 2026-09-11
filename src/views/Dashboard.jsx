@@ -861,29 +861,23 @@ function SaleDetail({ order, onClose }) {
           <em className="detail-date">{fullDate(order.createdAt)}</em>
         </div>
 
-        {order.payer?.fullName && (
-          <div className="detail-block">
-            <h3 className="detail-title">Cliente</h3>
-            <div className="detail-grid">
-              <div>
-                <span className="detail-k">Nombre</span>
-                <strong>{order.payer.fullName}</strong>
-              </div>
-              {order.payer.email && (
-                <div>
-                  <span className="detail-k">Email</span>
-                  <strong>{order.payer.email}</strong>
-                </div>
-              )}
-              {idDoc(order) && (
-                <div>
-                  <span className="detail-k">Documento</span>
-                  <strong>{idDoc(order)}</strong>
-                </div>
-              )}
+        <div className="detail-block">
+          <h3 className="detail-title">Cliente</h3>
+          <div className="detail-grid">
+            <div>
+              <span className="detail-k">Nombre</span>
+              <strong>{order.payer?.fullName || 'Sin nombre'}</strong>
+            </div>
+            <div>
+              <span className="detail-k">Email</span>
+              <strong>{order.payer?.email || '—'}</strong>
+            </div>
+            <div>
+              <span className="detail-k">Documento</span>
+              <strong>{idDoc(order) || '—'}</strong>
             </div>
           </div>
-        )}
+        </div>
 
         <div className="detail-block">
           <h3 className="detail-title">Artículos</h3>
