@@ -18,6 +18,7 @@ function toPublicProduct(p) {
     rating: p.rating,
     stock: p.stock,
     badge: p.badge,
+    onSale: !!p.onSale,
     image: p.image,
     description: p.description,
     specs: p.specs,

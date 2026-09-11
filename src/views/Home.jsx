@@ -95,10 +95,14 @@ export default function Home({ onView }) {
   const [newsletter, setNewsletter] = useState(false)
   const [email, setEmail] = useState('')
 
-  const topDeals = useMemo(
-    () => [...products].sort((a, b) => (b.oldPrice ?? 0) - (a.oldPrice ?? 0)).slice(0, 4),
-    [products],
-  )
+  const topDeals = useMemo(() => {
+    const onSale = products.filter(
+      (p) => p.onSale && p.oldPrice && p.oldPrice > p.price,
+    )
+    return onSale.length > 0
+      ? onSale.slice(0, 4)
+      : [...products].sort((a, b) => (b.oldPrice ?? 0) - (a.oldPrice ?? 0)).slice(0, 4)
+  }, [products])
 
   const newest = useMemo(() => {
     const newArrivals = products.filter((p) => p.badge === 'Nuevo')

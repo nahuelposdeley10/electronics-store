@@ -180,6 +180,7 @@ export default function Dashboard({ onExit }) {
               { id: 'product-brands', label: 'Marcas' },
               { id: 'product-variants', label: 'Variantes' },
               { id: 'product-prices', label: 'Precios' },
+              { id: 'product-offers', label: 'Ofertas' },
               { id: 'product-import', label: 'Importar productos' },
             ]
           : []),
@@ -321,6 +322,9 @@ export default function Dashboard({ onExit }) {
         )}
         {gate === 'ready' && screen === 'product-prices' && (
           <PricesScreen canManage={user?.role === 'superadmin'} />
+        )}
+        {gate === 'ready' && screen === 'product-offers' && (
+          <OffersScreen canManage={user?.role === 'superadmin'} />
         )}
         {gate === 'ready' && screen === 'product-import' && (
           <ImportScreen canManage={user?.role === 'superadmin'} />
@@ -2061,6 +2065,355 @@ function PricesScreen({ canManage }) {
           </button>
         </div>
       )}
+    </div>
+  )
+}
+
+function OffersScreen({ canManage }) {
+  const [data, setData] = useState(null)
+  const [error, setError] = useState('')
+  const [query, setQuery] = useState('')
+  const [params, setParams] = useState({ q: '', page: 1 })
+  const [note, setNote] = useState('')
+  const [savingId, setSavingId] = useState(null)
+  const [edits, setEdits] = useState({})
+  const [formOpen, setFormOpen] = useState(false)
+
+  useEffect(() => {
+    let alive = true
+    const qs = new URLSearchParams({
+      q: params.q,
+      page: String(params.page),
+      limit: '10',
+    })
+    apiGet(`/api/admin/offers?${qs}`)
+      .then((res) => {
+        if (!alive) return
+        if (res.items.length === 0 && res.page > 1) {
+          setParams((prev) => ({ ...prev, page: res.totalPages || 1 }))
+          return
+        }
+        setData(res)
+      })
+      .catch((err) => {
+        if (alive) setError(err.message)
+      })
+    return () => {
+      alive = false
+    }
+  }, [params])
+
+  const submitSearch = (e) => {
+    e.preventDefault()
+    setParams((prev) => ({ ...prev, q: query.trim(), page: 1 }))
+  }
+
+  const oldPriceOf = (p) => edits[p.id]?.oldPrice ?? p.oldPrice ?? ''
+
+  const setOldPrice = (p, value) =>
+    setEdits((prev) => ({
+      ...prev,
+      [p.id]: { ...(prev[p.id] || {}), oldPrice: value },
+    }))
+
+  const hasEdit = (p) => Boolean(edits[p.id])
+
+  const saveOffer = async (p) => {
+    setSavingId(p.id)
+    setNote('')
+    try {
+      await apiPost('/api/admin/offers', {
+        productId: p.id,
+        oldPrice: oldPriceOf(p),
+      })
+      setNote(`Oferta guardada: ${p.name}`)
+      setEdits((prev) => {
+        const next = { ...prev }
+        delete next[p.id]
+        return next
+      })
+      setParams((prev) => ({ ...prev }))
+    } catch (err) {
+      setNote(err.message)
+    } finally {
+      setSavingId(null)
+    }
+  }
+
+  const removeOffer = async (p) => {
+    if (!window.confirm(`¿Quitar "${p.name}" de las ofertas?`)) return
+    setNote('')
+    try {
+      await apiDelete(`/api/admin/offers/${p.id}`)
+      setNote(`Oferta removida: ${p.name}`)
+      if (data && data.items.length === 1 && data.page > 1) {
+        setParams((prev) => ({ ...prev, page: prev.page - 1 }))
+      } else {
+        setParams((prev) => ({ ...prev }))
+      }
+    } catch (err) {
+      setNote(err.message)
+    }
+  }
+
+  const handleAdded = (saved) => {
+    setFormOpen(false)
+    setNote(`Producto en oferta: ${saved.name}`)
+    setParams((prev) => ({ ...prev, page: 1 }))
+  }
+
+  if (!data && !error) return <ScreenLoading label="Cargando ofertas…" />
+  if (error) return <ScreenBlocked message={error} />
+
+  return (
+    <div className="dash-screen">
+      <header className="dash-head">
+        <div>
+          <span className="dash-eyebrow">Estantería</span>
+          <h1>Ofertas de la semana</h1>
+        </div>
+        <div className="dash-head-today">
+          <strong className="mono">{data.total}</strong>
+          <em>en oferta</em>
+        </div>
+      </header>
+
+      <div className="dash-toolbar">
+        <form className="dash-search" role="search" onSubmit={submitSearch}>
+          <IconSearch />
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Buscá producto, marca o categoría…"
+            aria-label="Buscar ofertas"
+          />
+        </form>
+        <span className="count-tag mono">
+          {data.items.length} de {data.total}
+        </span>
+        {canManage && (
+          <button
+            type="button"
+            className="primary-btn dash-add"
+            onClick={() => setFormOpen(true)}
+          >
+            <IconPlus />
+            Poner en oferta
+          </button>
+        )}
+      </div>
+
+      {note && <p className="sale-note">{note}</p>}
+
+      {formOpen && (
+        <OfferForm onClose={() => setFormOpen(false)} onSaved={handleAdded} />
+      )}
+
+      <div className="table-wrap">
+        <table className="dash-table">
+          <thead>
+            <tr>
+              <th>Producto</th>
+              <th>Precio</th>
+              <th>Antes ($)</th>
+              <th>Descuento</th>
+              <th>Stock</th>
+              {canManage && <th>Acciones</th>}
+            </tr>
+          </thead>
+          <tbody>
+            {data.items.map((p) => {
+              const old = Number(oldPriceOf(p))
+              const discount =
+                old > p.price ? Math.round((1 - p.price / old) * 100) : 0
+              return (
+                <tr key={p.id}>
+                  <td>
+                    <span className="t-cell-product">
+                      <img className="prod-thumb" src={p.image} alt="" loading="lazy" />
+                      <span>
+                        <strong>{p.name}</strong>
+                        <em>{p.brand}</em>
+                      </span>
+                    </span>
+                  </td>
+                  <td className="mono t-num">{formatARS(p.price)}</td>
+                  <td>
+                    <input
+                      className="price-input mono"
+                      type="number"
+                      min="1"
+                      step="1"
+                      value={oldPriceOf(p)}
+                      onChange={(e) => setOldPrice(p, e.target.value)}
+                      disabled={!canManage}
+                      aria-label={`Precio anterior de ${p.name}`}
+                    />
+                  </td>
+                  <td className="mono t-num t-money">
+                    {discount > 0 ? `${discount}% OFF` : '—'}
+                  </td>
+                  <td className="mono t-num">{p.stock}</td>
+                  {canManage && (
+                    <td>
+                      <span className="row-actions">
+                        <button
+                          type="button"
+                          className="row-btn"
+                          disabled={!hasEdit(p) || savingId === p.id}
+                          onClick={() => saveOffer(p)}
+                          aria-label={`Guardar oferta de ${p.name}`}
+                        >
+                          <IconCheck />
+                        </button>
+                        <button
+                          type="button"
+                          className="row-btn row-btn-danger"
+                          onClick={() => removeOffer(p)}
+                          aria-label={`Quitar ${p.name} de las ofertas`}
+                        >
+                          <IconTrash />
+                        </button>
+                      </span>
+                    </td>
+                  )}
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+        {data.items.length === 0 && (
+          <EmptyNote text="Todavía no hay productos en oferta." />
+        )}
+      </div>
+
+      {data.totalPages > 1 && (
+        <div className="dash-pager">
+          <button
+            type="button"
+            onClick={() => setParams((prev) => ({ ...prev, page: prev.page - 1 }))}
+            disabled={data.page <= 1}
+          >
+            ← Anterior
+          </button>
+          <span className="mono">
+            Página {data.page} de {data.totalPages} · {data.total} ofertas
+          </span>
+          <button
+            type="button"
+            onClick={() => setParams((prev) => ({ ...prev, page: prev.page + 1 }))}
+            disabled={data.page >= data.totalPages}
+          >
+            Siguiente →
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function OfferForm({ onClose, onSaved }) {
+  const [products, setProducts] = useState([])
+  const [form, setForm] = useState({ productId: '', oldPrice: '' })
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    let alive = true
+    apiGet('/api/admin/products?limit=100')
+      .then((res) => {
+        if (alive) setProducts(res.items || [])
+      })
+      .catch(() => {})
+    return () => {
+      alive = false
+    }
+  }, [])
+
+  const set = (key) => (e) =>
+    setForm((f) => ({ ...f, [key]: e.target.value }))
+
+  const submit = async (e) => {
+    e.preventDefault()
+    setSaving(true)
+    setError('')
+    try {
+      const saved = await apiPost('/api/admin/offers', {
+        productId: form.productId,
+        oldPrice: form.oldPrice,
+      })
+      onSaved(saved)
+    } catch (err) {
+      setError(err.message)
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="product-overlay" onMouseDown={saving ? undefined : onClose}>
+      <div
+        className="product-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Poner en oferta"
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        <header className="product-head">
+          <div>
+            <span className="dash-eyebrow">Estantería</span>
+            <h2>Poner en oferta</h2>
+          </div>
+          <button
+            type="button"
+            className="product-close"
+            onClick={onClose}
+            aria-label="Cerrar"
+          >
+            <IconCross />
+          </button>
+        </header>
+
+        <form onSubmit={submit}>
+          <div className="pf-grid">
+            <label className="pf-field pf-full">
+              <span>Producto</span>
+              <select value={form.productId} onChange={set('productId')} required>
+                <option value="">Elegí un producto…</option>
+                {products.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} · {p.brand}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="pf-field pf-full">
+              <span>Precio anterior ($) — debe ser mayor al precio actual</span>
+              <input
+                type="number"
+                min="1"
+                step="1"
+                value={form.oldPrice}
+                onChange={set('oldPrice')}
+                placeholder="Ej. 249990"
+                required
+              />
+            </label>
+          </div>
+
+          {error && <em className="unlock-error">{error}</em>}
+
+          <div className="pf-actions">
+            <button type="button" className="ghost-btn" onClick={onClose} disabled={saving}>
+              Cancelar
+            </button>
+            <button type="submit" className="primary-btn" disabled={saving || !form.productId}>
+              {saving ? 'Guardando…' : 'Poner en oferta'}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   )
 }

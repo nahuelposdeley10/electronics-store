@@ -8,6 +8,7 @@ const productSchema = new mongoose.Schema(
     category: { type: String, required: true, trim: true },
     price: { type: Number, required: true },
     oldPrice: { type: Number, default: null },
+    onSale: { type: Boolean, default: false },
     freeShipping: { type: Boolean, default: false },
     rating: { type: Number, default: 0 },
     stock: { type: Number, default: 0 },

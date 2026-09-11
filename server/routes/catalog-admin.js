@@ -496,6 +496,94 @@ router.post('/prices/bulk', requireRole('superadmin'), async (req, res) => {
   }
 })
 
+/* ---------------- Ofertas ---------------- */
+
+router.get('/offers', requireRole('superadmin'), async (req, res) => {
+  try {
+    const { page, limit } = parsePagination(req.query)
+    const filter = buildProductSearchFilter(req.query.q)
+    filter.onSale = true
+    const [total, products] = await Promise.all([
+      Product.countDocuments(filter),
+      Product.find(filter)
+        .sort({ id: 1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean(),
+    ])
+    return res.json({
+      items: products.map((p) => ({
+        id: p.id,
+        name: p.name,
+        brand: p.brand,
+        category: p.category,
+        price: p.price,
+        oldPrice: p.oldPrice,
+        onSale: !!p.onSale,
+        image: p.image,
+        stock: p.stock,
+      })),
+      page,
+      limit,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+    })
+  } catch (error) {
+    console.error('Offers error:', error)
+    return res.status(500).json({ error: 'No se pudieron leer las ofertas' })
+  }
+})
+
+router.post('/offers', requireRole('superadmin'), async (req, res) => {
+  const { productId, oldPrice } = req.body || {}
+  const product = await Product.findOne({ id: Number(productId) })
+  if (!product) {
+    return res.status(404).json({ error: 'Producto no encontrado' })
+  }
+
+  if (oldPrice !== undefined && oldPrice !== '' && Number(oldPrice) <= product.price) {
+    return res.status(400).json({ error: 'El precio anterior debe ser mayor al precio actual' })
+  }
+
+  try {
+    product.onSale = true
+    if (oldPrice !== undefined && oldPrice !== '') {
+      product.oldPrice = Number(oldPrice)
+    }
+    await product.save()
+    return res.json({
+      id: product.id,
+      name: product.name,
+      brand: product.brand,
+      category: product.category,
+      price: product.price,
+      oldPrice: product.oldPrice,
+      onSale: product.onSale,
+      image: product.image,
+      stock: product.stock,
+    })
+  } catch (error) {
+    console.error('Offers add error:', error)
+    return res.status(500).json({ error: 'No se pudo marcar el producto en oferta' })
+  }
+})
+
+router.delete('/offers/:id', requireRole('superadmin'), async (req, res) => {
+  const product = await Product.findOne({ id: Number(req.params.id) })
+  if (!product) {
+    return res.status(404).json({ error: 'Producto no encontrado' })
+  }
+  try {
+    product.onSale = false
+    product.oldPrice = null
+    await product.save()
+    return res.json({ ok: true, id: product.id })
+  } catch (error) {
+    console.error('Offers remove error:', error)
+    return res.status(500).json({ error: 'No se pudo quitar la oferta' })
+  }
+})
+
 /* ---------------- Importar productos ---------------- */
 
 router.post('/import/products', requireRole('superadmin'), async (req, res) => {
