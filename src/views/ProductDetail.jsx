@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useCart } from '../context/useCart'
+import { useCatalog } from '../context/useCatalog'
 import { formatARS, installmentsFor } from '../data/format'
-import { products } from '../data/products'
 import {
   IconBack,
   IconBolt,
@@ -25,6 +25,7 @@ function Stars({ rating }) {
 
 export default function ProductDetail({ product, onBack, onHome }) {
   const { addItem } = useCart()
+  const { products } = useCatalog()
   const [buyNow, setBuyNow] = useState(false)
 
   const inst = installmentsFor(product.price)

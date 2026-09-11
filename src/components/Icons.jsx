@@ -91,6 +91,15 @@ export function IconPlus(props) {
   )
 }
 
+export function IconEdit(props) {
+  return (
+    <svg {...S} {...props}>
+      <path d="M4 20h4L19.5 8.5a2.1 2.1 0 0 0-3-3L5 17l-1 4Z" />
+      <path d="m14.5 6.5 3 3" />
+    </svg>
+  )
+}
+
 export function IconTrash(props) {
   return (
     <svg {...S} {...props}>

@@ -21,6 +21,14 @@ router.post('/orders/:id/refresh', async (req, res) => {
         status: order.status,
         paymentId: order.paymentId,
         total: order.total,
+        payer: {
+          email: order.payerEmail,
+          name: order.payerName,
+          surname: order.payerSurname,
+          fullName: [order.payerName, order.payerSurname].filter(Boolean).join(' ') || null,
+          idType: order.payerIdType,
+          idNumber: order.payerIdNumber,
+        },
       })
     }
 
@@ -34,6 +42,14 @@ router.post('/orders/:id/refresh', async (req, res) => {
       status: updated.status,
       paymentId: updated.paymentId,
       total: updated.total,
+      payer: {
+        email: updated.payerEmail,
+        name: updated.payerName,
+        surname: updated.payerSurname,
+        fullName: [updated.payerName, updated.payerSurname].filter(Boolean).join(' ') || null,
+        idType: updated.payerIdType,
+        idNumber: updated.payerIdNumber,
+      },
     })
   } catch (error) {
     console.error('Order refresh error:', error)
@@ -43,7 +59,7 @@ router.post('/orders/:id/refresh', async (req, res) => {
 
 router.post('/checkout', async (req, res) => {
   try {
-    const cart = buildCart(req.body.items, req.body.coupon)
+    const cart = await buildCart(req.body.items, req.body.coupon)
     if (cart.lineItems.length === 0) {
       return res.status(400).json({ error: 'El carrito está vacío' })
     }

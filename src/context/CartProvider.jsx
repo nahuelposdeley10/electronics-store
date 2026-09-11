@@ -1,13 +1,14 @@
 import { useState } from 'react'
 import { useEffect, useMemo } from 'react'
 import { CartContext } from './cartContext'
-import { products } from '../data/products'
+import { useCatalog } from './useCatalog'
 import { coupons } from '../data/format'
 
 const STORAGE_KEY = 'electronics-store-cart'
 const COUPON_STORAGE_KEY = 'electronics-store-coupon'
 
 export default function CartProvider({ children }) {
+  const { products } = useCatalog()
   const [items, setItems] = useState(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY)

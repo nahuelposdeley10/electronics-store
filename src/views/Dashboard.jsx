@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { formatARS } from '../data/format'
-import { apiConfirmOrder, apiGet, apiUpload, clearSession, getSession, login as apiLogin } from '../lib/api'
+import { apiConfirmOrder, apiDelete, apiGet, apiUpdate, apiUpload, clearSession, getSession, login as apiLogin } from '../lib/api'
 import { useOrderEvents } from '../lib/useOrderEvents'
 import {
   IconBack,
@@ -11,12 +11,14 @@ import {
   IconCheck,
   IconClock,
   IconCross,
+  IconEdit,
   IconLock,
   IconLogout,
   IconPlus,
   IconRefresh,
   IconSearch,
   IconSearchOff,
+  IconTrash,
 } from '../components/Icons'
 
 const STATUS_META = {
@@ -257,7 +259,9 @@ export default function Dashboard({ onExit }) {
         {gate === 'ready' && overview && screen === 'overview' && (
           <OverviewScreen data={overview} onView={changeScreen} />
         )}
-        {gate === 'ready' && screen === 'products' && <ProductsScreen />}
+        {gate === 'ready' && screen === 'products' && (
+          <ProductsScreen canManage={user?.role === 'superadmin'} />
+        )}
         {gate === 'ready' && screen === 'sales' && <SalesScreen />}
       </main>
     </div>
@@ -427,11 +431,13 @@ function OverviewScreen({ data, onView }) {
   )
 }
 
-function ProductsScreen() {
+function ProductsScreen({ canManage }) {
   const [products, setProducts] = useState(null)
   const [error, setError] = useState('')
   const [query, setQuery] = useState('')
   const [formOpen, setFormOpen] = useState(false)
+  const [editing, setEditing] = useState(null)
+  const [note, setNote] = useState('')
   const [refresh, setRefresh] = useState(0)
 
   useEffect(() => {
@@ -447,6 +453,39 @@ function ProductsScreen() {
       alive = false
     }
   }, [refresh])
+
+  const openForm = (product = null) => {
+    setEditing(product)
+    setFormOpen(true)
+  }
+
+  const closeForm = () => {
+    setFormOpen(false)
+    setEditing(null)
+  }
+
+  const handleSaved = (saved) => {
+    closeForm()
+    setNote(
+      editing
+        ? `Producto actualizado: ${saved.name}`
+        : `Producto agregado: ${saved.name}`,
+    )
+    setRefresh((n) => n + 1)
+  }
+
+  const handleDelete = async (product) => {
+    if (!window.confirm(`¿Eliminar "${product.name}" ${product.brand} de la galería?`)) {
+      return
+    }
+    try {
+      await apiDelete(`/api/admin/products/${product.id}`)
+      setNote(`Producto eliminado: ${product.name}`)
+      setRefresh((n) => n + 1)
+    } catch (err) {
+      setNote(err.message)
+    }
+  }
 
   const filtered = useMemo(() => {
     if (!products) return []
@@ -487,23 +526,25 @@ function ProductsScreen() {
         <span className="count-tag mono">
           {filtered.length} de {products.length}
         </span>
-        <button
-          type="button"
-          className="primary-btn dash-add"
-          onClick={() => setFormOpen(true)}
-        >
-          <IconPlus />
-          Agregar producto
-        </button>
+        {canManage && (
+          <button
+            type="button"
+            className="primary-btn dash-add"
+            onClick={() => openForm()}
+          >
+            <IconPlus />
+            Agregar producto
+          </button>
+        )}
       </div>
+
+      {note && <p className="sale-note">{note}</p>}
 
       {formOpen && (
         <ProductForm
-          onClose={() => setFormOpen(false)}
-          onSaved={() => {
-            setFormOpen(false)
-            setRefresh((n) => n + 1)
-          }}
+          product={editing}
+          onClose={closeForm}
+          onSaved={handleSaved}
         />
       )}
 
@@ -517,6 +558,7 @@ function ProductsScreen() {
               <th>Stock</th>
               <th>Vendidos</th>
               <th>Ingresos</th>
+              {canManage && <th>Acciones</th>}
             </tr>
           </thead>
           <tbody>
@@ -538,6 +580,28 @@ function ProductsScreen() {
                 <td className="mono t-num">{p.stock}</td>
                 <td className="mono t-num">{p.soldUnits}</td>
                 <td className="mono t-num t-money">{formatARS(p.revenue)}</td>
+                {canManage && (
+                  <td>
+                    <span className="row-actions">
+                      <button
+                        type="button"
+                        className="row-btn"
+                        aria-label={`Editar ${p.name}`}
+                        onClick={() => openForm(p)}
+                      >
+                        <IconEdit />
+                      </button>
+                      <button
+                        type="button"
+                        className="row-btn row-btn-danger"
+                        aria-label={`Eliminar ${p.name}`}
+                        onClick={() => handleDelete(p)}
+                      >
+                        <IconTrash />
+                      </button>
+                    </span>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
@@ -579,7 +643,7 @@ function SalesScreen() {
       setOrders((list) =>
         list.map((o) =>
           o.id === data.id
-            ? { ...o, status: data.status, paymentId: data.paymentId }
+            ? { ...o, status: data.status, paymentId: data.paymentId, payer: data.payer }
             : o,
         ),
       )
@@ -600,7 +664,7 @@ function SalesScreen() {
       list
         ? list.map((o) =>
             o.id === data.id
-              ? { ...o, status: data.status, paymentId: data.paymentId }
+              ? { ...o, status: data.status, paymentId: data.paymentId, payer: data.payer || o.payer }
               : o,
           )
         : list,
@@ -677,6 +741,7 @@ function SalesScreen() {
             <tr>
               <th>Pedido</th>
               <th>Fecha</th>
+              <th>Cliente</th>
               <th>Detalle</th>
               <th>Cupón</th>
               <th>Total</th>
@@ -688,6 +753,23 @@ function SalesScreen() {
               <tr key={order.id}>
                 <td className="mono t-id">#{shortId(order.id)}</td>
                 <td className="t-date">{shortDate(order.createdAt)}</td>
+                <td className="t-payer">
+                  {order.payer?.fullName ? (
+                    <>
+                      <strong>{order.payer.fullName}</strong>
+                      <span className="t-dim">
+                        {[
+                          order.payer.email,
+                          [order.payer.idType, order.payer.idNumber].filter(Boolean).join(' '),
+                        ]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="t-dim">—</span>
+                  )}
+                </td>
                 <td className="t-detail">{itemsSummary(order.items)}</td>
                 <td className="mono t-coupon">
                   {order.coupon || <span className="t-dim">—</span>}
@@ -726,21 +808,21 @@ function itemsSummary(items) {
   return `${names.slice(0, 2).join(' · ')} +${names.length - 2} más`
 }
 
-function ProductForm({ onClose, onSaved }) {
-  const [form, setForm] = useState({
-    name: '',
-    brand: '',
-    category: 'audio',
-    price: '',
-    oldPrice: '',
-    stock: '',
-    rating: '',
-    freeShipping: true,
-    badge: '',
-    emoji: '',
-    description: '',
-    specs: '',
-  })
+function ProductForm({ product, onClose, onSaved }) {
+  const [form, setForm] = useState(() => ({
+    name: product?.name || '',
+    brand: product?.brand || '',
+    category: product?.category || 'audio',
+    price: product?.price ?? '',
+    oldPrice: product?.oldPrice ?? '',
+    stock: product?.stock ?? '',
+    rating: product?.rating ?? '',
+    freeShipping: product?.freeShipping ?? true,
+    badge: product?.badge || '',
+    emoji: product?.emoji || '',
+    description: product?.description || '',
+    specs: product?.specs?.join(', ') || '',
+  }))
   const [image, setImage] = useState(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -760,8 +842,12 @@ function ProductForm({ onClose, onSaved }) {
     if (image) fd.append('image', image)
 
     try {
-      await apiUpload('/api/admin/products', fd)
-      onSaved()
+      if (product) {
+        await apiUpdate(`/api/admin/products/${product.id}`, fd)
+      } else {
+        await apiUpload('/api/admin/products', fd)
+      }
+      onSaved({ name: form.name })
     } catch (err) {
       setError(err.message)
       setSaving(false)
@@ -774,13 +860,13 @@ function ProductForm({ onClose, onSaved }) {
         className="product-panel"
         role="dialog"
         aria-modal="true"
-        aria-label="Agregar producto"
+        aria-label={product ? 'Editar producto' : 'Agregar producto'}
         onMouseDown={(e) => e.stopPropagation()}
       >
         <header className="product-head">
           <div>
             <span className="dash-eyebrow">Estantería</span>
-            <h2>Agregar producto</h2>
+            <h2>{product ? 'Editar producto' : 'Agregar producto'}</h2>
           </div>
           <button
             type="button"
@@ -922,12 +1008,19 @@ function ProductForm({ onClose, onSaved }) {
             </label>
 
             <label className="pf-field pf-full">
-              <span>Imagen (PNG, JPG o WEBP)</span>
+              <span>
+                {product
+                  ? 'Imagen nueva (dejá vacío para conservar la actual)'
+                  : 'Imagen (PNG, JPG o WEBP)'}
+              </span>
+              {product && product.image && !image && (
+                <img className="pf-preview" src={product.image} alt="" />
+              )}
               <input
                 type="file"
                 accept="image/*"
                 onChange={(e) => setImage(e.target.files[0] || null)}
-                required
+                required={!product}
               />
             </label>
 
@@ -959,7 +1052,11 @@ function ProductForm({ onClose, onSaved }) {
               className="primary-btn"
               disabled={saving}
             >
-              {saving ? 'Guardando…' : 'Guardar producto'}
+              {saving
+                ? 'Guardando…'
+                : product
+                  ? 'Guardar cambios'
+                  : 'Guardar producto'}
             </button>
           </div>
         </form>

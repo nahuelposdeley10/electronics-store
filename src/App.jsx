@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
+import CatalogProvider from './context/CatalogProvider'
 import CartProvider from './context/CartProvider'
+import { useCatalog } from './context/useCatalog'
 import Header from './components/Header'
 import Footer from './components/Footer'
 import Toast from './components/Toast'
@@ -11,7 +13,6 @@ import CartView from './views/CartView'
 import ProductDetail from './views/ProductDetail'
 import OrderStatus from './views/OrderStatus'
 import Dashboard from './views/Dashboard'
-import { products } from './data/products'
 import './App.css'
 
 function pathToView() {
@@ -29,7 +30,18 @@ function pathToView() {
   return null
 }
 
-function App() {
+function CatalogLoading() {
+  return (
+    <main className="catalog-loading" role="status">
+      <span className="empty-draw">📦</span>
+      <h1>Cargando catálogo…</h1>
+      <p>Estamos acomodando la galería.</p>
+    </main>
+  )
+}
+
+function AppContent() {
+  const { products, loading } = useCatalog()
   const [view, setView] = useState(() => pathToView() || { name: 'home' })
 
   useEffect(() => {
@@ -65,6 +77,11 @@ function App() {
   const openProductById = (id) => {
     const p = products.find((x) => x.id === Number(id))
     if (p) navigate('product', p)
+  }
+
+  const needsCatalog = ['home', 'product', 'results'].includes(view.name)
+  if (needsCatalog && loading && products.length === 0) {
+    return <CatalogLoading />
   }
 
   let content
@@ -129,6 +146,14 @@ function App() {
         </>
       )}
     </CartProvider>
+  )
+}
+
+function App() {
+  return (
+    <CatalogProvider>
+      <AppContent />
+    </CatalogProvider>
   )
 }
 

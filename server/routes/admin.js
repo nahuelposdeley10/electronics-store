@@ -127,6 +127,14 @@ router.get('/orders', async (req, res) => {
         paymentId: o.paymentId,
         items: o.items,
         createdAt: o.createdAt,
+        payer: {
+          email: o.payerEmail,
+          name: o.payerName,
+          surname: o.payerSurname,
+          fullName: [o.payerName, o.payerSurname].filter(Boolean).join(' ') || null,
+          idType: o.payerIdType,
+          idNumber: o.payerIdNumber,
+        },
       })),
     )
   } catch (error) {
@@ -158,8 +166,12 @@ router.get('/products', async (req, res) => {
         oldPrice: p.oldPrice,
         stock: p.stock,
         rating: p.rating,
+        freeShipping: p.freeShipping,
+        badge: p.badge,
         emoji: p.emoji,
         image: p.image,
+        description: p.description,
+        specs: p.specs,
         soldUnits: sold.get(p.id) || 0,
         revenue: (sold.get(p.id) || 0) * p.price,
       })),
@@ -220,6 +232,95 @@ router.post('/products', requireRole('superadmin'), upload.single('image'), asyn
   } catch (error) {
     console.error('Products create error:', error)
     return res.status(500).json({ error: 'No se pudo crear el producto' })
+  }
+})
+
+router.put('/products/:id', requireRole('superadmin'), upload.single('image'), async (req, res) => {
+  const {
+    name,
+    brand,
+    category,
+    price,
+    oldPrice,
+    stock,
+    rating,
+    freeShipping,
+    badge,
+    emoji,
+    description,
+    specs,
+  } = req.body || {}
+
+  const product = await Product.findOne({ id: Number(req.params.id) })
+  if (!product) {
+    return res.status(404).json({ error: 'Producto no encontrado' })
+  }
+
+  const patch = {
+    name: name !== undefined ? String(name).trim() : product.name,
+    brand: brand !== undefined ? String(brand).trim() : product.brand,
+    category: category !== undefined ? category : product.category,
+    price: price !== undefined && price !== '' ? Number(price) : product.price,
+    oldPrice: oldPrice !== undefined && oldPrice !== '' ? Number(oldPrice) : null,
+    stock: stock !== undefined && stock !== '' ? Number(stock) : product.stock,
+    rating: rating !== undefined && rating !== '' ? Number(rating) : product.rating,
+    freeShipping:
+      freeShipping === 'true' || freeShipping === true || (freeShipping === undefined && product.freeShipping),
+    badge: badge !== undefined ? String(badge).trim() || null : product.badge,
+    emoji: emoji !== undefined ? String(emoji).trim() : product.emoji,
+    description: description !== undefined ? String(description).trim() : product.description,
+    specs:
+      specs !== undefined
+        ? String(specs)
+            .split(',')
+            .map((s) => s.trim())
+            .filter(Boolean)
+        : product.specs,
+  }
+
+  if (!patch.name || !patch.brand || !CATEGORIES.has(patch.category) || !patch.price) {
+    return res.status(400).json({ error: 'Nombre, marca, categoría y precio son requeridos' })
+  }
+
+  try {
+    if (req.file) patch.image = await uploadToCloudinary(req.file)
+    Object.assign(product, patch)
+    await product.save()
+
+    return res.json({
+      id: product.id,
+      name: product.name,
+      brand: product.brand,
+      category: product.category,
+      price: product.price,
+      oldPrice: product.oldPrice,
+      stock: product.stock,
+      rating: product.rating,
+      freeShipping: product.freeShipping,
+      badge: product.badge,
+      emoji: product.emoji,
+      image: product.image,
+      description: product.description,
+      specs: product.specs,
+    })
+  } catch (error) {
+    console.error('Products update error:', error)
+    return res.status(500).json({ error: 'No se pudo actualizar el producto' })
+  }
+})
+
+router.delete('/products/:id', requireRole('superadmin'), async (req, res) => {
+  const product = await Product.findOne({ id: Number(req.params.id) })
+  if (!product) {
+    return res.status(404).json({ error: 'Producto no encontrado' })
+  }
+
+  try {
+    await product.deleteOne()
+    return res.json({ ok: true, id: product.id })
+  } catch (error) {
+    console.error('Products delete error:', error)
+    return res.status(500).json({ error: 'No se pudo eliminar el producto' })
   }
 })
 

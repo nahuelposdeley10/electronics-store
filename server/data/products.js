@@ -1,4 +1,4 @@
-export const products = [
+export const seedProducts = [
   {
     id: 1,
     name: 'Auriculares Inalámbricos Pro Max',
@@ -196,34 +196,3 @@ export const products = [
     specs: ['Full Frame', '4K 30fps', 'Estab. 5 ejes', '24.2MP'],
   },
 ]
-
-export const brands = [
-  'Sony',
-  'Samsung',
-  'Lenovo',
-  'LG',
-  'Honor',
-  'Logitech',
-  'JBL',
-  'PlayStation',
-]
-
-export const benefits = [
-  { icon: '🚚', title: 'Envío a todo el país', text: 'Gratis superando $300.000' },
-  { icon: '💳', title: 'Hasta 12 cuotas', text: 'Sin interés con todas las tarjetas' },
-  { icon: '🛡️', title: 'Garantía oficial', text: 'Soporte de fábrica en todos los productos' },
-  { icon: '🔧', title: 'Servicio técnico', text: 'Asistencia especializada propia' },
-  { icon: '🏪', title: 'Retiro en local', text: 'Villa Urquiza, CABA' },
-]
-
-export function formatARS(value) {
-  return new Intl.NumberFormat('es-AR', {
-    style: 'currency',
-    currency: 'ARS',
-    minimumFractionDigits: 0,
-  }).format(value)
-}
-
-export function getProduct(id) {
-  return products.find((p) => p.id === Number(id))
-}

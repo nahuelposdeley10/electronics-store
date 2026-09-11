@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { products, brands } from '../data/products'
+import { useCatalog } from '../context/useCatalog'
 import ProductCard from '../components/ProductCard'
 import { formatARS } from '../data/format'
 import { IconArrow, IconCheck, IconBolt } from '../components/Icons'
@@ -21,20 +21,24 @@ function Section({ title, items, onView, offer = false }) {
 }
 
 export default function Home({ onView }) {
+  const { products, brands } = useCatalog()
   const [newsletter, setNewsletter] = useState(false)
   const [email, setEmail] = useState('')
 
   const topDeals = useMemo(
     () => [...products].sort((a, b) => (b.oldPrice ?? 0) - (a.oldPrice ?? 0)).slice(0, 4),
-    [],
+    [products],
   )
 
   const newest = useMemo(() => {
     const newArrivals = products.filter((p) => p.badge === 'Nuevo')
     return newArrivals.length ? newArrivals : products.slice(2, 6)
-  }, [])
+  }, [products])
 
-  const featured = useMemo(() => products.filter((p) => p.freeShipping).slice(0, 8), [])
+  const featured = useMemo(
+    () => products.filter((p) => p.freeShipping).slice(0, 8),
+    [products],
+  )
 
   const shelf = topDeals.slice(0, 4)
 

@@ -2,12 +2,12 @@ import 'dotenv/config'
 import mongoose from 'mongoose'
 import { env } from './config/env.js'
 import { Product } from './models/Product.js'
-import { products } from '../src/data/products.js'
+import { seedProducts } from './data/products.js'
 
 async function run() {
   await mongoose.connect(env.mongodbUri, { dbName: 'electronics-store' })
 
-  for (const product of products) {
+  for (const product of seedProducts) {
     await Product.findOneAndUpdate(
       { id: product.id },
       product,

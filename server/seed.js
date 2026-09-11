@@ -1,7 +1,7 @@
 import 'dotenv/config'
 import mongoose from 'mongoose'
 import { Order } from './models/Order.js'
-import { products } from '../src/data/products.js'
+import { seedProducts } from './data/products.js'
 import { coupons } from '../src/data/format.js'
 
 const FREE_SHIPPING_THRESHOLD = 300000
@@ -29,7 +29,7 @@ function pick(list) {
 
 function randomItems() {
   const count = 1 + Math.floor(Math.random() * 3)
-  const pool = [...products]
+  const pool = [...seedProducts]
   const chosen = []
   for (let i = 0; i < count && pool.length; i++) {
     chosen.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0])

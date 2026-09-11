@@ -1,5 +1,6 @@
 import { paymentService } from '../services/mercadopago.js'
 import { orderStatusForPayment } from './order-status.js'
+import { applyPayerFromPayment } from './payer.js'
 
 export async function verifyOrderPayment(order) {
   const search = await paymentService.search({
@@ -25,6 +26,7 @@ export async function verifyOrderPayment(order) {
 
   if (payment.id) order.paymentId = payment.id
   if (payment.merchant_order_id) order.merchantOrderId = payment.merchant_order_id
+  applyPayerFromPayment(order, payment)
   if (payment.status === 'approved') {
     order.status = 'approved'
   } else if (order.status === 'pending') {

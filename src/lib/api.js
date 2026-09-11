@@ -96,13 +96,21 @@ export async function apiConfirmOrder(orderId) {
 }
 
 export async function apiUpload(path, formData) {
+  return apiFile(path, 'POST', formData)
+}
+
+export async function apiUpdate(path, formData) {
+  return apiFile(path, 'PUT', formData)
+}
+
+async function apiFile(path, method, formData) {
   const headers = {}
   const { token } = getSession()
   if (token) headers.Authorization = `Bearer ${token}`
 
   let res
   try {
-    res = await fetch(path, { method: 'POST', headers, body: formData })
+    res = await fetch(path, { method, headers, body: formData })
   } catch {
     throw new ApiError('No se pudo conectar con el servidor', 'NETWORK')
   }
@@ -117,6 +125,32 @@ export async function apiUpload(path, formData) {
   }
   if (!res.ok) {
     throw new ApiError(data.error || 'No se pudo guardar el producto', 'ERROR')
+  }
+  return data
+}
+
+export async function apiDelete(path) {
+  const headers = {}
+  const { token } = getSession()
+  if (token) headers.Authorization = `Bearer ${token}`
+
+  let res
+  try {
+    res = await fetch(path, { method: 'DELETE', headers })
+  } catch {
+    throw new ApiError('No se pudo conectar con el servidor', 'NETWORK')
+  }
+
+  const data = await res.json().catch(() => ({}))
+
+  if (res.status === 401) {
+    throw new ApiError('Sesión requerida', 'AUTH')
+  }
+  if (res.status === 403) {
+    throw new ApiError('No tenés permiso para esto', 'FORBIDDEN')
+  }
+  if (!res.ok) {
+    throw new ApiError(data.error || 'No se pudo eliminar el producto', 'ERROR')
   }
   return data
 }

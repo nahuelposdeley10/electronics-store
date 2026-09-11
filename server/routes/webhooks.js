@@ -2,6 +2,7 @@ import express from 'express'
 import { Order } from '../models/Order.js'
 import { paymentService } from '../services/mercadopago.js'
 import { orderStatusForPayment } from '../lib/order-status.js'
+import { applyPayerFromPayment } from '../lib/payer.js'
 
 const router = express.Router()
 
@@ -38,6 +39,7 @@ router.post('/webhooks/mercadopago', async (req, res) => {
     order.status = orderStatusForPayment(payment.status)
     if (payment.id) order.paymentId = payment.id
     if (payment.merchant_order_id) order.merchantOrderId = payment.merchant_order_id
+    applyPayerFromPayment(order, payment)
     await order.save()
   } catch (error) {
     console.error('Webhook error:', error)
