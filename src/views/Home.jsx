@@ -20,15 +20,50 @@ function Section({ title, items, onView, offer = false }) {
   )
 }
 
-function GallerySection({ onView }) {
+function GallerySection({ onView, brands }) {
   const [page, setPage] = useState(1)
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [categories, setCategories] = useState([])
+  const [category, setCategory] = useState('all')
+  const [brand, setBrand] = useState('all')
+  const [sort, setSort] = useState('relevance')
 
   useEffect(() => {
     let alive = true
-    fetch(`/api/products?page=${page}&limit=12`)
+    fetch('/api/categories')
+      .then((res) => res.json())
+      .then((result) => {
+        if (alive) setCategories(result.categories || [])
+      })
+      .catch(() => {})
+    return () => {
+      alive = false
+    }
+  }, [])
+
+  const hasFilters = category !== 'all' || brand !== 'all' || sort !== 'relevance'
+
+  const resetPage = (update) => {
+    setPage(1)
+    if (update) update()
+  }
+
+  const clearFilters = () => {
+    setPage(1)
+    setCategory('all')
+    setBrand('all')
+    setSort('relevance')
+  }
+
+  useEffect(() => {
+    let alive = true
+    const qs = new URLSearchParams({ page: String(page), limit: '12' })
+    if (category !== 'all') qs.set('category', category)
+    if (brand !== 'all') qs.set('brand', brand)
+    if (sort !== 'relevance') qs.set('sort', sort)
+    fetch(`/api/products?${qs.toString()}`)
       .then((res) => res.json())
       .then((result) => {
         if (alive) setData(result)
@@ -42,12 +77,82 @@ function GallerySection({ onView }) {
     return () => {
       alive = false
     }
-  }, [page])
+  }, [page, category, brand, sort])
 
   return (
     <section className="home-section gallery-section">
       <div className="section-head">
         <h2 id="section-galeria">Toda la galería</h2>
+        <span className="count-tag">{data ? `${data.total} productos` : '…'}</span>
+      </div>
+
+      <div className="gallery-tools">
+        <div className="gallery-chips" role="group" aria-label="Filtrar por categoría">
+          <button
+            type="button"
+            className={`gallery-chip${category === 'all' ? ' active' : ''}`}
+            onClick={() => resetPage(() => setCategory('all'))}
+          >
+            Todas
+          </button>
+          {categories.map((c) => (
+            <button
+              key={c.key}
+              type="button"
+              className={`gallery-chip${category === c.key ? ' active' : ''}`}
+              onClick={() => resetPage(() => setCategory(c.key))}
+            >
+              {c.name}
+            </button>
+          ))}
+        </div>
+
+        <div className="gallery-meta">
+          <label className="gallery-select">
+            <span>Marca</span>
+            <select
+              value={brand}
+              onChange={(e) => resetPage(() => setBrand(e.target.value))}
+            >
+              <option value="all">Todas las marcas</option>
+              {brands.map((b) => (
+                <option key={b} value={b}>
+                  {b}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <div className="gallery-sort" role="group" aria-label="Ordenar por precio">
+            <button
+              type="button"
+              className={`sort-btn${sort === 'relevance' ? ' active' : ''}`}
+              onClick={() => resetPage(() => setSort('relevance'))}
+            >
+              Relevancia
+            </button>
+            <button
+              type="button"
+              className={`sort-btn${sort === 'price_asc' ? ' active' : ''}`}
+              onClick={() => resetPage(() => setSort('price_asc'))}
+            >
+              Menor precio
+            </button>
+            <button
+              type="button"
+              className={`sort-btn${sort === 'price_desc' ? ' active' : ''}`}
+              onClick={() => resetPage(() => setSort('price_desc'))}
+            >
+              Mayor precio
+            </button>
+          </div>
+
+          {hasFilters && (
+            <button type="button" className="gallery-clear" onClick={clearFilters}>
+              Limpiar filtros
+            </button>
+          )}
+        </div>
       </div>
 
       {error ? (
@@ -55,7 +160,7 @@ function GallerySection({ onView }) {
       ) : loading && !data ? (
         <p className="gallery-note">Cargando la galería…</p>
       ) : data.items.length === 0 ? (
-        <p className="gallery-note">La galería está vacía por ahora.</p>
+        <p className="gallery-note">No hay productos con esos filtros.</p>
       ) : (
         <>
           <div className="product-grid">
@@ -215,7 +320,7 @@ export default function Home({ onView }) {
         </div>
       </section>
 
-      <GallerySection onView={onView} />
+      <GallerySection onView={onView} brands={brands} />
 
       <section className="brands-strip" aria-label="Marcas oficiales">
         <h2>Marcas oficiales</h2>

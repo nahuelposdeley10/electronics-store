@@ -1,8 +1,14 @@
 import express from 'express'
 import { Product } from '../models/Product.js'
 import { Brand } from '../models/Brand.js'
+import { Category } from '../models/Category.js'
 import { ensureCatalogMeta } from '../lib/catalog-meta.js'
-import { parsePagination, buildProductSearchFilter } from '../lib/catalog-query.js'
+import {
+  parsePagination,
+  buildProductSearchFilter,
+  parseMulti,
+  buildCatalogSort,
+} from '../lib/catalog-query.js'
 
 const router = express.Router()
 
@@ -30,10 +36,18 @@ router.get('/products', async (req, res) => {
     const { page, limit } = parsePagination(req.query)
     const filter = buildProductSearchFilter(req.query.q)
 
+    const categories = parseMulti(req.query.category)
+    if (categories) filter.category = { $in: categories }
+
+    const brands = parseMulti(req.query.brand)
+    if (brands) filter.brand = { $in: brands }
+
+    const sort = buildCatalogSort(req.query.sort)
+
     const [total, products] = await Promise.all([
       Product.countDocuments(filter),
       Product.find(filter)
-        .sort({ id: 1 })
+        .sort(sort)
         .skip((page - 1) * limit)
         .limit(limit)
         .lean(),
@@ -49,6 +63,19 @@ router.get('/products', async (req, res) => {
   } catch (error) {
     console.error('Catalog error:', error)
     return res.status(500).json({ error: 'No se pudo leer el catálogo' })
+  }
+})
+
+router.get('/categories', async (req, res) => {
+  try {
+    await ensureCatalogMeta()
+    const categories = await Category.find({ active: true }).sort({ key: 1 }).lean()
+    return res.json({
+      categories: categories.map((c) => ({ key: c.key, name: c.name })),
+    })
+  } catch (error) {
+    console.error('Categories error:', error)
+    return res.status(500).json({ error: 'No se pudieron leer las categorías' })
   }
 })
 

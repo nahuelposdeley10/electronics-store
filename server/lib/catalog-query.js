@@ -20,3 +20,18 @@ export function buildProductSearchFilter(q) {
   const regex = new RegExp(escapeRegex(term), 'i')
   return { $or: [{ name: regex }, { brand: regex }, { category: regex }] }
 }
+
+export function parseMulti(value) {
+  if (value === undefined || value === null || value === '') return null
+  const list = String(value)
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
+  return list.length ? [...new Set(list)] : null
+}
+
+export function buildCatalogSort(value) {
+  if (value === 'price_desc') return { price: -1, id: 1 }
+  if (value === 'price_asc') return { price: 1, id: 1 }
+  return { id: 1 }
+}
