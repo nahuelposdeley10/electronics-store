@@ -1032,7 +1032,7 @@ function SalesScreen() {
         )}
       </div>
 
-      {data.totalPages > 1 && (
+      {data.total > 0 && (
         <div className="dash-pager">
           <button
             type="button"
