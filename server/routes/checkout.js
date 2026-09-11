@@ -64,6 +64,10 @@ router.post('/checkout', async (req, res) => {
       return res.status(400).json({ error: 'El carrito está vacío' })
     }
 
+    const buyer = req.body.payer || {}
+    const fullName = String(buyer.name || '').trim()
+    const lastNameIdx = fullName.lastIndexOf(' ') + 1
+
     const order = await Order.create({
       items: cart.lineItems.map((line) => ({
         productId: line.product.id,
@@ -76,6 +80,9 @@ router.post('/checkout', async (req, res) => {
       discount: cart.discount,
       shippingCost: cart.shippingCost,
       total: cart.total,
+      payerEmail: String(buyer.email || '').trim() || null,
+      payerName: fullName ? fullName.slice(0, lastNameIdx - 1) || fullName : null,
+      payerSurname: fullName && lastNameIdx > 0 ? fullName.slice(lastNameIdx) : null,
     })
 
     trackOrder(order._id)

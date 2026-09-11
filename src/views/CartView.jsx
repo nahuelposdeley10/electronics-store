@@ -30,6 +30,8 @@ export default function CartView({ onNavigate }) {
   } = useCart()
 
   const [couponInput, setCouponInput] = useState('')
+  const [buyerName, setBuyerName] = useState('')
+  const [buyerEmail, setBuyerEmail] = useState('')
   const [checkingOut, setCheckingOut] = useState(false)
   const [checkoutError, setCheckoutError] = useState('')
 
@@ -41,6 +43,16 @@ export default function CartView({ onNavigate }) {
 
   const checkout = async () => {
     if (items.length === 0 || checkingOut) return
+    const name = buyerName.trim()
+    const email = buyerEmail.trim()
+    if (name.length < 2) {
+      setCheckoutError('Escribí tu nombre y apellido para poder identificar la venta.')
+      return
+    }
+    if (!/^\S+@\S+\.\S+$/.test(email)) {
+      setCheckoutError('Escribí un email válido para recibir el comprobante.')
+      return
+    }
     setCheckingOut(true)
     setCheckoutError('')
     try {
@@ -50,6 +62,7 @@ export default function CartView({ onNavigate }) {
         body: JSON.stringify({
           items: items.map((item) => ({ id: item.id, quantity: item.quantity })),
           coupon: appliedCoupon,
+          payer: { name, email },
         }),
       })
       const data = await res.json()
@@ -192,6 +205,27 @@ export default function CartView({ onNavigate }) {
           </div>
           <div className="summary-installments mono">
             o {inst.count} cuotas de {formatARS(inst.value)}
+          </div>
+
+          <div className="buyer-box">
+            <label htmlFor="buyer-name">Nombre y apellido</label>
+            <input
+              id="buyer-name"
+              type="text"
+              autoComplete="name"
+              placeholder="Ej: Juan Pérez"
+              value={buyerName}
+              onChange={(e) => setBuyerName(e.target.value)}
+            />
+            <label htmlFor="buyer-email">Email</label>
+            <input
+              id="buyer-email"
+              type="email"
+              autoComplete="email"
+              placeholder="tumail@ejemplo.com"
+              value={buyerEmail}
+              onChange={(e) => setBuyerEmail(e.target.value)}
+            />
           </div>
 
           <button
