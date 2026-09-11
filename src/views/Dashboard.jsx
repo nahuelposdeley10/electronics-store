@@ -432,19 +432,29 @@ function OverviewScreen({ data, onView }) {
 }
 
 function ProductsScreen({ canManage }) {
-  const [products, setProducts] = useState(null)
+  const [data, setData] = useState(null)
   const [error, setError] = useState('')
   const [query, setQuery] = useState('')
+  const [params, setParams] = useState({ q: '', page: 1 })
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState(null)
   const [note, setNote] = useState('')
-  const [refresh, setRefresh] = useState(0)
 
   useEffect(() => {
     let alive = true
-    apiGet('/api/admin/products')
-      .then((data) => {
-        if (alive) setProducts(data)
+    const paramsString = new URLSearchParams({
+      q: params.q,
+      page: String(params.page),
+      limit: '10',
+    })
+    apiGet(`/api/admin/products?${paramsString}`)
+      .then((res) => {
+        if (!alive) return
+        if (res.items.length === 0 && res.page > 1) {
+          setParams((prev) => ({ ...prev, page: res.totalPages || 1 }))
+          return
+        }
+        setData(res)
       })
       .catch((err) => {
         if (alive) setError(err.message)
@@ -452,7 +462,12 @@ function ProductsScreen({ canManage }) {
     return () => {
       alive = false
     }
-  }, [refresh])
+  }, [params])
+
+  const submitSearch = (e) => {
+    e.preventDefault()
+    setParams((prev) => ({ ...prev, q: query.trim(), page: 1 }))
+  }
 
   const openForm = (product = null) => {
     setEditing(product)
@@ -471,7 +486,7 @@ function ProductsScreen({ canManage }) {
         ? `Producto actualizado: ${saved.name}`
         : `Producto agregado: ${saved.name}`,
     )
-    setRefresh((n) => n + 1)
+    setParams((prev) => ({ ...prev, page: 1 }))
   }
 
   const handleDelete = async (product) => {
@@ -481,22 +496,17 @@ function ProductsScreen({ canManage }) {
     try {
       await apiDelete(`/api/admin/products/${product.id}`)
       setNote(`Producto eliminado: ${product.name}`)
-      setRefresh((n) => n + 1)
+      if (data && data.items.length === 1 && data.page > 1) {
+        setParams((prev) => ({ ...prev, page: prev.page - 1 }))
+      } else {
+        setParams((prev) => ({ ...prev }))
+      }
     } catch (err) {
       setNote(err.message)
     }
   }
 
-  const filtered = useMemo(() => {
-    if (!products) return []
-    const q = query.trim().toLowerCase()
-    if (!q) return products
-    return products.filter((p) =>
-      `${p.name} ${p.brand} ${p.category}`.toLowerCase().includes(q),
-    )
-  }, [products, query])
-
-  if (!products && !error) return <ScreenLoading label="Cargando la estantería…" />
+  if (!data && !error) return <ScreenLoading label="Cargando la estantería…" />
   if (error) return <ScreenBlocked message={error} />
 
   return (
@@ -507,13 +517,13 @@ function ProductsScreen({ canManage }) {
           <h1>Productos</h1>
         </div>
         <div className="dash-head-today">
-          <strong className="mono">{products.length}</strong>
+          <strong className="mono">{data.total}</strong>
           <em>en la galería</em>
         </div>
       </header>
 
       <div className="dash-toolbar">
-        <label className="dash-search">
+        <form className="dash-search" role="search" onSubmit={submitSearch}>
           <IconSearch />
           <input
             type="text"
@@ -522,9 +532,9 @@ function ProductsScreen({ canManage }) {
             placeholder="Buscá producto, marca o categoría…"
             aria-label="Buscar productos"
           />
-        </label>
+        </form>
         <span className="count-tag mono">
-          {filtered.length} de {products.length}
+          {data.items.length} de {data.total}
         </span>
         {canManage && (
           <button
@@ -562,7 +572,7 @@ function ProductsScreen({ canManage }) {
             </tr>
           </thead>
           <tbody>
-            {filtered.map((p) => (
+            {data.items.map((p) => (
               <tr key={p.id}>
                 <td>
                   <span className="t-cell-product">
@@ -606,10 +616,32 @@ function ProductsScreen({ canManage }) {
             ))}
           </tbody>
         </table>
-        {filtered.length === 0 && (
-          <EmptyNote text="Ningún producto con ese nombre o marca." />
+        {data.items.length === 0 && (
+          <EmptyNote text="Ningún producto con ese nombre, marca o categoría." />
         )}
       </div>
+
+      {data.totalPages > 1 && (
+        <div className="dash-pager">
+          <button
+            type="button"
+            onClick={() => setParams((prev) => ({ ...prev, page: prev.page - 1 }))}
+            disabled={data.page <= 1}
+          >
+            ← Anterior
+          </button>
+          <span className="mono">
+            Página {data.page} de {data.totalPages} · {data.total} productos
+          </span>
+          <button
+            type="button"
+            onClick={() => setParams((prev) => ({ ...prev, page: prev.page + 1 }))}
+            disabled={data.page >= data.totalPages}
+          >
+            Siguiente →
+          </button>
+        </div>
+      )}
     </div>
   )
 }

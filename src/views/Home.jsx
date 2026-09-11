@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useCatalog } from '../context/useCatalog'
 import ProductCard from '../components/ProductCard'
 import { formatARS } from '../data/format'
@@ -16,6 +16,102 @@ function Section({ title, items, onView, offer = false }) {
           <ProductCard key={product.id} product={product} onView={onView} offer={offer} />
         ))}
       </div>
+    </section>
+  )
+}
+
+function GallerySection({ onView }) {
+  const [draft, setDraft] = useState('')
+  const [query, setQuery] = useState('')
+  const [page, setPage] = useState(1)
+  const [data, setData] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    const id = setTimeout(() => {
+      const next = draft.trim()
+      if (next !== query) {
+        setQuery(next)
+        setPage(1)
+      }
+    }, 350)
+    return () => clearTimeout(id)
+  }, [draft, query])
+
+  useEffect(() => {
+    let alive = true
+    const params = new URLSearchParams({ page: String(page), limit: '12' })
+    if (query) params.set('q', query)
+    fetch(`/api/products?${params.toString()}`)
+      .then((res) => res.json())
+      .then((result) => {
+        if (alive) setData(result)
+      })
+      .catch((err) => {
+        if (alive) setError(err.message)
+      })
+      .finally(() => {
+        if (alive) setLoading(false)
+      })
+    return () => {
+      alive = false
+    }
+  }, [query, page])
+
+  return (
+    <section className="home-section gallery-section">
+      <div className="section-head">
+        <h2 id="section-galeria">Toda la galería</h2>
+        <form className="gallery-search" role="search" onSubmit={(e) => e.preventDefault()}>
+          <input
+            type="text"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            placeholder="Buscar nombre, marca o categoría…"
+            aria-label="Buscar en la galería"
+          />
+        </form>
+      </div>
+
+      {error ? (
+        <p className="gallery-note">{error}</p>
+      ) : loading && !data ? (
+        <p className="gallery-note">Cargando la galería…</p>
+      ) : data.items.length === 0 ? (
+        <p className="gallery-note">
+          No encontramos productos que coincidan con «{query}».
+        </p>
+      ) : (
+        <>
+          <div className="product-grid">
+            {data.items.map((product) => (
+              <ProductCard key={product.id} product={product} onView={onView} />
+            ))}
+          </div>
+          {data.totalPages > 1 && (
+            <div className="gallery-pager">
+              <button
+                type="button"
+                onClick={() => setPage((p) => p - 1)}
+                disabled={page <= 1 || loading}
+              >
+                ← Anterior
+              </button>
+              <span className="mono">
+                Página {data.page} de {data.totalPages} · {data.total} productos
+              </span>
+              <button
+                type="button"
+                onClick={() => setPage((p) => p + 1)}
+                disabled={page >= data.totalPages || loading}
+              >
+                Siguiente →
+              </button>
+            </div>
+          )}
+        </>
+      )}
     </section>
   )
 }
@@ -144,7 +240,7 @@ export default function Home({ onView }) {
         </div>
       </section>
 
-      <Section title="Toda la galería" items={products} onView={onView} />
+      <GallerySection onView={onView} />
 
       <section className="brands-strip" aria-label="Marcas oficiales">
         <h2>Marcas oficiales</h2>

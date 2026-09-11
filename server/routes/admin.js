@@ -4,6 +4,7 @@ import { Order } from '../models/Order.js'
 import { Product } from '../models/Product.js'
 import { requireAuth, requireRole } from '../middleware/auth.js'
 import { uploadToCloudinary } from '../services/cloudinary.js'
+import { parsePagination, buildProductSearchFilter } from '../lib/catalog-query.js'
 
 const router = express.Router()
 
@@ -144,9 +145,16 @@ router.get('/orders', async (req, res) => {
 
 router.get('/products', async (req, res) => {
   try {
-    const [dbProducts, approved] = await Promise.all([
-      Product.find().sort({ id: 1 }).lean(),
+    const { page, limit } = parsePagination(req.query)
+    const filter = buildProductSearchFilter(req.query.q)
+    const [approved, total, dbProducts] = await Promise.all([
       Order.find({ status: 'approved' }).lean(),
+      Product.countDocuments(filter),
+      Product.find(filter)
+        .sort({ id: 1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean(),
     ])
     const sold = new Map()
     for (const order of approved) {
@@ -155,8 +163,8 @@ router.get('/products', async (req, res) => {
       }
     }
 
-    return res.json(
-      dbProducts.map((p) => ({
+    return res.json({
+      items: dbProducts.map((p) => ({
         id: p.id,
         name: p.name,
         brand: p.brand,
@@ -173,7 +181,11 @@ router.get('/products', async (req, res) => {
         soldUnits: sold.get(p.id) || 0,
         revenue: (sold.get(p.id) || 0) * p.price,
       })),
-    )
+      page,
+      limit,
+      total,
+      totalPages: Math.max(1, Math.ceil(total / limit)),
+    })
   } catch (error) {
     console.error('Products error:', error)
     return res.status(500).json({ error: 'No se pudo leer los productos' })

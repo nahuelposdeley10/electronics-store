@@ -8,10 +8,10 @@ export default function CatalogProvider({ children }) {
 
   const reload = useCallback(async () => {
     try {
-      const res = await fetch('/api/products')
+      const res = await fetch('/api/products?limit=100')
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'No se pudo leer el catálogo')
-      setProducts(data)
+      setProducts(data.items || [])
       setError('')
     } catch (err) {
       setError(err.message)
@@ -22,11 +22,11 @@ export default function CatalogProvider({ children }) {
 
   useEffect(() => {
     let alive = true
-    fetch('/api/products')
+    fetch('/api/products?limit=100')
       .then((res) => res.json())
       .then((data) => {
         if (alive) {
-          setProducts(data)
+          setProducts(data.items || [])
           setError('')
         }
       })
