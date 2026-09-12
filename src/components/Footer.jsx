@@ -25,7 +25,11 @@ export default function Footer({ onNavigate }) {
       <div className="footer-grid">
         <div className="footer-col footer-about">
           <span className="footer-brand">
-            <IconBolt />
+            {settings.store.logoUrl ? (
+              <img className="footer-logo" src={settings.store.logoUrl} alt="" />
+            ) : (
+              <IconBolt />
+            )}
             {settings.store.name === 'TechStore' ? (
               <>
                 Tech<span className="footer-accent">Store</span>

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useCart } from '../context/useCart'
 import { useSiteSettings, mergeSettings } from '../lib/siteSettings'
 import { formatARS } from '../data/format'
@@ -25,6 +25,13 @@ export default function Header({ onNavigate, view, onSearch }) {
   const { totalItems } = useCart()
   const [query, setQuery] = useState('')
   const settings = mergeSettings(useSiteSettings())
+
+  useEffect(() => {
+    if (!settings.store.logoUrl) return undefined
+    const link = document.querySelector('link[rel="icon"]')
+    if (link) link.href = settings.store.logoUrl
+    return undefined
+  }, [settings.store.logoUrl])
 
   const announcementItems =
     Array.isArray(settings.general.marquee) && settings.general.marquee.length
@@ -76,7 +83,11 @@ export default function Header({ onNavigate, view, onSearch }) {
             aria-label={`${settings.store.name} — ir al inicio`}
           >
             <span className="brand-chip">
-              <IconBolt />
+              {settings.store.logoUrl ? (
+                <img className="brand-logo" src={settings.store.logoUrl} alt="" />
+              ) : (
+                <IconBolt />
+              )}
             </span>
             <span className="brand-word">
               {settings.store.name === 'TechStore' ? (

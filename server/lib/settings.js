@@ -27,6 +27,8 @@ export function defaults() {
     store: {
       name: 'TechStore',
       tagline: 'caja · Villa Urquiza',
+      logoUrl: null,
+      coverUrl: null,
       phone: '11 5555 4294',
       whatsapp: '5491155554294',
       email: 'hola@tienda.com.ar',
@@ -82,13 +84,26 @@ async function seed() {
   return doc.value
 }
 
+function hydrate(raw) {
+  const base = defaults()
+  const out = {}
+  for (const section of Object.keys(base)) {
+    const stored = raw?.[section]
+    out[section] =
+      stored && typeof stored === 'object' && !Array.isArray(stored)
+        ? { ...base[section], ...stored }
+        : { ...base[section] }
+  }
+  return out
+}
+
 export async function getSettings({ fresh } = {}) {
   const now = Date.now()
   if (!fresh && cache && now - cacheAt < CACHE_MS) {
     return cache
   }
-  const value = await seed()
-  cache = value
+  const raw = await seed()
+  cache = hydrate(raw)
   cacheAt = now
   return cache
 }

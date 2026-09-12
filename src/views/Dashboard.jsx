@@ -5741,6 +5741,39 @@ function SettingsNote({ text }) {
   )
 }
 
+function SetImageField({ label, hint, value, uploading, onFile, onRemove }) {
+  return (
+    <div className="set-image-box">
+      <span className="set-image-label">{label}</span>
+      <div className="set-image-preview">
+        {value ? (
+          <img src={value} alt="" />
+        ) : (
+          <span className="set-image-empty">Sin imagen</span>
+        )}
+      </div>
+      <div className="set-image-actions">
+        <label className="primary-btn set-image-upload">
+          {uploading ? 'Subiendo…' : 'Subir imagen'}
+          <input
+            type="file"
+            accept="image/*"
+            style={{ display: 'none' }}
+            disabled={uploading}
+            onChange={onFile}
+          />
+        </label>
+        {value && (
+          <button type="button" className="ghost-btn" onClick={onRemove}>
+            Quitar
+          </button>
+        )}
+      </div>
+      {hint && <em className="set-hint">{hint}</em>}
+    </div>
+  )
+}
+
 function UsersScreen() {
   const [users, setUsers] = useState(null)
   const [error, setError] = useState('')
@@ -6224,6 +6257,8 @@ function StoreScreenBody({ settings, saving, note, onSave }) {
   const [form, setForm] = useState({
     name: store.name || '',
     tagline: store.tagline || '',
+    logoUrl: store.logoUrl || '',
+    coverUrl: store.coverUrl || '',
     phone: store.phone || '',
     whatsapp: store.whatsapp || '',
     email: store.email || '',
@@ -6232,8 +6267,37 @@ function StoreScreenBody({ settings, saving, note, onSave }) {
     hours: store.hours || '',
     band: store.band || '',
   })
+  const [uploading, setUploading] = useState(null)
+  const [imageResult, setImageResult] = useState('')
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }))
+
+  const uploadImage = async (which, e) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setUploading(which)
+    setImageResult('')
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      fd.append('field', which)
+      const res = await apiUpload('/api/admin/settings/media', fd)
+      setForm((f) => ({ ...f, [`${which}Url`]: res[which] }))
+      setImageResult(
+        `${which === 'logo' ? 'Logo' : 'Portada'} actualizado. Guardalo con los demás cambios.`,
+      )
+    } catch (err) {
+      setImageResult(err.message)
+    } finally {
+      setUploading(null)
+    }
+  }
+
+  const removeImage = (which) => {
+    setImageResult('')
+    setForm((f) => ({ ...f, [`${which}Url`]: '' }))
+  }
 
   const submit = (e) => {
     e.preventDefault()
@@ -6251,13 +6315,34 @@ function StoreScreenBody({ settings, saving, note, onSave }) {
 
       <div className="dash-toolbar">
         <p className="list-note">
-          Estos datos se muestran en la tienda: cabecera, pie de página, mapa y botón de WhatsApp.
+          Estos datos se muestran en la tienda: cabecera, pie de página, mapa, portada y botón de WhatsApp.
         </p>
       </div>
 
       <SettingsNote text={note} />
+      <SettingsNote text={imageResult} />
 
       <form className="set-card set-form" onSubmit={submit}>
+        <h3>Logo y portada</h3>
+        <div className="set-row set-images">
+          <SetImageField
+            label="Logo"
+            hint="Aparece en el header y el pie de la tienda. PNG con fondo transparente recomendado."
+            value={form.logoUrl}
+            uploading={uploading === 'logo'}
+            onFile={(e) => uploadImage('logo', e)}
+            onRemove={() => removeImage('logo')}
+          />
+          <SetImageField
+            label="Portada"
+            hint="Imagen de fondo del hero de inicio. Si no hay, se usa la foto por defecto."
+            value={form.coverUrl}
+            uploading={uploading === 'cover'}
+            onFile={(e) => uploadImage('cover', e)}
+            onRemove={() => removeImage('cover')}
+          />
+        </div>
+
         <h3>Identidad</h3>
         <div className="set-row">
           <label className="inv-field">

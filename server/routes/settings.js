@@ -1,8 +1,15 @@
 import express from 'express'
+import multer from 'multer'
 import { requireAuth, requirePermission } from '../middleware/auth.js'
 import { getSettings, saveSettings } from '../lib/settings.js'
+import { uploadToCloudinary } from '../services/cloudinary.js'
 
 const router = express.Router()
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 8 * 1024 * 1024 },
+})
 
 const PUBLIC_SECTIONS = ['store', 'shipping', 'general']
 
@@ -46,5 +53,33 @@ router.put('/admin/settings', requireAuth, requirePermission('settings.manage'),
     return res.status(500).json({ error: 'No se pudieron guardar los ajustes' })
   }
 })
+
+router.post(
+  '/admin/settings/media',
+  requireAuth,
+  requirePermission('settings.manage'),
+  upload.single('file'),
+  async (req, res) => {
+    const field = String(req.body.field || '').trim()
+    if (!['logo', 'cover'].includes(field)) {
+      return res.status(400).json({ error: 'Campo inválido (logo o cover)' })
+    }
+    if (!req.file) {
+      return res.status(400).json({ error: 'Imagen requerida' })
+    }
+    try {
+      const url = await uploadToCloudinary(req.file)
+      const current = await getSettings()
+      const saved = await saveSettings({
+        section: 'store',
+        value: { ...(current.store || {}), [`${field}Url`]: url },
+      })
+      return res.json({ [field]: url, store: saved.store })
+    } catch (error) {
+      console.error('Settings media error:', error)
+      return res.status(500).json({ error: 'No se pudo subir la imagen' })
+    }
+  },
+)
 
 export default router

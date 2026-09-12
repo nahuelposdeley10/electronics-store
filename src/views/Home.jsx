@@ -6,6 +6,9 @@ import { formatARS } from '../data/format'
 import { useSiteSettings, mergeSettings } from '../lib/siteSettings'
 import { IconArrow, IconCheck, IconBolt } from '../components/Icons'
 
+const DEFAULT_COVER =
+  'https://images.unsplash.com/photo-1531297484001-80022131f5a1?auto=format&fit=crop&w=2000&q=80'
+
 function Section({ title, items, onView, offer = false }) {
   return (
     <section className="home-section" aria-labelledby={`section-${title}`}>
@@ -233,7 +236,7 @@ export default function Home({ onView }) {
       <section className="hero-bay">
         <img
           className="bay-bg"
-          src="https://images.unsplash.com/photo-1531297484001-80022131f5a1?auto=format&fit=crop&w=2000&q=80"
+          src={settings.store.coverUrl || DEFAULT_COVER}
           alt=""
           aria-hidden="true"
           loading="eager"
