@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useCatalog } from '../context/useCatalog'
 import ProductCard from '../components/ProductCard'
 import SearchSelect from '../components/SearchSelect'
@@ -204,6 +204,19 @@ export default function Home({ onView }) {
   const freeThreshold = settings.shipping.freeThreshold
   const [newsletter, setNewsletter] = useState(false)
   const [email, setEmail] = useState('')
+  const [bayLive, setBayLive] = useState(false)
+  const heroRef = useRef(null)
+
+  useEffect(() => {
+    const el = heroRef.current
+    if (!el || typeof IntersectionObserver === 'undefined') return undefined
+    const io = new IntersectionObserver(
+      ([entry]) => setBayLive(entry.isIntersecting),
+      { rootMargin: '120px' },
+    )
+    io.observe(el)
+    return () => io.disconnect()
+  }, [])
 
   const topDeals = useMemo(() => {
     const onSale = products.filter(
@@ -230,7 +243,7 @@ export default function Home({ onView }) {
 
   return (
     <main className="home">
-      <section className="hero-bay">
+      <section ref={heroRef} className={bayLive ? 'hero-bay bay-live' : 'hero-bay'}>
         {settings.store.coverUrl && (
           <img
             className="bay-bg"

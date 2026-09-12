@@ -125,7 +125,11 @@ export default function Header({ onNavigate, view, onSearch }) {
             >
               <IconCart />
               <span className="cart-label">Carrito</span>
-              {totalItems > 0 && <span className="cart-punch">{totalItems}</span>}
+              {totalItems > 0 && (
+                <span className="cart-punch" key={totalItems}>
+                  {totalItems}
+                </span>
+              )}
             </button>
           </div>
         </div>

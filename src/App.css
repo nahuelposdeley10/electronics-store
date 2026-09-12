@@ -5433,3 +5433,184 @@ a.set-image-preview:hover {
   margin-top: auto;
   text-decoration: none;
 }
+
+/* ================= Motion: hero focal ================= */
+
+.bay-eyebrow {
+  animation: bay-rise 0.5s var(--ease-out) 0.05s both;
+}
+
+.bay-copy h1 {
+  animation: bay-rise 0.6s var(--ease-out) 0.12s both;
+}
+
+.h1-tail {
+  animation: bay-tail 0.55s var(--ease-out) 0.34s both;
+}
+
+.bay-lead {
+  animation: bay-rise 0.6s var(--ease-out) 0.34s both;
+}
+
+.bay-actions {
+  animation: bay-rise 0.6s var(--ease-out) 0.46s both;
+}
+
+.bay-stats {
+  animation: bay-rise 0.6s var(--ease-out) 0.58s both;
+}
+
+.hero-bay::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(
+    115deg,
+    transparent 42%,
+    rgba(255, 255, 255, 0.15) 50%,
+    transparent 58%
+  );
+  transform: translateX(-130%);
+  animation: bay-scan 1.5s var(--ease-out) 0.18s forwards;
+}
+
+@keyframes bay-scan {
+  0% {
+    transform: translateX(-130%);
+  }
+  55% {
+    transform: translateX(130%);
+  }
+  100% {
+    transform: translateX(130%);
+    opacity: 0;
+  }
+}
+
+@keyframes bay-rise {
+  0% {
+    opacity: 0;
+    transform: translateY(26px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes bay-tail {
+  0% {
+    clip-path: inset(0 100% 0 0);
+  }
+  100% {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+/* ================= Motion: fondo vivo ================= */
+
+.hero-bay.bay-live .bay-bg {
+  animation: bay-kenburns 28s var(--ease-out) infinite alternate;
+  will-change: transform;
+}
+
+.hero-bay.bay-live .bay-shade {
+  animation: bay-breathe 16s ease-in-out infinite alternate;
+}
+
+@keyframes bay-kenburns {
+  0% {
+    transform: scale(1) translate(0, 0);
+  }
+  100% {
+    transform: scale(1.08) translate(0.6%, -0.6%);
+  }
+}
+
+@keyframes bay-breathe {
+  0% {
+    transform: scale(1.005);
+  }
+  100% {
+    transform: scale(1.03);
+  }
+}
+
+/* ================= Motion: feedback ================= */
+
+.primary-btn:active,
+.hero-btn:active,
+.add-btn:active,
+.ghost-btn:active,
+.gallery-chip:active {
+  transform: scale(0.97);
+}
+
+.cart-punch {
+  animation: punch-pop 0.4s var(--ease-out);
+}
+
+@keyframes punch-pop {
+  0% {
+    transform: scale(1.6);
+  }
+  60% {
+    transform: scale(0.9);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.box-media::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 60%;
+  z-index: 2;
+  pointer-events: none;
+  background: linear-gradient(105deg, transparent, rgba(255, 255, 255, 0.5), transparent);
+  transform: translateX(-130%) skewX(-12deg);
+  transition: transform 0.7s var(--ease-out);
+}
+
+.product-box:hover .box-media::after {
+  transform: translateX(260%) skewX(-12deg);
+}
+
+.tag-discount,
+.tag-flash,
+.tag-shipping,
+.mark-stock {
+  z-index: 3;
+}
+
+.marquee:hover .marquee-track {
+  animation-play-state: paused;
+}
+
+.newsletter-ok {
+  animation: bay-rise 0.4s var(--ease-out);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bay-eyebrow,
+  .bay-copy h1,
+  .h1-tail,
+  .bay-lead,
+  .bay-actions,
+  .bay-stats,
+  .hero-bay::before,
+  .hero-bay.bay-live .bay-bg,
+  .hero-bay.bay-live .bay-shade,
+  .cart-punch,
+  .newsletter-ok,
+  .box-media::after,
+  .marquee-track {
+    animation: none;
+  }
+}
