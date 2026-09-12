@@ -5,7 +5,7 @@ import { Product } from '../models/Product.js'
 import { Quote } from '../models/Quote.js'
 import { requireAuth, requireRole } from '../middleware/auth.js'
 import { uploadToCloudinary } from '../services/cloudinary.js'
-import { parsePagination, buildProductSearchFilter, escapeRegex } from '../lib/catalog-query.js'
+import { parsePagination, buildProductSearchFilter, escapeRegex, parseMulti } from '../lib/catalog-query.js'
 import { getValidCategoryKeys } from '../lib/catalog-meta.js'
 import { changeStock } from '../lib/stock.js'
 
@@ -154,11 +154,12 @@ router.get('/orders', async (req, res) => {
       contextFilter.$or = or
     }
 
-    const [total, approved, pending, rejected, orders] = await Promise.all([
+    const [total, approved, pending, rejected, refunded, orders] = await Promise.all([
       Order.countDocuments(contextFilter),
       Order.countDocuments({ ...contextFilter, status: 'approved' }),
       Order.countDocuments({ ...contextFilter, status: { $in: [...PENDING_STATUSES] } }),
       Order.countDocuments({ ...contextFilter, status: { $in: [...REJECTED_STATUSES] } }),
+      Order.countDocuments({ ...contextFilter, status: 'refunded' }),
       Order.find({ ...contextFilter, ...statusFilter })
         .sort({ createdAt: -1 })
         .skip((page - 1) * limit)
@@ -194,7 +195,7 @@ router.get('/orders', async (req, res) => {
       limit,
       total,
       totalPages: Math.max(1, Math.ceil(total / limit)),
-      counts: { all: total, approved, pending, rejected },
+      counts: { all: total, approved, pending, rejected, refunded },
     })
   } catch (error) {
     console.error('Orders error:', error)
@@ -206,6 +207,13 @@ router.get('/products', async (req, res) => {
   try {
     const { page, limit } = parsePagination(req.query)
     const filter = buildProductSearchFilter(req.query.q)
+
+    const categories = parseMulti(req.query.category)
+    if (categories) filter.category = { $in: categories }
+
+    const brands = parseMulti(req.query.brand)
+    if (brands) filter.brand = { $in: brands }
+
     const [approved, total, dbProducts] = await Promise.all([
       Order.find({ status: 'approved' }).lean(),
       Product.countDocuments(filter),

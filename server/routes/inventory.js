@@ -7,6 +7,7 @@ import {
   parsePagination,
   buildProductSearchFilter,
   escapeRegex,
+  parseMulti,
 } from '../lib/catalog-query.js'
 import { changeStock } from '../lib/stock.js'
 
@@ -30,6 +31,12 @@ router.get('/stock', async (req, res) => {
   try {
     const { page, limit } = parsePagination(req.query)
     const filter = buildProductSearchFilter(req.query.q)
+
+    const categories = parseMulti(req.query.category)
+    if (categories) filter.category = { $in: categories }
+
+    const brands = parseMulti(req.query.brand)
+    if (brands) filter.brand = { $in: brands }
 
     if (req.query.low === '1' || req.query.low === 'true') {
       filter.$expr = { $lte: ['$stock', '$minStock'] }

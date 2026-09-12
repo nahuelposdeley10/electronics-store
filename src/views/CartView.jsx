@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useCart } from '../context/useCart'
-import { formatARS, installmentsFor } from '../data/format'
+import { formatARS } from '../data/format'
 import {
   IconCart,
   IconClose,
@@ -89,8 +89,6 @@ export default function CartView({ onNavigate }) {
       </main>
     )
   }
-
-  const inst = installmentsFor(total)
 
   return (
     <main className="cart">
@@ -202,9 +200,6 @@ export default function CartView({ onNavigate }) {
           <div className="summary-total-row">
             <span>Total</span>
             <span className="summary-total mono">{formatARS(total)}</span>
-          </div>
-          <div className="summary-installments mono">
-            o {inst.count} cuotas de {formatARS(inst.value)}
           </div>
 
           <div className="buyer-box">

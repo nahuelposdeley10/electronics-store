@@ -8,6 +8,7 @@ import {
   parsePagination,
   buildProductSearchFilter,
   escapeRegex,
+  parseMulti,
 } from '../lib/catalog-query.js'
 import {
   ensureCatalogMeta,
@@ -502,6 +503,13 @@ router.get('/offers', requireRole('superadmin'), async (req, res) => {
   try {
     const { page, limit } = parsePagination(req.query)
     const filter = buildProductSearchFilter(req.query.q)
+
+    const categories = parseMulti(req.query.category)
+    if (categories) filter.category = { $in: categories }
+
+    const brands = parseMulti(req.query.brand)
+    if (brands) filter.brand = { $in: brands }
+
     filter.onSale = true
     const [total, products] = await Promise.all([
       Product.countDocuments(filter),

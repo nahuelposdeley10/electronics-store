@@ -3705,6 +3705,14 @@
   margin-bottom: 12px;
 }
 
+.pos-filters {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
 .dash-filter-field {
   display: flex;
   align-items: center;

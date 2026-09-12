@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   Area,
   AreaChart,
@@ -596,26 +596,31 @@ function ProductsScreen({ canManage }) {
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
   const [query, setQuery] = useState('')
-  const [params, setParams] = useState({ q: '', page: 1 })
+  const [params, setParams] = useState({ q: '', category: '', brand: '', page: 1 })
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState(null)
   const [note, setNote] = useState('')
   const [cats, setCats] = useState([])
+  const [brands, setBrands] = useState([])
   const [bulk, setBulk] = useState({ mode: 'percent', value: '', category: 'todas' })
   const [bulkSaving, setBulkSaving] = useState(false)
 
   useEffect(() => {
-    if (!canManage) return
     let alive = true
-    apiGet('/api/admin/categories')
+    apiGet('/api/categories')
       .then((res) => {
-        if (alive) setCats(res.items || [])
+        if (alive) setCats(res.categories || [])
+      })
+      .catch(() => {})
+    apiGet('/api/brands')
+      .then((res) => {
+        if (alive) setBrands(res.brands || [])
       })
       .catch(() => {})
     return () => {
       alive = false
     }
-  }, [canManage])
+  }, [])
 
   useEffect(() => {
     let alive = true
@@ -624,6 +629,8 @@ function ProductsScreen({ canManage }) {
       page: String(params.page),
       limit: '10',
     })
+    if (params.category) paramsString.set('category', params.category)
+    if (params.brand) paramsString.set('brand', params.brand)
     apiGet(`/api/admin/products?${paramsString}`)
       .then((res) => {
         if (!alive) return
@@ -645,6 +652,12 @@ function ProductsScreen({ canManage }) {
     e.preventDefault()
     setParams((prev) => ({ ...prev, q: query.trim(), page: 1 }))
   }
+
+  const onCategory = (e) =>
+    setParams((prev) => ({ ...prev, category: e.target.value, page: 1 }))
+
+  const onBrand = (e) =>
+    setParams((prev) => ({ ...prev, brand: e.target.value, page: 1 }))
 
   const openForm = (product = null) => {
     setEditing(product)
@@ -731,6 +744,26 @@ function ProductsScreen({ canManage }) {
             aria-label="Buscar productos"
           />
         </form>
+        <div className="dash-filters">
+          <label className="dash-filter-field">
+            <span>Categoría</span>
+            <select value={params.category} onChange={onCategory}>
+              <option value="">Todas</option>
+              {cats.map((c) => (
+                <option key={c.key} value={c.key}>{c.name}</option>
+              ))}
+            </select>
+          </label>
+          <label className="dash-filter-field">
+            <span>Marca</span>
+            <select value={params.brand} onChange={onBrand}>
+              <option value="">Todas</option>
+              {brands.map((b) => (
+                <option key={b} value={b}>{b}</option>
+              ))}
+            </select>
+          </label>
+        </div>
         <span className="count-tag mono">
           {data.items.length} de {data.total}
         </span>
@@ -1324,6 +1357,14 @@ const QUOTE_STATUS_LABELS = { draft: 'Borrador', confirmed: 'Confirmado', cancel
 function PosScreen({ canManage }) {
   const [products, setProducts] = useState([])
   const [query, setQuery] = useState('')
+  const [category, setCategory] = useState('')
+  const [brand, setBrand] = useState('')
+  const [catOptions, setCatOptions] = useState([])
+  const [brandOptions, setBrandOptions] = useState([])
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalItems, setTotalItems] = useState(0)
+  const [loading, setLoading] = useState(true)
   const [lines, setLines] = useState([])
   const [discount, setDiscount] = useState('')
   const [customer, setCustomer] = useState('')
@@ -1334,26 +1375,59 @@ function PosScreen({ canManage }) {
 
   useEffect(() => {
     let alive = true
-    apiGet('/api/admin/products?limit=100')
+    apiGet('/api/categories')
       .then((res) => {
-        if (alive) setProducts(res.items || [])
+        if (alive) setCatOptions(res.categories || [])
       })
-      .catch((err) => {
-        if (alive) setNote(err.message)
+      .catch(() => {})
+    apiGet('/api/brands')
+      .then((res) => {
+        if (alive) setBrandOptions(res.brands || [])
       })
+      .catch(() => {})
     return () => {
       alive = false
     }
   }, [])
 
-  const filtered = useMemo(
-    () => {
-      const q = query.trim().toLowerCase()
-      if (!q) return products
-      return products.filter((p) => `${p.name} ${p.brand} ${p.category}`.toLowerCase().includes(q))
-    },
-    [products, query],
-  )
+  useEffect(() => {
+    let alive = true
+    const params = new URLSearchParams({ limit: 20, page })
+    if (query.trim()) params.set('q', query.trim())
+    if (category) params.set('category', category)
+    if (brand) params.set('brand', brand)
+    apiGet(`/api/admin/products?${params.toString()}`)
+      .then((res) => {
+        if (!alive) return
+        setProducts(res.items || [])
+        setTotalPages(res.totalPages || 1)
+        setTotalItems(res.total || 0)
+      })
+      .catch((err) => {
+        if (alive) setNote(err.message)
+      })
+      .finally(() => {
+        if (alive) setLoading(false)
+      })
+    return () => {
+      alive = false
+    }
+  }, [query, category, brand, page])
+
+  const onQuery = (e) => {
+    setQuery(e.target.value)
+    setPage(1)
+  }
+
+  const onCategory = (e) => {
+    setCategory(e.target.value)
+    setPage(1)
+  }
+
+  const onBrand = (e) => {
+    setBrand(e.target.value)
+    setPage(1)
+  }
 
   const add = (product) => {
     if (product.stock <= 0) return
@@ -1438,13 +1512,34 @@ function PosScreen({ canManage }) {
             <input
               type="text"
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={onQuery}
               placeholder="Buscá en el catálogo…"
               aria-label="Buscar productos"
             />
           </div>
+          <div className="pos-filters">
+            <label className="dash-filter-field">
+              <span>Categoría</span>
+              <select value={category} onChange={onCategory}>
+                <option value="">Todas</option>
+                {catOptions.map((c) => (
+                  <option key={c.key} value={c.key}>{c.name}</option>
+                ))}
+              </select>
+            </label>
+            <label className="dash-filter-field">
+              <span>Marca</span>
+              <select value={brand} onChange={onBrand}>
+                <option value="">Todas</option>
+                {brandOptions.map((b) => (
+                  <option key={b} value={b}>{b}</option>
+                ))}
+              </select>
+            </label>
+            <span className="dash-count mono">{totalItems} productos</span>
+          </div>
           <div className="pos-list">
-            {filtered.map((p) => (
+            {products.map((p) => (
               <button
                 key={p.id}
                 type="button"
@@ -1464,8 +1559,30 @@ function PosScreen({ canManage }) {
                 <IconPlus />
               </button>
             ))}
-            {filtered.length === 0 && <EmptyNote text="Sin productos para esa búsqueda." />}
+            {loading && products.length === 0 && <EmptyNote text="Cargando productos…" />}
+            {!loading && products.length === 0 && <EmptyNote text="Sin productos para esos filtros." />}
           </div>
+          {totalPages > 1 && (
+            <div className="dash-pager">
+              <button
+                type="button"
+                disabled={page <= 1}
+                onClick={() => setPage((n) => n - 1)}
+              >
+                ← Anterior
+              </button>
+              <span className="mono">
+                página {page} de {totalPages}
+              </span>
+              <button
+                type="button"
+                disabled={page >= totalPages}
+                onClick={() => setPage((n) => n + 1)}
+              >
+                Siguiente →
+              </button>
+            </div>
+          )}
         </section>
 
         <section className="pos-ticket">
@@ -1553,18 +1670,26 @@ function PosScreen({ canManage }) {
 }
 
 function ReturnsScreen({ canManage }) {
-  const [orders, setOrders] = useState(null)
+  const [data, setData] = useState(null)
   const [error, setError] = useState('')
-  const [filter, setFilter] = useState('all')
+  const [params, setParams] = useState({ filter: 'all', page: 1 })
   const [processing, setProcessing] = useState({})
   const [note, setNote] = useState('')
   const [detail, setDetail] = useState(null)
+  const [version, setVersion] = useState(0)
 
   useEffect(() => {
     let alive = true
-    apiGet('/api/admin/orders?limit=100')
-      .then((data) => {
-        if (alive) setOrders(data.items || [])
+    const qs = new URLSearchParams({ page: String(params.page), limit: '10' })
+    if (params.filter !== 'all') qs.set('status', params.filter)
+    apiGet(`/api/admin/orders?${qs}`)
+      .then((res) => {
+        if (!alive) return
+        if (res.items.length === 0 && res.page > 1) {
+          setParams((prev) => ({ ...prev, page: res.totalPages || 1 }))
+          return
+        }
+        setData(res)
       })
       .catch((err) => {
         if (alive) setError(err.message)
@@ -1572,50 +1697,32 @@ function ReturnsScreen({ canManage }) {
     return () => {
       alive = false
     }
-  }, [])
+  }, [params, version])
 
-  const groups = useMemo(
-    () => {
-      const list = orders || []
-      return {
-        all: list.length,
-        approved: list.filter((o) => o.status === 'approved').length,
-        refunded: list.filter((o) => o.status === 'refunded').length,
-      }
-    },
-    [orders],
-  )
-
-  const filtered = useMemo(
-    () => {
-      const list = orders || []
-      if (filter === 'approved') return list.filter((o) => o.status === 'approved')
-      if (filter === 'refunded') return list.filter((o) => o.status === 'refunded')
-      return list
-    },
-    [orders, filter],
-  )
+  const setFilter = (id) => setParams((prev) => ({ ...prev, filter: id, page: 1 }))
 
   const doReturn = (order) => {
     if (!window.confirm(`¿Registrar la devolución de "#${shortId(order.id)}"? Saldrá ${formatARS(order.total)} del stock de caja.`)) return
     setProcessing((m) => ({ ...m, [order.id]: true }))
     setNote('')
     apiPost(`/api/admin/orders/${order.id}/return`, {})
-      .then((data) => {
-        setOrders((list) => list.map((o) => (o.id === order.id ? { ...o, status: data.status, returnedAt: data.returnedAt } : o)))
+      .then((res) => {
+        setData((prev) => (prev ? { ...prev, items: prev.items.map((o) => (o.id === order.id ? { ...o, status: res.status, returnedAt: res.returnedAt } : o)) } : prev))
         setNote(`Devolución de "#${shortId(order.id)}" registrada.`)
+        setVersion((v) => v + 1)
       })
       .catch((err) => setNote(err.message))
       .finally(() => setProcessing((m) => ({ ...m, [order.id]: false })))
   }
 
-  if (!orders && !error) return <ScreenLoading label="Leyendo devoluciones…" />
+  if (!data && !error) return <ScreenLoading label="Leyendo devoluciones…" />
   if (error) return <ScreenBlocked message={error} />
 
+  const filters = data.counts || {}
   const chips = [
-    { id: 'all', label: 'Todas', count: groups.all },
-    { id: 'approved', label: 'Aprobadas', count: groups.approved },
-    { id: 'refunded', label: 'Devueltas', count: groups.refunded },
+    { id: 'all', label: 'Todas', count: filters.all ?? 0 },
+    { id: 'approved', label: 'Aprobadas', count: filters.approved ?? 0 },
+    { id: 'refunded', label: 'Devueltas', count: filters.refunded ?? 0 },
   ]
 
   return (
@@ -1626,7 +1733,7 @@ function ReturnsScreen({ canManage }) {
           <h1>Devoluciones</h1>
         </div>
         <div className="dash-head-today">
-          <strong className="mono">{groups.refunded}</strong>
+          <strong className="mono">{filters.refunded ?? 0}</strong>
           <em>devueltas</em>
         </div>
       </header>
@@ -1636,7 +1743,7 @@ function ReturnsScreen({ canManage }) {
           <button
             key={chip.id}
             type="button"
-            className={`sale-chip mono${filter === chip.id ? ' active' : ''}`}
+            className={`sale-chip mono${params.filter === chip.id ? ' active' : ''}`}
             onClick={() => setFilter(chip.id)}
           >
             {chip.label} <span>{chip.count}</span>
@@ -1660,7 +1767,7 @@ function ReturnsScreen({ canManage }) {
             </tr>
           </thead>
           <tbody>
-            {filtered.map((order) => (
+            {data.items.map((order) => (
               <tr key={order.id}>
                 <td className="mono t-id">#{shortId(order.id)}</td>
                 <td className="t-date">{shortDate(order.createdAt)}</td>
@@ -1700,8 +1807,30 @@ function ReturnsScreen({ canManage }) {
             ))}
           </tbody>
         </table>
-        {filtered.length === 0 && <EmptyNote text="Sin ventas para mostrar." />}
+        {data.items.length === 0 && <EmptyNote text="Sin ventas para mostrar." />}
       </div>
+
+      {data.total > data.limit && (
+        <div className="dash-pager">
+          <button
+            type="button"
+            disabled={data.page <= 1}
+            onClick={() => setParams((prev) => ({ ...prev, page: prev.page - 1 }))}
+          >
+            ← Anterior
+          </button>
+          <span className="mono">
+            página {data.page} de {data.totalPages}
+          </span>
+          <button
+            type="button"
+            disabled={data.page >= data.totalPages}
+            onClick={() => setParams((prev) => ({ ...prev, page: prev.page + 1 }))}
+          >
+            Siguiente →
+          </button>
+        </div>
+      )}
 
       {detail && <SaleDetail order={detail} onClose={() => setDetail(null)} />}
     </div>
@@ -2353,7 +2482,26 @@ function StockScreen() {
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
   const [query, setQuery] = useState('')
-  const [params, setParams] = useState({ q: '', low: '', page: 1 })
+  const [cats, setCats] = useState([])
+  const [brands, setBrands] = useState([])
+  const [params, setParams] = useState({ q: '', low: '', category: '', brand: '', page: 1 })
+
+  useEffect(() => {
+    let alive = true
+    apiGet('/api/categories')
+      .then((res) => {
+        if (alive) setCats(res.categories || [])
+      })
+      .catch(() => {})
+    apiGet('/api/brands')
+      .then((res) => {
+        if (alive) setBrands(res.brands || [])
+      })
+      .catch(() => {})
+    return () => {
+      alive = false
+    }
+  }, [])
 
   useEffect(() => {
     let alive = true
@@ -2363,6 +2511,8 @@ function StockScreen() {
       page: String(params.page),
       limit: '50',
     })
+    if (params.category) paramsString.set('category', params.category)
+    if (params.brand) paramsString.set('brand', params.brand)
     apiGet(`/api/admin/inventory/stock?${paramsString}`)
       .then((res) => {
         if (!alive) return
@@ -2384,6 +2534,12 @@ function StockScreen() {
     e.preventDefault()
     setParams((prev) => ({ ...prev, q: query.trim(), page: 1 }))
   }
+
+  const onCategory = (e) =>
+    setParams((prev) => ({ ...prev, category: e.target.value, page: 1 }))
+
+  const onBrand = (e) =>
+    setParams((prev) => ({ ...prev, brand: e.target.value, page: 1 }))
 
   const toggleLow = () => {
     setParams((prev) => ({ ...prev, low: prev.low ? '' : '1', page: 1 }))
@@ -2418,6 +2574,26 @@ function StockScreen() {
             aria-label="Buscar en stock"
           />
         </form>
+        <div className="dash-filters">
+          <label className="dash-filter-field">
+            <span>Categoría</span>
+            <select value={params.category} onChange={onCategory}>
+              <option value="">Todas</option>
+              {cats.map((c) => (
+                <option key={c.key} value={c.key}>{c.name}</option>
+              ))}
+            </select>
+          </label>
+          <label className="dash-filter-field">
+            <span>Marca</span>
+            <select value={params.brand} onChange={onBrand}>
+              <option value="">Todas</option>
+              {brands.map((b) => (
+                <option key={b} value={b}>{b}</option>
+              ))}
+            </select>
+          </label>
+        </div>
         <span className="count-tag mono">
           {data.items.length} de {data.total}
         </span>
@@ -2801,10 +2977,35 @@ function MinStockScreen({ canManage }) {
   const [savingId, setSavingId] = useState(null)
   const [note, setNote] = useState('')
   const [version, setVersion] = useState(0)
+  const [query, setQuery] = useState('')
+  const [cats, setCats] = useState([])
+  const [brands, setBrands] = useState([])
+  const [params, setParams] = useState({ page: 1, q: '', category: '', brand: '' })
 
   useEffect(() => {
     let alive = true
-    apiGet('/api/admin/inventory/stock?limit=100')
+    apiGet('/api/categories')
+      .then((res) => {
+        if (alive) setCats(res.categories || [])
+      })
+      .catch(() => {})
+    apiGet('/api/brands')
+      .then((res) => {
+        if (alive) setBrands(res.brands || [])
+      })
+      .catch(() => {})
+    return () => {
+      alive = false
+    }
+  }, [])
+
+  useEffect(() => {
+    let alive = true
+    const qs = new URLSearchParams({ page: String(params.page), limit: '50' })
+    if (params.q) qs.set('q', params.q)
+    if (params.category) qs.set('category', params.category)
+    if (params.brand) qs.set('brand', params.brand)
+    apiGet(`/api/admin/inventory/stock?${qs}`)
       .then((res) => {
         if (!alive) return
         setData(res)
@@ -2822,7 +3023,7 @@ function MinStockScreen({ canManage }) {
     return () => {
       alive = false
     }
-  }, [version])
+  }, [version, params])
 
   const saveMin = async (product) => {
     setSavingId(product.id)
@@ -2840,6 +3041,17 @@ function MinStockScreen({ canManage }) {
       setSavingId(null)
     }
   }
+
+  const submitSearch = (e) => {
+    e.preventDefault()
+    setParams((prev) => ({ ...prev, q: query.trim(), page: 1 }))
+  }
+
+  const onCategory = (e) =>
+    setParams((prev) => ({ ...prev, category: e.target.value, page: 1 }))
+
+  const onBrand = (e) =>
+    setParams((prev) => ({ ...prev, brand: e.target.value, page: 1 }))
 
   if (!data && !error) return <ScreenLoading label="Leyendo los mínimos…" />
   if (error) return <ScreenBlocked message={error} />
@@ -2866,6 +3078,42 @@ function MinStockScreen({ canManage }) {
       {!canManage && (
         <p className="sale-note">Solo el administrador puede cambiar los mínimos.</p>
       )}
+
+      <div className="dash-toolbar">
+        <form className="dash-search" role="search" onSubmit={submitSearch}>
+          <IconSearch />
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Buscá producto, marca o categoría…"
+            aria-label="Buscar en stock mínimo"
+          />
+        </form>
+        <div className="dash-filters">
+          <label className="dash-filter-field">
+            <span>Categoría</span>
+            <select value={params.category} onChange={onCategory}>
+              <option value="">Todas</option>
+              {cats.map((c) => (
+                <option key={c.key} value={c.key}>{c.name}</option>
+              ))}
+            </select>
+          </label>
+          <label className="dash-filter-field">
+            <span>Marca</span>
+            <select value={params.brand} onChange={onBrand}>
+              <option value="">Todas</option>
+              {brands.map((b) => (
+                <option key={b} value={b}>{b}</option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <span className="count-tag mono">
+          {data.items.length} de {data.total}
+        </span>
+      </div>
 
       <div className="table-wrap">
         <table className="dash-table">
@@ -2925,6 +3173,28 @@ function MinStockScreen({ canManage }) {
         </table>
         {data.items.length === 0 && <EmptyNote text="No hay productos para configurar." />}
       </div>
+
+      {data.total > data.pageSize && (
+        <div className="dash-pager">
+          <button
+            type="button"
+            disabled={data.page <= 1}
+            onClick={() => setParams((prev) => ({ ...prev, page: prev.page - 1 }))}
+          >
+            ← Anterior
+          </button>
+          <span className="mono">
+            página {data.page} de {data.totalPages}
+          </span>
+          <button
+            type="button"
+            disabled={data.page >= data.totalPages}
+            onClick={() => setParams((prev) => ({ ...prev, page: prev.page + 1 }))}
+          >
+            Siguiente →
+          </button>
+        </div>
+      )}
     </div>
   )
 }
@@ -3222,10 +3492,35 @@ function PhysicalInventoryScreen({ canManage }) {
   const [result, setResult] = useState(null)
   const [saving, setSaving] = useState(false)
   const [version, setVersion] = useState(0)
+  const [query, setQuery] = useState('')
+  const [cats, setCats] = useState([])
+  const [brands, setBrands] = useState([])
+  const [params, setParams] = useState({ page: 1, q: '', category: '', brand: '' })
 
   useEffect(() => {
     let alive = true
-    apiGet('/api/admin/inventory/stock?limit=100')
+    apiGet('/api/categories')
+      .then((res) => {
+        if (alive) setCats(res.categories || [])
+      })
+      .catch(() => {})
+    apiGet('/api/brands')
+      .then((res) => {
+        if (alive) setBrands(res.brands || [])
+      })
+      .catch(() => {})
+    return () => {
+      alive = false
+    }
+  }, [])
+
+  useEffect(() => {
+    let alive = true
+    const qs = new URLSearchParams({ page: String(params.page), limit: '50' })
+    if (params.q) qs.set('q', params.q)
+    if (params.category) qs.set('category', params.category)
+    if (params.brand) qs.set('brand', params.brand)
+    apiGet(`/api/admin/inventory/stock?${qs}`)
       .then((res) => {
         if (!alive) return
         setData(res)
@@ -3243,7 +3538,7 @@ function PhysicalInventoryScreen({ canManage }) {
     return () => {
       alive = false
     }
-  }, [version])
+  }, [version, params])
 
   const submitCount = async (e) => {
     e.preventDefault()
@@ -3269,6 +3564,17 @@ function PhysicalInventoryScreen({ canManage }) {
       setSaving(false)
     }
   }
+
+  const submitSearch = (e) => {
+    e.preventDefault()
+    setParams((prev) => ({ ...prev, q: query.trim(), page: 1 }))
+  }
+
+  const onCategory = (e) =>
+    setParams((prev) => ({ ...prev, category: e.target.value, page: 1 }))
+
+  const onBrand = (e) =>
+    setParams((prev) => ({ ...prev, brand: e.target.value, page: 1 }))
 
   if (!data && !error) return <ScreenLoading label="Preparando el conteo…" />
   if (error) return <ScreenBlocked message={error} />
@@ -3296,6 +3602,42 @@ function PhysicalInventoryScreen({ canManage }) {
         <p className="sale-note">Solo el administrador puede guardar el conteo.
         </p>
       )}
+
+      <div className="dash-toolbar">
+        <form className="dash-search" role="search" onSubmit={submitSearch}>
+          <IconSearch />
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Buscá producto, marca o categoría…"
+            aria-label="Buscar en inventario físico"
+          />
+        </form>
+        <div className="dash-filters">
+          <label className="dash-filter-field">
+            <span>Categoría</span>
+            <select value={params.category} onChange={onCategory}>
+              <option value="">Todas</option>
+              {cats.map((c) => (
+                <option key={c.key} value={c.key}>{c.name}</option>
+              ))}
+            </select>
+          </label>
+          <label className="dash-filter-field">
+            <span>Marca</span>
+            <select value={params.brand} onChange={onBrand}>
+              <option value="">Todas</option>
+              {brands.map((b) => (
+                <option key={b} value={b}>{b}</option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <span className="count-tag mono">
+          {data.items.length} de {data.total}
+        </span>
+      </div>
 
       <form onSubmit={submitCount}>
         <div className="table-wrap">
@@ -3366,6 +3708,27 @@ function PhysicalInventoryScreen({ canManage }) {
           <button type="submit" className="primary-btn" disabled={saving || !canManage}>
             {saving ? 'Guardando…' : 'Guardar inventario físico'}
           </button>
+          {data.total > data.pageSize && (
+            <div className="dash-pager" style={{ marginTop: 0 }}>
+              <button
+                type="button"
+                disabled={data.page <= 1}
+                onClick={() => setParams((prev) => ({ ...prev, page: prev.page - 1 }))}
+              >
+                ← Anterior
+              </button>
+              <span className="mono">
+                página {data.page} de {data.totalPages}
+              </span>
+              <button
+                type="button"
+                disabled={data.page >= data.totalPages}
+                onClick={() => setParams((prev) => ({ ...prev, page: prev.page + 1 }))}
+              >
+                Siguiente →
+              </button>
+            </div>
+          )}
         </div>
       </form>
     </div>
@@ -4683,11 +5046,30 @@ function OffersScreen({ canManage }) {
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
   const [query, setQuery] = useState('')
-  const [params, setParams] = useState({ q: '', page: 1 })
+  const [cats, setCats] = useState([])
+  const [brands, setBrands] = useState([])
+  const [params, setParams] = useState({ q: '', category: '', brand: '', page: 1 })
   const [note, setNote] = useState('')
   const [savingId, setSavingId] = useState(null)
   const [edits, setEdits] = useState({})
   const [formOpen, setFormOpen] = useState(false)
+
+  useEffect(() => {
+    let alive = true
+    apiGet('/api/categories')
+      .then((res) => {
+        if (alive) setCats(res.categories || [])
+      })
+      .catch(() => {})
+    apiGet('/api/brands')
+      .then((res) => {
+        if (alive) setBrands(res.brands || [])
+      })
+      .catch(() => {})
+    return () => {
+      alive = false
+    }
+  }, [])
 
   useEffect(() => {
     let alive = true
@@ -4696,6 +5078,8 @@ function OffersScreen({ canManage }) {
       page: String(params.page),
       limit: '10',
     })
+    if (params.category) qs.set('category', params.category)
+    if (params.brand) qs.set('brand', params.brand)
     apiGet(`/api/admin/offers?${qs}`)
       .then((res) => {
         if (!alive) return
@@ -4717,6 +5101,12 @@ function OffersScreen({ canManage }) {
     e.preventDefault()
     setParams((prev) => ({ ...prev, q: query.trim(), page: 1 }))
   }
+
+  const onCategory = (e) =>
+    setParams((prev) => ({ ...prev, category: e.target.value, page: 1 }))
+
+  const onBrand = (e) =>
+    setParams((prev) => ({ ...prev, brand: e.target.value, page: 1 }))
 
   const oldPriceOf = (p) => edits[p.id]?.oldPrice ?? p.oldPrice ?? ''
 
@@ -4802,6 +5192,26 @@ function OffersScreen({ canManage }) {
             aria-label="Buscar ofertas"
           />
         </form>
+        <div className="dash-filters">
+          <label className="dash-filter-field">
+            <span>Categoría</span>
+            <select value={params.category} onChange={onCategory}>
+              <option value="">Todas</option>
+              {cats.map((c) => (
+                <option key={c.key} value={c.key}>{c.name}</option>
+              ))}
+            </select>
+          </label>
+          <label className="dash-filter-field">
+            <span>Marca</span>
+            <select value={params.brand} onChange={onBrand}>
+              <option value="">Todas</option>
+              {brands.map((b) => (
+                <option key={b} value={b}>{b}</option>
+              ))}
+            </select>
+          </label>
+        </div>
         <span className="count-tag mono">
           {data.items.length} de {data.total}
         </span>
