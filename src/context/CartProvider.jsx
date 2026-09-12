@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { useEffect, useMemo } from 'react'
 import { CartContext } from './cartContext'
 import { useCatalog } from './useCatalog'
-import { coupons } from '../data/format'
 
 const STORAGE_KEY = 'electronics-store-cart'
 const COUPON_STORAGE_KEY = 'electronics-store-coupon'
@@ -24,7 +23,27 @@ export default function CartProvider({ children }) {
       return null
     }
   })
+  const [couponMap, setCouponMap] = useState({})
   const [toast, setToast] = useState(null)
+
+  useEffect(() => {
+    let alive = true
+    fetch('/api/coupons')
+      .then((res) =>
+        res.ok ? res.json() : Promise.reject(new Error('No se pudieron leer los cupones')),
+      )
+      .then((data) => {
+        if (!alive) return
+        const map = {}
+        for (const c of data.items || []) map[c.code] = c.percent
+        setCouponMap(map)
+        setAppliedCoupon((prev) => (prev && map[prev] ? prev : null))
+      })
+      .catch(() => {})
+    return () => {
+      alive = false
+    }
+  }, [])
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(items))
@@ -91,7 +110,7 @@ export default function CartProvider({ children }) {
 
   const applyCoupon = (code) => {
     const normalized = (code || '').trim().toUpperCase()
-    if (!coupons[normalized]) {
+    if (!(normalized in couponMap)) {
       notify('Cupón inválido')
       return false
     }
@@ -115,7 +134,7 @@ export default function CartProvider({ children }) {
     [items],
   )
 
-  const discountRate = appliedCoupon ? coupons[appliedCoupon] : 0
+  const discountRate = appliedCoupon ? couponMap[appliedCoupon] || 0 : 0
   const discount = (subtotal * discountRate) / 100
 
   const freeShippingThreshold = 300000

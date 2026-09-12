@@ -2,6 +2,7 @@ import express from 'express'
 import { Product } from '../models/Product.js'
 import { Brand } from '../models/Brand.js'
 import { Category } from '../models/Category.js'
+import { Coupon } from '../models/Coupon.js'
 import { ensureCatalogMeta } from '../lib/catalog-meta.js'
 import {
   parsePagination,
@@ -63,6 +64,22 @@ router.get('/products', async (req, res) => {
   } catch (error) {
     console.error('Catalog error:', error)
     return res.status(500).json({ error: 'No se pudo leer el catálogo' })
+  }
+})
+
+router.get('/coupons', async (req, res) => {
+  try {
+    const coupons = await Coupon.find({ active: true }).sort({ createdAt: -1 }).lean()
+    return res.json({
+      items: coupons.map((c) => ({
+        code: c.code,
+        percent: c.percent,
+        description: c.description || '',
+      })),
+    })
+  } catch (error) {
+    console.error('Coupons error:', error)
+    return res.status(500).json({ error: 'No se pudieron leer los cupones' })
   }
 })
 
