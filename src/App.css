@@ -2058,16 +2058,16 @@
   }
 
 .product-grid {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
   }
 
   .box-body {
-    padding: 10px;
+    padding: 12px;
   }
 
   .price-current {
-    font-size: 17px;
+    font-size: 20px;
   }
 
   .price-installments {
@@ -2144,16 +2144,16 @@
   }
 
 .product-grid {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     gap: 8px;
   }
 
   .box-body {
-    padding: 8px;
+    padding: 10px;
   }
 
   .price-current {
-    font-size: 16px;
+    font-size: 17px;
   }
 
   .box-label {
