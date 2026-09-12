@@ -3035,50 +3035,54 @@ function PurchasesScreen({ canManage }) {
           <div className="pur-lines">
             {form.lines.map((line, index) => (
               <div key={index} className="pur-line">
-                <div className="pur-line-field pur-line-product">
-                  <span>Producto</span>
-                  <select
-                    value={line.productId}
-                    onChange={(e) => updateLine(index, 'productId', e.target.value)}
-                    required
+                <div className="pur-line-top">
+                  <label className="pur-line-field pur-line-product">
+                    <span>Producto</span>
+                    <select
+                      value={line.productId}
+                      onChange={(e) => updateLine(index, 'productId', e.target.value)}
+                      required
+                    >
+                      <option value="">Elegí…</option>
+                      {products.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name} · {p.brand} (stock {p.stock})
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <button
+                    type="button"
+                    className="pur-line-remove"
+                    aria-label="Quitar línea"
+                    onClick={() => removeLine(index)}
+                    disabled={form.lines.length <= 1}
                   >
-                    <option value="">Elegí…</option>
-                    {products.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name} · {p.brand} (stock {p.stock})
-                      </option>
-                    ))}
-                  </select>
+                    <IconCross />
+                  </button>
                 </div>
-                <div className="pur-line-field">
-                  <span>Cant.</span>
-                  <input
-                    type="number"
-                    min="1"
-                    value={line.quantity}
-                    onChange={(e) => updateLine(index, 'quantity', e.target.value)}
-                  />
+                <div className="pur-line-bottom">
+                  <label className="pur-line-field">
+                    <span>Cant.</span>
+                    <input
+                      type="number"
+                      min="1"
+                      value={line.quantity}
+                      onChange={(e) => updateLine(index, 'quantity', e.target.value)}
+                    />
+                  </label>
+                  <label className="pur-line-field">
+                    <span>Costo/u</span>
+                    <input
+                      type="number"
+                      min="0"
+                      value={line.cost}
+                      onChange={(e) => updateLine(index, 'cost', e.target.value)}
+                      placeholder="0"
+                    />
+                  </label>
+                  <div className="pur-line-total mono">{formatARS(lineTotal(line))}</div>
                 </div>
-                <div className="pur-line-field">
-                  <span>Costo/u</span>
-                  <input
-                    type="number"
-                    min="0"
-                    value={line.cost}
-                    onChange={(e) => updateLine(index, 'cost', e.target.value)}
-                    placeholder="0"
-                  />
-                </div>
-                <div className="pur-line-total mono">{formatARS(lineTotal(line))}</div>
-                <button
-                  type="button"
-                  className="pur-line-remove"
-                  aria-label="Quitar línea"
-                  onClick={() => removeLine(index)}
-                  disabled={form.lines.length <= 1}
-                >
-                  <IconCross />
-                </button>
               </div>
             ))}
           </div>
