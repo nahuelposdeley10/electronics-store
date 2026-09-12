@@ -224,11 +224,11 @@ export function IconCheck(props) {
   )
 }
 
-export function IconStar(props) {
+export function IconStar({ filled = false, ...props }) {
   return (
     <svg
       viewBox="0 0 24 24"
-      fill={props.filled ? 'currentColor' : 'none'}
+      fill={filled ? 'currentColor' : 'none'}
       stroke="currentColor"
       strokeWidth="1.6"
       strokeLinejoin="round"

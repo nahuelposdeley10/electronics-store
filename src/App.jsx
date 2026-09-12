@@ -14,7 +14,10 @@ import ProductDetail from './views/ProductDetail'
 import OrderStatus from './views/OrderStatus'
 import InfoPage from './views/InfoPage'
 import Dashboard from './views/Dashboard'
+import { initMotion } from './lib/motion'
 import './App.css'
+
+initMotion()
 
 function pathToView() {
   if (window.location.pathname === '/admin') {
@@ -83,7 +86,7 @@ function AppContent() {
   const tapeRef = useRef(null)
 
   useEffect(() => {
-    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const reduce = document.documentElement.classList.contains('anim-off')
 
     let tick = false
     let io

@@ -5597,22 +5597,20 @@ a.set-image-preview:hover {
   animation: bay-rise 0.4s var(--ease-out);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .bay-eyebrow,
-  .bay-copy h1,
-  .h1-tail,
-  .bay-lead,
-  .bay-actions,
-  .bay-stats,
-  .hero-bay::before,
-  .hero-bay.bay-live .bay-bg,
-  .hero-bay.bay-live .bay-shade,
-  .cart-punch,
-  .newsletter-ok,
-  .box-media::after,
-  .marquee-track {
-    animation: none;
-  }
+html.anim-off .bay-eyebrow,
+html.anim-off .bay-copy h1,
+html.anim-off .h1-tail,
+html.anim-off .bay-lead,
+html.anim-off .bay-actions,
+html.anim-off .bay-stats,
+html.anim-off .hero-bay::before,
+html.anim-off .hero-bay.bay-live .bay-bg,
+html.anim-off .hero-bay.bay-live .bay-shade,
+html.anim-off .cart-punch,
+html.anim-off .newsletter-ok,
+html.anim-off .box-media::after,
+html.anim-off .marquee-track {
+  animation: none;
 }
 
 /* ================= Motion: scroll reveal ================= */
@@ -5683,15 +5681,53 @@ a.set-image-preview:hover {
   );
 }
 
-@media (prefers-reduced-motion: reduce) {
-  [data-reveal],
-  [data-reveal="sweep"] {
-    opacity: 1;
-    transform: none;
-    filter: none;
-    clip-path: none;
-    transition: none;
-  }
+html.anim-off [data-reveal],
+html.anim-off [data-reveal="sweep"] {
+  opacity: 1;
+  transform: none;
+  filter: none;
+  clip-path: none;
+  transition: none;
+}
+
+.footer-bottom {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.footer-bottom-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+}
+
+.footer-motion-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  padding: 5px 10px;
+  border: 1px solid var(--gal-line-strong);
+  border-radius: 999px;
+  color: var(--gal-ink-soft);
+}
+
+.footer-motion-toggle:hover {
+  color: var(--gal-ink);
+  border-color: var(--gal-facade);
+}
+
+.footer-motion-toggle.on {
+  background: var(--gal-black);
+  color: #fff;
+  border-color: var(--gal-black);
 }
 
 .product-box:hover {

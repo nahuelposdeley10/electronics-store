@@ -236,7 +236,7 @@ export default function Home({ onView }) {
 
   useEffect(() => {
     const stage = stageRef.current
-    if (!stage || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    if (!stage || document.documentElement.classList.contains('anim-off')) {
       return undefined
     }
     let ticking = false
