@@ -194,11 +194,14 @@ router.get('/profit', async (req, res) => {
     ])
 
     const byProduct = new Map()
+    const seriesMap = new Map()
     let revenue = 0
     let cogs = 0
     let units = 0
 
     for (const order of orders) {
+      const day = dayKey(order.createdAt)
+      const dayRow = seriesMap.get(day) || { date: day, revenue: 0, cogs: 0 }
       for (const item of order.items) {
         const costPrice = catalog.get(item.productId)?.costPrice || 0
         const row = byProduct.get(item.productId) || {
@@ -219,9 +222,14 @@ router.get('/profit', async (req, res) => {
         revenue += lineRevenue
         cogs += lineCogs
         units += item.quantity
+        dayRow.revenue += lineRevenue
+        dayRow.cogs += lineCogs
         byProduct.set(row.productId, row)
       }
+      seriesMap.set(day, dayRow)
     }
+
+    const series = [...seriesMap.values()].sort((a, b) => (a.date < b.date ? -1 : 1))
 
     const items = [...byProduct.values()].map((row) => ({
       ...row,
@@ -244,6 +252,7 @@ router.get('/profit', async (req, res) => {
         spentOnPurchases,
         purchaseCount: purchaseDocs.length,
       },
+      series,
       items,
     })
   } catch (error) {

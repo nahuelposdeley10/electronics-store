@@ -1,4 +1,18 @@
 import { useEffect, useMemo, useState } from 'react'
+import {
+  Area,
+  AreaChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from 'recharts'
 import { formatARS } from '../data/format'
 import { apiConfirmOrder, apiDelete, apiGet, apiPost, apiPut, apiUpdate, apiUpload, clearSession, getSession, login as apiLogin } from '../lib/api'
 import { useOrderEvents } from '../lib/useOrderEvents'
@@ -3341,6 +3355,55 @@ function PhysicalInventoryScreen({ canManage }) {
   )
 }
 
+const CHART_COLORS = ['#d7261d', '#ffc61a', '#c79a63', '#c8dcf2', '#43473c', '#6f7366']
+const CHART_TICK = { fill: '#6f7366', fontSize: 10 }
+const CHART_GRID = { stroke: '#d7dcd6', strokeDasharray: '2 4' }
+
+function compactARS(value) {
+  if (value >= 1000000) return `${(value / 1000000).toFixed(value >= 10000000 ? 0 : 1)}M`
+  if (value >= 1000) return `${(value / 1000).toFixed(value >= 100000 ? 0 : 1)}k`
+  return `${value}`
+}
+
+function chartDayShort(date) {
+  return `${date.slice(8, 10)}/${date.slice(5, 7)}`
+}
+
+function ChartTip({ active, payload, label, formatter }) {
+  if (!active || !payload || !payload.length) return null
+  return (
+    <div className="chart-tip">
+      {label ? <div className="chart-tip-label">{label}</div> : null}
+      <div className="chart-tip-body">
+        {payload.map((entry, i) => (
+          <div key={`${entry.dataKey}-${i}`} className="chart-tip-row">
+            <span
+              className="chart-tip-dot"
+              style={{ background: entry.color || entry.payload?.fill || '#d7261d' }}
+            />
+            <em>{entry.name}</em>
+            <strong className="mono">{formatter ? formatter(entry.value, entry.dataKey) : entry.value}</strong>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function ChartLegend({ data }) {
+  return (
+    <div className="chart-legend">
+      {data.map((item) => (
+        <span key={item.key} className="chart-legend-item">
+          <span className="chart-tip-dot" style={{ background: item.color }} />
+          {item.label}
+          <em className="mono">{item.value}</em>
+        </span>
+      ))}
+    </div>
+  )
+}
+
 const REPORT_PERIODS = [
   { days: 7, label: '7 días' },
   { days: 30, label: '30 días' },
@@ -3362,21 +3425,6 @@ function ReportPeriodBar({ days, onChange }) {
           {p.label}
         </button>
       ))}
-    </div>
-  )
-}
-
-function ReportBar({ label, value, max, format }) {
-  const pct = max > 0 ? Math.max(2, Math.round((value / max) * 100)) : 0
-  return (
-    <div className="rep-bar">
-      <div className="rep-bar-label">
-        <span>{label}</span>
-        <em className="mono">{format ? format(value) : value}</em>
-      </div>
-      <div className="rep-bar-track">
-        <span className="rep-bar-fill" style={{ width: `${pct}%` }} />
-      </div>
     </div>
   )
 }
@@ -3408,8 +3456,9 @@ function SalesReportScreen() {
   if (!data && !error) return <ScreenLoading label="Armando el reporte de ventas…" />
   if (error) return <ScreenBlocked message={error} />
 
-  const maxBar = Math.max(...data.series.map((s) => s.count), 1)
-  const maxPay = Math.max(...data.byPayment.map((p) => p.total), 1)
+  const chartData = data.series.map((s) => ({ label: chartDayShort(s.date), total: s.total, count: s.count }))
+  const payData = data.byPayment.map((p) => ({ key: p.key, label: reportPaymentLabel(p.key), value: p.total }))
+  const payTotal = payData.reduce((sum, p) => sum + p.value, 0)
 
   return (
     <div className="dash-screen">
@@ -3436,16 +3485,33 @@ function SalesReportScreen() {
       <div className="rep-grid">
         <section className="dash-card">
           <div className="dash-card-head">
-            <h2>Ventas por día</h2>
-            <span className="dash-count">{data.series.length} días</span>
+            <h2>Facturado por día</h2>
+            <span className="dash-count">línea · ventas punteado</span>
           </div>
           {data.series.length === 0 ? (
             <EmptyNote text="Sin ventas en el período." />
           ) : (
-            <div className="rep-bars">
-              {data.series.map((s) => (
-                <ReportBar key={s.date} label={s.date} value={s.count} max={maxBar} />
-              ))}
+            <div className="rep-chart">
+              <ResponsiveContainer width="100%" height={230}>
+                <AreaChart data={chartData} margin={{ top: 6, right: 6, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="areaSales" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#d7261d" stopOpacity={0.16} />
+                      <stop offset="100%" stopColor="#d7261d" stopOpacity={0.02} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid {...CHART_GRID} vertical={false} />
+                  <XAxis dataKey="label" tick={CHART_TICK} interval="preserveStartEnd" minTickGap={16} axisLine={{ stroke: '#b9c0b8' }} tickLine={false} />
+                  <YAxis yAxisId="0" tickFormatter={compactARS} tick={CHART_TICK} width={40} axisLine={false} tickLine={false} />
+                  <YAxis yAxisId="count" orientation="right" tick={CHART_TICK} width={26} axisLine={false} tickLine={false} />
+                  <Tooltip
+                    content={<ChartTip formatter={(v, key) => (key === 'count' ? `${v} ventas` : formatARS(v))} />}
+                    cursor={{ stroke: '#b9c0b8', strokeDasharray: '3 3' }}
+                  />
+                  <Area yAxisId="0" type="monotone" dataKey="total" name="Facturado" stroke="#d7261d" strokeWidth={2} fill="url(#areaSales)" dot={false} activeDot={{ r: 4, stroke: '#fbfcfa', strokeWidth: 2 }} />
+                  <Area yAxisId="count" type="monotone" dataKey="count" name="Ventas" stroke="#171a12" strokeWidth={1.5} strokeDasharray="4 4" fill="none" dot={false} />
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
           )}
         </section>
@@ -3458,17 +3524,37 @@ function SalesReportScreen() {
           {data.byPayment.length === 0 ? (
             <EmptyNote text="Sin datos todavía." />
           ) : (
-            <div className="rep-bars">
-              {data.byPayment.map((p) => (
-                <ReportBar
-                  key={p.key}
-                  label={reportPaymentLabel(p.key)}
-                  value={p.total}
-                  max={maxPay}
-                  format={formatARS}
-                />
-              ))}
-            </div>
+            <>
+              <div className="rep-chart">
+                <ResponsiveContainer width="100%" height={180}>
+                  <PieChart>
+                    <Pie
+                      data={payData}
+                      dataKey="value"
+                      nameKey="label"
+                      innerRadius={52}
+                      outerRadius={72}
+                      paddingAngle={2}
+                      stroke="#fbfcfa"
+                      strokeWidth={2}
+                    >
+                      {payData.map((p, i) => (
+                        <Cell key={p.key} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip content={<ChartTip formatter={(v) => formatARS(v)} />} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <ChartLegend
+                data={payData.map((p, i) => ({
+                  key: p.key,
+                  label: p.label,
+                  color: CHART_COLORS[i % CHART_COLORS.length],
+                  value: `${formatARS(p.value)} · ${payTotal ? Math.round((p.value / payTotal) * 100) : 0}%`,
+                }))}
+              />
+            </>
           )}
           {data.bySource.length > 0 && (
             <div className="rep-breakdown">
@@ -3510,7 +3596,7 @@ function ProductsReportScreen() {
   if (!data && !error) return <ScreenLoading label="Armando el reporte de productos…" />
   if (error) return <ScreenBlocked message={error} />
 
-  const maxUnits = Math.max(...data.items.map((i) => i.units), 1)
+  const top = data.items.slice(0, 8)
 
   return (
     <div className="dash-screen">
@@ -3575,10 +3661,23 @@ function ProductsReportScreen() {
           <span className="dash-count">por unidades</span>
         </div>
         {data.items.length === 0 ? null : (
-          <div className="rep-bars">
-            {data.items.slice(0, 8).map((p) => (
-              <ReportBar key={p.productId} label={p.name} value={p.units} max={maxUnits} />
-            ))}
+          <div className="rep-chart">
+            <ResponsiveContainer width="100%" height={Math.max(180, top.length * 34 + 20)}>
+              <BarChart data={top} layout="vertical" margin={{ top: 0, right: 12, left: 0, bottom: 0 }}>
+                <XAxis type="number" hide />
+                <YAxis
+                  type="category"
+                  dataKey="name"
+                  width={170}
+                  tick={{ ...CHART_TICK, fill: '#43473c', fontSize: 11 }}
+                  tickFormatter={(value) => (value.length > 28 ? `${value.slice(0, 26)}…` : value)}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <Tooltip content={<ChartTip formatter={(v) => `${v} uds`} />} cursor={{ fill: '#e7f1fb' }} />
+                <Bar dataKey="units" name="Unidades" fill="#d7261d" radius={[0, 3, 3, 0]} barSize={16} />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         )}
       </section>
@@ -3608,7 +3707,8 @@ function ProfitReportScreen() {
   if (!data && !error) return <ScreenLoading label="Calculando ganancias…" />
   if (error) return <ScreenBlocked message={error} />
 
-  const maxMargin = Math.max(...data.items.map((i) => i.profit), 1)
+  const series = data.series.map((s) => ({ label: chartDayShort(s.date), Facturado: s.revenue, Costo: s.cogs }))
+  const top = data.items.slice(0, 8)
 
   return (
     <div className="dash-screen">
@@ -3667,16 +3767,50 @@ function ProfitReportScreen() {
         {data.items.length === 0 && <EmptyNote text="Sin ventas en el período." />}
       </div>
 
-      {data.items.length > 0 && (
+      {series.length > 0 && (
+        <section className="dash-card">
+          <div className="dash-card-head">
+            <h2>Facturado vs costo</h2>
+            <span className="dash-count">por día</span>
+          </div>
+          <div className="rep-chart">
+            <ResponsiveContainer width="100%" height={230}>
+              <BarChart data={series} margin={{ top: 6, right: 6, left: 0, bottom: 0 }}>
+                <CartesianGrid {...CHART_GRID} vertical={false} />
+                <XAxis dataKey="label" tick={CHART_TICK} interval="preserveStartEnd" minTickGap={16} axisLine={{ stroke: '#b9c0b8' }} tickLine={false} />
+                <YAxis tickFormatter={compactARS} tick={CHART_TICK} width={44} axisLine={false} tickLine={false} />
+                <Tooltip content={<ChartTip formatter={(v) => formatARS(v)} />} cursor={{ fill: '#e7f1fb' }} />
+                <Bar dataKey="Facturado" name="Facturado" fill="#d7261d" radius={[3, 3, 0, 0]} barSize={14} />
+                <Bar dataKey="Costo" name="Costo" fill="#c79a63" radius={[3, 3, 0, 0]} barSize={14} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </section>
+      )}
+
+      {top.length > 0 && (
         <section className="dash-card">
           <div className="dash-card-head">
             <h2>Ganancia por producto</h2>
             <span className="dash-count">bruta</span>
           </div>
-          <div className="rep-bars">
-            {data.items.slice(0, 8).map((p) => (
-              <ReportBar key={p.productId} label={p.name} value={p.profit} max={maxMargin} format={formatARS} />
-            ))}
+          <div className="rep-chart">
+            <ResponsiveContainer width="100%" height={Math.max(180, top.length * 34 + 20)}>
+              <BarChart data={top} layout="vertical" margin={{ top: 0, right: 12, left: 0, bottom: 0 }}>
+                <XAxis type="number" hide />
+                <YAxis
+                  type="category"
+                  dataKey="name"
+                  width={170}
+                  tick={{ ...CHART_TICK, fill: '#43473c', fontSize: 11 }}
+                  tickFormatter={(value) => (value.length > 28 ? `${value.slice(0, 26)}…` : value)}
+                  tickLine={false}
+                  axisLine={false}
+                />
+                <Tooltip content={<ChartTip formatter={(v) => formatARS(v)} />} cursor={{ fill: '#e7f1fb' }} />
+                <Bar dataKey="profit" name="Ganancia" fill="#d7261d" radius={[0, 3, 3, 0]} barSize={16} />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         </section>
       )}
@@ -3705,7 +3839,12 @@ function StockReportScreen() {
   if (!data && !error) return <ScreenLoading label="Leyendo el stock…" />
   if (error) return <ScreenBlocked message={error} />
 
-  const maxValue = Math.max(...data.topValue.map((p) => p.value), 1)
+  const statusData = [
+    { key: 'ok', name: 'Óptimo', value: data.statusCounts.ok, color: '#171a12' },
+    { key: 'bajo', name: 'Bajo mínimo', value: data.statusCounts.bajo, color: '#ffc61a' },
+    { key: 'sin', name: 'Sin stock', value: data.statusCounts.sin, color: '#d7261d' },
+  ].filter((s) => s.value > 0)
+  const top = data.topValue
 
   return (
     <div className="dash-screen">
@@ -3733,23 +3872,43 @@ function StockReportScreen() {
             <h2>Estado del stock</h2>
             <span className="dash-count">{data.totals.products} productos</span>
           </div>
-          <div className="rep-status">
-            <div className="rep-status-row">
-              <StockBadge status="ok" />
-              <strong>{data.statusCounts.ok}</strong>
-              <em>en óptimo nivel</em>
-            </div>
-            <div className="rep-status-row">
-              <StockBadge status="bajo" />
-              <strong>{data.statusCounts.bajo}</strong>
-              <em>por debajo del mínimo</em>
-            </div>
-            <div className="rep-status-row">
-              <StockBadge status="sin" />
-              <strong>{data.statusCounts.sin}</strong>
-              <em>sin stock</em>
-            </div>
-          </div>
+          {statusData.length === 0 ? (
+            <EmptyNote text="Catálogo vacío." />
+          ) : (
+            <>
+              <div className="rep-chart">
+                <ResponsiveContainer width="100%" height={170}>
+                  <PieChart>
+                    <Pie
+                      data={statusData}
+                      dataKey="value"
+                      nameKey="name"
+                      innerRadius={52}
+                      outerRadius={70}
+                      paddingAngle={2}
+                      stroke="#fbfcfa"
+                      strokeWidth={2}
+                    >
+                      {statusData.map((s) => (
+                        <Cell key={s.key} fill={s.color} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      content={<ChartTip formatter={(v) => `${v} producto${v === 1 ? '' : 's'}`} />}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <ChartLegend
+                data={statusData.map((s) => ({
+                  key: s.key,
+                  label: s.name,
+                  color: s.color,
+                  value: `${s.value} · ${data.totals.products ? Math.round((s.value / data.totals.products) * 100) : 0}%`,
+                }))}
+              />
+            </>
+          )}
         </section>
 
         <section className="dash-card">
@@ -3760,10 +3919,23 @@ function StockReportScreen() {
           {data.topValue.length === 0 ? (
             <EmptyNote text="Catálogo vacío." />
           ) : (
-            <div className="rep-bars">
-              {data.topValue.map((p) => (
-                <ReportBar key={p.id} label={p.name} value={p.value} max={maxValue} format={formatARS} />
-              ))}
+            <div className="rep-chart">
+              <ResponsiveContainer width="100%" height={Math.max(220, top.length * 24 + 20)}>
+                <BarChart data={top} layout="vertical" margin={{ top: 0, right: 12, left: 0, bottom: 0 }}>
+                  <XAxis type="number" hide />
+                  <YAxis
+                    type="category"
+                    dataKey="name"
+                    width={170}
+                    tick={{ ...CHART_TICK, fill: '#43473c', fontSize: 11 }}
+                    tickFormatter={(value) => (value.length > 28 ? `${value.slice(0, 26)}…` : value)}
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <Tooltip content={<ChartTip formatter={(v) => formatARS(v)} />} cursor={{ fill: '#e7f1fb' }} />
+                  <Bar dataKey="value" name="Valor" fill="#c8dcf2" radius={[0, 3, 3, 0]} barSize={12} />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           )}
         </section>
@@ -3832,7 +4004,10 @@ function CustomersReportScreen() {
   if (!data && !error) return <ScreenLoading label="Agrupando clientes…" />
   if (error) return <ScreenBlocked message={error} />
 
-  const maxTotal = Math.max(...data.items.map((c) => c.total), 1)
+  const top = data.items.slice(0, 8)
+  const recent = data.items.filter((c) => c.name !== 'Sin identificar')
+  const recentData = recent.slice(0, 8).map((c, i) => ({ key: c.email || `c${i}`, label: c.name, value: c.total }))
+  const recentTotal = recentData.reduce((sum, r) => sum + r.value, 0)
 
   return (
     <div className="dash-screen">
@@ -3864,27 +4039,67 @@ function CustomersReportScreen() {
           {data.items.length === 0 ? (
             <EmptyNote text="Sin compras en el período." />
           ) : (
-            <div className="rep-bars">
-              {data.items.slice(0, 10).map((c, idx) => (
-                <ReportBar key={idx} label={c.name} value={c.total} max={maxTotal} format={formatARS} />
-              ))}
+            <div className="rep-chart">
+              <ResponsiveContainer width="100%" height={Math.max(200, top.length * 34 + 20)}>
+                <BarChart data={top} layout="vertical" margin={{ top: 0, right: 12, left: 0, bottom: 0 }}>
+                  <XAxis type="number" hide />
+                  <YAxis
+                    type="category"
+                    dataKey="name"
+                    width={170}
+                    tick={{ ...CHART_TICK, fill: '#43473c', fontSize: 11 }}
+                    tickFormatter={(value) => (value.length > 28 ? `${value.slice(0, 26)}…` : value)}
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <Tooltip content={<ChartTip formatter={(v) => formatARS(v)} />} cursor={{ fill: '#e7f1fb' }} />
+                  <Bar dataKey="total" name="Gasto" fill="#d7261d" radius={[0, 3, 3, 0]} barSize={16} />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
           )}
         </section>
 
         <section className="dash-card">
           <div className="dash-card-head">
-            <h2>Recientes</h2>
-            <span className="dash-count">montos</span>
+            <h2>Participación</h2>
+            <span className="dash-count">por cliente</span>
           </div>
-          <div className="rep-bars">
-            {data.items
-              .filter((c) => c.name !== 'Sin identificar')
-              .slice(0, 10)
-              .map((c, idx) => (
-                <ReportBar key={idx} label={c.name} value={c.total} max={maxTotal} format={formatARS} />
-              ))}
-          </div>
+          {recentData.length === 0 ? (
+            <EmptyNote text="Sin compras en el período." />
+          ) : (
+            <>
+              <div className="rep-chart">
+                <ResponsiveContainer width="100%" height={180}>
+                  <PieChart>
+                    <Pie
+                      data={recentData}
+                      dataKey="value"
+                      nameKey="label"
+                      innerRadius={52}
+                      outerRadius={72}
+                      paddingAngle={2}
+                      stroke="#fbfcfa"
+                      strokeWidth={2}
+                    >
+                      {recentData.map((r, i) => (
+                        <Cell key={r.key} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip content={<ChartTip formatter={(v) => formatARS(v)} />} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              <ChartLegend
+                data={recentData.map((r, i) => ({
+                  key: r.key,
+                  label: r.label,
+                  color: CHART_COLORS[i % CHART_COLORS.length],
+                  value: `${formatARS(r.value)} · ${recentTotal ? Math.round((r.value / recentTotal) * 100) : 0}%`,
+                }))}
+              />
+            </>
+          )}
         </section>
       </div>
 
