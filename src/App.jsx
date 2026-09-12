@@ -88,6 +88,7 @@ function AppContent() {
     let tick = false
     let io
     const seen = new Set()
+    const painted = new WeakSet()
 
     const updateTape = (p) => {
       tick = false
@@ -108,6 +109,17 @@ function AppContent() {
       }
     }
 
+    const reveal = (el) => {
+      if (painted.has(el)) {
+        el.classList.add('is-revealed')
+        return
+      }
+      painted.add(el)
+      window.requestAnimationFrame(() =>
+        window.requestAnimationFrame(() => el.classList.add('is-revealed')),
+      )
+    }
+
     const configIO = () => {
       if (!io) {
         io = new IntersectionObserver(
@@ -117,7 +129,7 @@ function AppContent() {
               if (entry.isIntersecting) {
                 const rect = el.getBoundingClientRect()
                 el.classList.toggle('reveal-from-top', rect.top < window.innerHeight * 0.3)
-                el.classList.add('is-revealed')
+                reveal(el)
               } else {
                 el.classList.remove('is-revealed')
               }
