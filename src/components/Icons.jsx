@@ -287,3 +287,11 @@ export function IconReport(props) {
     </svg>
   )
 }
+
+export function IconTicket(props) {
+  return (
+    <svg {...S} {...props}>
+      <path d="M4 8.5v-2h16v2M4 15.5v2h16v-2M4 8.5a2 2 0 1 1 0 3M4 15.5a2 2 0 1 0 0-3" />
+    </svg>
+  )
+}

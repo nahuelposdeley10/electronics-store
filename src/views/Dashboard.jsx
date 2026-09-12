@@ -35,6 +35,7 @@ import {
   IconReport,
   IconSearch,
   IconSearchOff,
+  IconTicket,
   IconTrash,
 } from '../components/Icons'
 
@@ -195,8 +196,22 @@ export default function Dashboard({ onExit }) {
           ? [
               { id: 'product-categories', label: 'Categorías' },
               { id: 'product-brands', label: 'Marcas' },
-              { id: 'product-offers', label: 'Ofertas' },
               { id: 'product-import', label: 'Importar productos' },
+            ]
+          : []),
+      ],
+    },
+    {
+      id: 'promos',
+      label: 'Promociones',
+      icon: IconTicket,
+      prefix: 'promo-',
+      children: [
+        ...(user?.role === 'superadmin'
+          ? [
+              { id: 'promo-discounts', label: 'Descuentos' },
+              { id: 'promo-coupons', label: 'Cupones' },
+              { id: 'promo-offers', label: 'Ofertas' },
             ]
           : []),
       ],
@@ -370,11 +385,17 @@ export default function Dashboard({ onExit }) {
             canManage={user?.role === 'superadmin'}
           />
         )}
-        {gate === 'ready' && screen === 'product-offers' && (
-          <OffersScreen canManage={user?.role === 'superadmin'} />
-        )}
         {gate === 'ready' && screen === 'product-import' && (
           <ImportScreen canManage={user?.role === 'superadmin'} />
+        )}
+        {gate === 'ready' && screen === 'promo-discounts' && (
+          <DiscountsScreen canManage={user?.role === 'superadmin'} />
+        )}
+        {gate === 'ready' && screen === 'promo-coupons' && (
+          <CouponsScreen canManage={user?.role === 'superadmin'} />
+        )}
+        {gate === 'ready' && screen === 'promo-offers' && (
+          <OffersScreen canManage={user?.role === 'superadmin'} />
         )}
         {gate === 'ready' && screen === 'sales-pos' && (
           <PosScreen canManage={user?.role === 'superadmin'} />
@@ -4132,6 +4153,577 @@ function CustomersReportScreen() {
           </tbody>
         </table>
         {data.items.length === 0 && <EmptyNote text="Sin compras en el período." />}
+      </div>
+    </div>
+  )
+}
+
+const PROMO_SCOPES = [
+  { key: 'global', label: 'Todo el catálogo' },
+  { key: 'category', label: 'Por categoría' },
+  { key: 'brand', label: 'Por marca' },
+  { key: 'product', label: 'Por producto' },
+]
+
+function promoStateChip(active, onLabel, offLabel) {
+  return (
+    <span className={`promo-state${active ? ' on' : ''}`}>
+      {active ? onLabel : offLabel}
+    </span>
+  )
+}
+
+function DiscountsScreen({ canManage }) {
+  const [data, setData] = useState(null)
+  const [error, setError] = useState('')
+  const [note, setNote] = useState('')
+  const [formOpen, setFormOpen] = useState(false)
+  const [editing, setEditing] = useState(null)
+  const [form, setForm] = useState(null)
+  const [saving, setSaving] = useState(false)
+  const [cats, setCats] = useState([])
+  const [brands, setBrands] = useState([])
+  const [products, setProducts] = useState([])
+  const [refresh, setRefresh] = useState(0)
+
+  useEffect(() => {
+    let alive = true
+    apiGet('/api/admin/discounts')
+      .then((res) => {
+        if (alive) setData(res)
+      })
+      .catch((err) => {
+        if (alive) setError(err.message)
+      })
+    return () => {
+      alive = false
+    }
+  }, [refresh])
+
+  useEffect(() => {
+    let alive = true
+    Promise.all([
+      apiGet('/api/admin/categories'),
+      apiGet('/api/admin/brands'),
+      apiGet('/api/admin/products?limit=300'),
+    ])
+      .then(([c, b, p]) => {
+        if (!alive) return
+        setCats(c.items || [])
+        setBrands(b.items || [])
+        setProducts(p.items || [])
+      })
+      .catch(() => {})
+    return () => {
+      alive = false
+    }
+  }, [])
+
+  const catName = (key) => cats.find((c) => c.key === key)?.name || key
+  const productName = (id) => products.find((p) => String(p.id) === String(id))?.name || id
+  const targetLabel = (d) => {
+    if (d.scope === 'global') return 'Todo el catálogo'
+    if (d.scope === 'category') return catName(d.target)
+    if (d.scope === 'brand') return d.target
+    return productName(d.target)
+  }
+
+  const openNew = () => {
+    setEditing(null)
+    setForm({ name: '', scope: 'global', target: '', percent: 10, active: true })
+    setFormOpen(true)
+  }
+
+  const openEdit = (d) => {
+    setEditing(d.id)
+    setForm({
+      name: d.name,
+      scope: d.scope,
+      target: d.target || '',
+      percent: d.percent,
+      active: d.active,
+    })
+    setFormOpen(true)
+  }
+
+  const set = (key) => (e) =>
+    setForm((f) => ({ ...f, [key]: key === 'active' ? e.target.checked : e.target.value }))
+
+  const submit = async (e) => {
+    e.preventDefault()
+    setSaving(true)
+    setNote('')
+    try {
+      const payload = {
+        ...form,
+        percent: Number(form.percent),
+      }
+      if (editing) {
+        await apiPut(`/api/admin/discounts/${editing}`, payload)
+      } else {
+        await apiPost('/api/admin/discounts', payload)
+      }
+      setNote(editing ? 'Descuento actualizado.' : 'Descuento creado y aplicado al catálogo.')
+      setFormOpen(false)
+      setRefresh((n) => n + 1)
+    } catch (err) {
+      setNote(err.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const toggleActive = async (d) => {
+    setNote('')
+    try {
+      await apiPut(`/api/admin/discounts/${d.id}`, { active: !d.active })
+      setNote(d.active ? 'Descuento desactivado.' : 'Descuento activado.')
+      setRefresh((n) => n + 1)
+    } catch (err) {
+      setNote(err.message)
+    }
+  }
+
+  const remove = async (d) => {
+    if (!window.confirm(`¿Eliminar la regla "${d.name}"?`)) return
+    setNote('')
+    try {
+      await apiDelete(`/api/admin/discounts/${d.id}`)
+      setNote('Regla eliminada.')
+      setRefresh((n) => n + 1)
+    } catch (err) {
+      setNote(err.message)
+    }
+  }
+
+  if (!data && !error) return <ScreenLoading label="Cargando descuentos…" />
+  if (error) return <ScreenBlocked message={error} />
+
+  const activeCount = data.items.filter((d) => d.active).length
+
+  return (
+    <div className="dash-screen">
+      <header className="dash-head">
+        <div>
+          <span className="dash-eyebrow">Promociones</span>
+          <h1>Descuentos</h1>
+        </div>
+        <div className="dash-head-today">
+          <strong className="mono">{activeCount}</strong>
+          <em>reglas activas</em>
+        </div>
+      </header>
+
+      <div className="dash-toolbar">
+        <p className="list-note">
+          Se aplican solos en el carrito de la web. Si un producto encaja en varias reglas, se usa el % mayor.
+        </p>
+        {canManage && (
+          <button type="button" className="primary-btn dash-add" onClick={openNew}>
+            <IconPlus />
+            Nueva regla
+          </button>
+        )}
+      </div>
+
+      {note && <p className="sale-note">{note}</p>}
+
+      {formOpen && (
+        <section className="dash-card promo-form">
+          <div className="dash-card-head">
+            <h2>{editing ? 'Editar regla' : 'Nueva regla de descuento'}</h2>
+            <button type="button" className="ghost-btn" onClick={() => setFormOpen(false)}>
+              Cancelar
+            </button>
+          </div>
+          <form onSubmit={submit}>
+            <div className="pf-grid">
+              <label className="pf-field pf-full">
+                <span>Nombre</span>
+                <input
+                  type="text"
+                  value={form.name}
+                  onChange={set('name')}
+                  placeholder="Ej.: Liquidación de audio"
+                  required
+                />
+              </label>
+
+              <label className="pf-field">
+                <span>Ámbito</span>
+                <select value={form.scope} onChange={set('scope')}>
+                  {PROMO_SCOPES.map((s) => (
+                    <option key={s.key} value={s.key}>{s.label}</option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="pf-field">
+                <span>Porcentaje (%)</span>
+                <input
+                  type="number"
+                  min="1"
+                  max="100"
+                  step="1"
+                  value={form.percent}
+                  onChange={set('percent')}
+                  required
+                />
+              </label>
+
+              {form.scope === 'category' && (
+                <label className="pf-field pf-full">
+                  <span>Categoría</span>
+                  <select value={form.target} onChange={set('target')} required>
+                    <option value="">Elegí una categoría…</option>
+                    {cats.map((c) => (
+                      <option key={c.key} value={c.key}>{c.name}</option>
+                    ))}
+                  </select>
+                </label>
+              )}
+
+              {form.scope === 'brand' && (
+                <label className="pf-field pf-full">
+                  <span>Marca</span>
+                  <select value={form.target} onChange={set('target')} required>
+                    <option value="">Elegí una marca…</option>
+                    {brands.map((b) => (
+                      <option key={b.name} value={b.name}>{b.name}</option>
+                    ))}
+                  </select>
+                </label>
+              )}
+
+              {form.scope === 'product' && (
+                <label className="pf-field pf-full">
+                  <span>Producto</span>
+                  <select value={form.target} onChange={set('target')} required>
+                    <option value="">Elegí un producto…</option>
+                    {products.map((p) => (
+                      <option key={p.id} value={p.id}>{p.name} · {p.brand}</option>
+                    ))}
+                  </select>
+                </label>
+              )}
+
+              {form.percent > 0 && (
+                <label className="pf-field pf-full promo-check">
+                  <input type="checkbox" checked={form.active} onChange={set('active')} />
+                  <span>Regla activa</span>
+                </label>
+              )}
+            </div>
+
+            <div className="pf-actions">
+              <button type="submit" className="primary-btn" disabled={saving}>
+                {saving ? 'Guardando…' : editing ? 'Guardar cambios' : 'Crear regla'}
+              </button>
+            </div>
+          </form>
+        </section>
+      )}
+
+      <div className="table-wrap">
+        <table className="dash-table">
+          <thead>
+            <tr>
+              <th>Regla</th>
+              <th>Aplica a</th>
+              <th>%</th>
+              <th>Estado</th>
+              {canManage && <th>Acciones</th>}
+            </tr>
+          </thead>
+          <tbody>
+            {data.items.map((d) => (
+              <tr key={String(d.id)} className={!d.active ? 'inv-muted-row' : ''}>
+                <td>
+                  <span className="t-cell-name">
+                    <strong>{d.name}</strong>
+                    <em>{PROMO_SCOPES.find((s) => s.key === d.scope)?.label}</em>
+                  </span>
+                </td>
+                <td>{targetLabel(d)}</td>
+                <td className="mono t-num t-money">{d.percent}%</td>
+                <td>{promoStateChip(d.active, 'Activo', 'Pausado')}</td>
+                {canManage && (
+                  <td>
+                    <span className="row-actions">
+                      <button
+                        type="button"
+                        className="row-btn"
+                        title={d.active ? 'Pausar' : 'Activar'}
+                        onClick={() => toggleActive(d)}
+                      >
+                        {d.active ? <IconCheck /> : <IconClock />}
+                      </button>
+                      <button
+                        type="button"
+                        className="row-btn"
+                        title="Editar"
+                        onClick={() => openEdit(d)}
+                      >
+                        <IconEdit />
+                      </button>
+                      <button
+                        type="button"
+                        className="row-btn row-btn-danger"
+                        title="Eliminar"
+                        onClick={() => remove(d)}
+                      >
+                        <IconTrash />
+                      </button>
+                    </span>
+                  </td>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {data.items.length === 0 && (
+          <EmptyNote text="Todavía no hay reglas de descuento." />
+        )}
+      </div>
+    </div>
+  )
+}
+
+function CouponsScreen({ canManage }) {
+  const [data, setData] = useState(null)
+  const [error, setError] = useState('')
+  const [note, setNote] = useState('')
+  const [formOpen, setFormOpen] = useState(false)
+  const [editing, setEditing] = useState(null)
+  const [form, setForm] = useState(null)
+  const [saving, setSaving] = useState(false)
+  const [refresh, setRefresh] = useState(0)
+
+  useEffect(() => {
+    let alive = true
+    apiGet('/api/admin/coupons')
+      .then((res) => {
+        if (alive) setData(res)
+      })
+      .catch((err) => {
+        if (alive) setError(err.message)
+      })
+    return () => {
+      alive = false
+    }
+  }, [refresh])
+
+  const openNew = () => {
+    setEditing(null)
+    setForm({ code: '', percent: 10, active: true, description: '' })
+    setFormOpen(true)
+  }
+
+  const openEdit = (c) => {
+    setEditing(c.id)
+    setForm({ code: c.code, percent: c.percent, active: c.active, description: c.description })
+    setFormOpen(true)
+  }
+
+  const set = (key) => (e) =>
+    setForm((f) => ({ ...f, [key]: key === 'active' ? e.target.checked : e.target.value }))
+
+  const submit = async (e) => {
+    e.preventDefault()
+    setSaving(true)
+    setNote('')
+    try {
+      const payload = { ...form, percent: Number(form.percent) }
+      if (editing) {
+        await apiPut(`/api/admin/coupons/${editing}`, payload)
+      } else {
+        await apiPost('/api/admin/coupons', payload)
+      }
+      setNote(editing ? 'Cupón actualizado.' : `Cupón ${form.code.toUpperCase()} creado.`)
+      setFormOpen(false)
+      setRefresh((n) => n + 1)
+    } catch (err) {
+      setNote(err.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const toggleActive = async (c) => {
+    setNote('')
+    try {
+      await apiPut(`/api/admin/coupons/${c.id}`, { active: !c.active })
+      setNote(c.active ? 'Cupón desactivado.' : 'Cupón activado.')
+      setRefresh((n) => n + 1)
+    } catch (err) {
+      setNote(err.message)
+    }
+  }
+
+  const remove = async (c) => {
+    if (!window.confirm(`¿Eliminar el cupón ${c.code}?`)) return
+    setNote('')
+    try {
+      await apiDelete(`/api/admin/coupons/${c.id}`)
+      setNote('Cupón eliminado.')
+      setRefresh((n) => n + 1)
+    } catch (err) {
+      setNote(err.message)
+    }
+  }
+
+  if (!data && !error) return <ScreenLoading label="Cargando cupones…" />
+  if (error) return <ScreenBlocked message={error} />
+
+  const activeCount = data.items.filter((c) => c.active).length
+
+  return (
+    <div className="dash-screen">
+      <header className="dash-head">
+        <div>
+          <span className="dash-eyebrow">Promociones</span>
+          <h1>Cupones</h1>
+        </div>
+        <div className="dash-head-today">
+          <strong className="mono">{activeCount}</strong>
+          <em>cupones activos</em>
+        </div>
+      </header>
+
+      <div className="dash-toolbar">
+        <p className="list-note">
+          El cliente ingresa el código en el checkout y recibe el descuento sobre el total.
+        </p>
+        {canManage && (
+          <button type="button" className="primary-btn dash-add" onClick={openNew}>
+            <IconPlus />
+            Nuevo cupón
+          </button>
+        )}
+      </div>
+
+      {note && <p className="sale-note">{note}</p>}
+
+      {formOpen && (
+        <section className="dash-card promo-form">
+          <div className="dash-card-head">
+            <h2>{editing ? `Editar ${form.code}` : 'Nuevo cupón'}</h2>
+            <button type="button" className="ghost-btn" onClick={() => setFormOpen(false)}>
+              Cancelar
+            </button>
+          </div>
+          <form onSubmit={submit}>
+            <div className="pf-grid">
+              <label className="pf-field">
+                <span>Código</span>
+                <input
+                  type="text"
+                  value={form.code}
+                  onChange={set('code')}
+                  placeholder="Ej.: BIENVENIDA10"
+                  style={{ textTransform: 'uppercase' }}
+                  required
+                />
+              </label>
+
+              <label className="pf-field">
+                <span>Descuento (%)</span>
+                <input
+                  type="number"
+                  min="1"
+                  max="100"
+                  step="1"
+                  value={form.percent}
+                  onChange={set('percent')}
+                  required
+                />
+              </label>
+
+              <label className="pf-field pf-full">
+                <span>Descripción (opcional)</span>
+                <input
+                  type="text"
+                  value={form.description}
+                  onChange={set('description')}
+                  placeholder="Ej.: Bienvenida para clientes nuevos"
+                />
+              </label>
+
+              <label className="pf-field pf-full promo-check">
+                <input type="checkbox" checked={form.active} onChange={set('active')} />
+                <span>Cupón activo</span>
+              </label>
+            </div>
+
+            <div className="pf-actions">
+              <button type="submit" className="primary-btn" disabled={saving}>
+                {saving ? 'Guardando…' : editing ? 'Guardar cambios' : 'Crear cupón'}
+              </button>
+            </div>
+          </form>
+        </section>
+      )}
+
+      <div className="table-wrap">
+        <table className="dash-table">
+          <thead>
+            <tr>
+              <th>Código</th>
+              <th>Descuento</th>
+              <th>Descripción</th>
+              <th>Estado</th>
+              {canManage && <th>Acciones</th>}
+            </tr>
+          </thead>
+          <tbody>
+            {data.items.map((c) => (
+              <tr key={String(c.id)} className={!c.active ? 'inv-muted-row' : ''}>
+                <td>
+                  <span className="t-cell-name">
+                    <strong className="mono">{c.code}</strong>
+                    <em>{shortDate(c.createdAt)}</em>
+                  </span>
+                </td>
+                <td className="mono t-num t-money">{c.percent}%</td>
+                <td className="t-desc">{c.description || '—'}</td>
+                <td>{promoStateChip(c.active, 'Activo', 'Pausado')}</td>
+                {canManage && (
+                  <td>
+                    <span className="row-actions">
+                      <button
+                        type="button"
+                        className="row-btn"
+                        title={c.active ? 'Pausar' : 'Activar'}
+                        onClick={() => toggleActive(c)}
+                      >
+                        {c.active ? <IconCheck /> : <IconClock />}
+                      </button>
+                      <button
+                        type="button"
+                        className="row-btn"
+                        title="Editar"
+                        onClick={() => openEdit(c)}
+                      >
+                        <IconEdit />
+                      </button>
+                      <button
+                        type="button"
+                        className="row-btn row-btn-danger"
+                        title="Eliminar"
+                        onClick={() => remove(c)}
+                      >
+                        <IconTrash />
+                      </button>
+                    </span>
+                  </td>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {data.items.length === 0 && (
+          <EmptyNote text="Todavía no hay cupones." />
+        )}
       </div>
     </div>
   )

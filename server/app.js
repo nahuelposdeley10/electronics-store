@@ -9,6 +9,7 @@ import webhooksRouter from './routes/webhooks.js'
 import catalogRouter from './routes/catalog.js'
 import adminRouter from './routes/admin.js'
 import catalogAdminRouter from './routes/catalog-admin.js'
+import promosRouter from './routes/promos.js'
 import inventoryRouter from './routes/inventory.js'
 import reportsRouter from './routes/reports.js'
 import usersRouter from './routes/users.js'
@@ -38,6 +39,7 @@ export function createApp() {
   app.use('/api/auth', authRouter)
   app.use('/api/admin', adminRouter)
   app.use('/api/admin', catalogAdminRouter)
+  app.use('/api/admin', promosRouter)
   app.use('/api/admin/inventory', inventoryRouter)
   app.use('/api/admin/reports', reportsRouter)
   app.use('/api/admin/users', usersRouter)
