@@ -5704,45 +5704,7 @@ html.anim-off [data-reveal="sweep"] {
   transition: none;
 }
 
-.footer-bottom {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-}
 
-.footer-bottom-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: 18px;
-}
-
-.footer-motion-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  font-family: var(--font-mono);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  padding: 5px 10px;
-  border: 1px solid var(--gal-line-strong);
-  border-radius: 999px;
-  color: var(--gal-ink-soft);
-}
-
-.footer-motion-toggle:hover {
-  color: var(--gal-ink);
-  border-color: var(--gal-facade);
-}
-
-.footer-motion-toggle.on {
-  background: var(--gal-black);
-  color: #fff;
-  border-color: var(--gal-black);
-}
 
 .product-box:hover {
   transform: translateY(-3px);

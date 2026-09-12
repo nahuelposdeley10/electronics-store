@@ -1,6 +1,4 @@
-import { useState } from 'react'
 import { useSiteSettings, mergeSettings } from '../lib/siteSettings'
-import { isMotionForced, setMotionForced } from '../lib/motion'
 import {
   IconBolt,
   IconMap,
@@ -20,13 +18,6 @@ function maxInstallmentMonths(settings) {
 export default function Footer({ onNavigate }) {
   const settings = mergeSettings(useSiteSettings())
   const year = new Date().getFullYear()
-  const [motionOn, setMotionOn] = useState(() => isMotionForced())
-
-  const toggleMotion = () => {
-    const next = !motionOn
-    setMotionForced(next)
-    setMotionOn(next)
-  }
 
   return (
     <footer className="site-footer">
@@ -95,20 +86,9 @@ export default function Footer({ onNavigate }) {
 
       <div className="footer-bottom">
         <p>© {year} {settings.store.name}. Todos los derechos reservados.</p>
-        <div className="footer-bottom-actions">
-          <button
-            type="button"
-            className={`footer-motion-toggle${motionOn ? ' on' : ''}`}
-            onClick={toggleMotion}
-            aria-pressed={motionOn}
-            title="Activar o desactivar las animaciones de la tienda"
-          >
-            ⚡ Movimiento {motionOn ? 'ON' : 'OFF'}
-          </button>
-          <button type="button" className="footer-panel-link" onClick={() => onNavigate('dashboard')}>
-            Panel de ventas
-          </button>
-        </div>
+        <button type="button" className="footer-panel-link" onClick={() => onNavigate('dashboard')}>
+          Panel de ventas
+        </button>
       </div>
     </footer>
   )
