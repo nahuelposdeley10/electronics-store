@@ -6357,7 +6357,7 @@ function StoreScreenBody({ settings, saving, note, onSave }) {
           />
           <SetImageField
             label="Portada"
-            hint="Imagen de fondo del hero de inicio. Si no hay, se usa la foto por defecto."
+            hint="Imagen de fondo del hero de inicio. Si no hay, el hero queda sin imagen."
             value={form.coverUrl}
             uploading={uploading === 'cover'}
             onFile={(e) => uploadImage('cover', e)}
