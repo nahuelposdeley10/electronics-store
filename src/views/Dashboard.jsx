@@ -2796,6 +2796,9 @@ function MinStockScreen({ canManage }) {
 
   const lowCount = data.items.filter((p) => p.status !== 'ok').length
 
+  const minUntouched = (product) =>
+    String(drafts[product.id] ?? String(product.minStock)) === String(product.minStock)
+
   return (
     <div className="dash-screen">
       <header className="dash-head">
@@ -2857,11 +2860,12 @@ function MinStockScreen({ canManage }) {
                   <td>
                     <button
                       type="button"
-                      className="row-btn"
-                      disabled={savingId === p.id}
+                      className={`min-save-btn${savingId === p.id ? ' saving' : ''}`}
+                      disabled={savingId === p.id || minUntouched(p)}
                       onClick={() => saveMin(p)}
                     >
-                      {savingId === p.id ? '…' : 'Guardar'}
+                      {savingId === p.id ? <span className="min-save-spin" /> : <IconCheck />}
+                      {savingId === p.id ? 'Guardando' : 'Guardar'}
                     </button>
                   </td>
                 )}

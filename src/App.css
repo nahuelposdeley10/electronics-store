@@ -4335,6 +4335,67 @@
   padding: 6px 8px;
 }
 
+.min-save-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--gal-line-strong);
+  border-radius: 99px;
+  background: var(--gal-white);
+  color: var(--gal-ink-soft);
+  font-size: 12px;
+  font-weight: 700;
+  font-family: var(--font-ui);
+  padding: 6px 12px;
+  cursor: pointer;
+  transition:
+    border-color 0.15s var(--ease-out),
+    color 0.15s var(--ease-out),
+    background 0.15s var(--ease-out),
+    box-shadow 0.15s var(--ease-out);
+}
+
+.min-save-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.min-save-btn:hover:not(:disabled) {
+  border-color: var(--gal-facade);
+  color: var(--gal-facade-ink);
+  background: var(--gal-facade);
+  box-shadow: 0 10px 22px -12px rgba(215, 38, 29, 0.55);
+}
+
+.min-save-btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.min-save-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.min-save-btn.saving {
+  border-color: var(--gal-line-strong);
+  color: var(--gal-ink-faint);
+}
+
+.min-save-spin {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--gal-line-strong);
+  border-top-color: var(--gal-facade);
+  border-radius: 50%;
+  animation: min-spin 0.7s linear infinite;
+}
+
+@keyframes min-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .inv-mov-list {
   display: flex;
   flex-direction: column;
