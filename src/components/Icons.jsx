@@ -129,6 +129,17 @@ export function IconCard(props) {
   )
 }
 
+export function IconCash(props) {
+  return (
+    <svg {...S} {...props}>
+      <rect x="2.5" y="6.5" width="19" height="11" rx="1.2" />
+      <path d="M2.5 9.5h19" />
+      <circle cx="12" cy="14" r="2" />
+      <path d="M6 14.8v-1.6M18 14.8v-1.6" />
+    </svg>
+  )
+}
+
 export function IconShield(props) {
   return (
     <svg {...S} {...props}>

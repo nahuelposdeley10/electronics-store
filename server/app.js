@@ -15,6 +15,7 @@ import reportsRouter from './routes/reports.js'
 import usersRouter from './routes/users.js'
 import authRouter from './routes/auth.js'
 import settingsRouter from './routes/settings.js'
+import cashRouter from './routes/cash.js'
 
 const DIST_DIR = path.resolve('dist')
 
@@ -43,6 +44,7 @@ export function createApp() {
   app.use('/api/admin', catalogAdminRouter)
   app.use('/api/admin', promosRouter)
   app.use('/api/admin/inventory', inventoryRouter)
+  app.use('/api/admin/cash', cashRouter)
   app.use('/api/admin/reports', reportsRouter)
   app.use('/api/admin/users', usersRouter)
 

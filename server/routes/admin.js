@@ -8,6 +8,8 @@ import { uploadToCloudinary } from '../services/cloudinary.js'
 import { parsePagination, buildProductSearchFilter, escapeRegex, parseMulti } from '../lib/catalog-query.js'
 import { getValidCategoryKeys } from '../lib/catalog-meta.js'
 import { changeStock } from '../lib/stock.js'
+import { currentShift } from '../lib/cash.js'
+import { CashMovement } from '../models/CashMovement.js'
 
 const router = express.Router()
 
@@ -475,6 +477,25 @@ router.post('/pos', async (req, res) => {
       })
     }
 
+    if (order.payment === 'efectivo') {
+      try {
+        const open = await currentShift()
+        if (open) {
+          await CashMovement.create({
+            shiftId: open._id,
+            kind: 'venta',
+            flow: 'in',
+            amount: order.total,
+            description: `Venta #${String(order._id).slice(-6).toUpperCase()}`,
+            ref: String(order._id),
+            by: req.user?.email || null,
+          })
+        }
+      } catch (cashError) {
+        console.error('Cash movement (venta) error:', cashError)
+      }
+    }
+
     return res.json({
       id: order._id,
       status: order.status,
@@ -513,6 +534,25 @@ router.post('/orders/:id/return', requirePermission('sales.return'), async (req,
           ref: String(order._id),
           createdBy: req.user?.email || null,
         })
+      }
+    }
+
+    if (order.payment === 'efectivo') {
+      try {
+        const open = await currentShift()
+        if (open) {
+          await CashMovement.create({
+            shiftId: open._id,
+            kind: 'devolucion',
+            flow: 'out',
+            amount: order.total,
+            description: `Devolución #${String(order._id).slice(-6).toUpperCase()}`,
+            ref: String(order._id),
+            by: req.user?.email || null,
+          })
+        }
+      } catch (cashError) {
+        console.error('Cash movement (devolución) error:', cashError)
       }
     }
 

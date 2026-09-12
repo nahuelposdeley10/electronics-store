@@ -9,6 +9,7 @@ export const ALL_PERMISSIONS = [
   'inventory.write',
   'sales.return',
   'quotes.delete',
+  'cash.manage',
 ]
 
 export const PERMISSION_LABELS = {
@@ -20,6 +21,7 @@ export const PERMISSION_LABELS = {
   'inventory.write': 'Inventario (ajustes, compras, mínimo y físico)',
   'sales.return': 'Devoluciones',
   'quotes.delete': 'Eliminar presupuestos',
+  'cash.manage': 'Caja (apertura, movimientos y arqueos)',
 }
 
 export function defaults() {
