@@ -5239,19 +5239,40 @@
 }
 
 .set-image-preview {
-  height: 130px;
+  display: grid;
+  place-items: center;
+  height: 160px;
   border: 1px dashed var(--gal-line-strong);
   border-radius: 3px;
   background: var(--gal-white);
-  display: grid;
-  place-items: center;
   overflow: hidden;
+  text-decoration: none;
+  transition: border-color 0.15s ease;
+}
+
+a.set-image-preview {
+  cursor: zoom-in;
+}
+
+a.set-image-preview:hover {
+  border-color: var(--gal-facade);
 }
 
 .set-image-preview img {
   width: 100%;
   height: 100%;
+}
+
+.set-image-preview img.set-image-fit-contain {
   object-fit: contain;
+}
+
+.set-image-box.is-wide .set-image-preview {
+  height: 220px;
+}
+
+.set-image-preview img.set-image-fit-cover {
+  object-fit: cover;
 }
 
 .set-image-empty {
@@ -5263,6 +5284,13 @@
   display: flex;
   gap: 8px;
   align-items: center;
+  flex-wrap: wrap;
+}
+
+.set-image-open {
+  text-decoration: none;
+  font-size: 12.5px;
+  padding: 8px 12px;
 }
 
 .set-image-upload {

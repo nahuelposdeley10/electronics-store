@@ -5741,17 +5741,29 @@ function SettingsNote({ text }) {
   )
 }
 
-function SetImageField({ label, hint, value, uploading, onFile, onRemove }) {
+function SetImageField({ label, hint, value, uploading, onFile, onRemove, wide }) {
   return (
-    <div className="set-image-box">
+    <div className={wide ? 'set-image-box is-wide' : 'set-image-box'}>
       <span className="set-image-label">{label}</span>
-      <div className="set-image-preview">
-        {value ? (
-          <img src={value} alt="" />
-        ) : (
+      {value ? (
+        <a
+          className="set-image-preview"
+          href={value}
+          target="_blank"
+          rel="noreferrer"
+          title="Abrir imagen completa"
+        >
+          <img
+            src={value}
+            alt=""
+            className={wide ? 'set-image-fit-cover' : 'set-image-fit-contain'}
+          />
+        </a>
+      ) : (
+        <div className="set-image-preview is-empty">
           <span className="set-image-empty">Sin imagen</span>
-        )}
-      </div>
+        </div>
+      )}
       <div className="set-image-actions">
         <label className="primary-btn set-image-upload">
           {uploading ? 'Subiendo…' : 'Subir imagen'}
@@ -5764,9 +5776,19 @@ function SetImageField({ label, hint, value, uploading, onFile, onRemove }) {
           />
         </label>
         {value && (
-          <button type="button" className="ghost-btn" onClick={onRemove}>
-            Quitar
-          </button>
+          <>
+            <a
+              className="ghost-btn set-image-open"
+              href={value}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Ver
+            </a>
+            <button type="button" className="ghost-btn" onClick={onRemove}>
+              Quitar
+            </button>
+          </>
         )}
       </div>
       {hint && <em className="set-hint">{hint}</em>}
@@ -6340,6 +6362,7 @@ function StoreScreenBody({ settings, saving, note, onSave }) {
             uploading={uploading === 'cover'}
             onFile={(e) => uploadImage('cover', e)}
             onRemove={() => removeImage('cover')}
+            wide
           />
         </div>
 
