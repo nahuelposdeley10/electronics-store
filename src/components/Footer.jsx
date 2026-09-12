@@ -49,7 +49,7 @@ export default function Footer({ onNavigate }) {
           <ul>
             <li><button type="button" onClick={() => onNavigate('home')}>Catálogo</button></li>
             <li><button type="button" onClick={() => onNavigate('cart')}>Carrito</button></li>
-            <li><button type="button">Cómo comprar</button></li>
+            <li><button type="button" onClick={() => onNavigate('info', 'como-comprar')}>Cómo comprar</button></li>
             <li><button type="button">Formas de pago</button></li>
           </ul>
         </div>

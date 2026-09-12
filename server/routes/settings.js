@@ -11,7 +11,7 @@ const upload = multer({
   limits: { fileSize: 8 * 1024 * 1024 },
 })
 
-const PUBLIC_SECTIONS = ['store', 'shipping', 'general']
+const PUBLIC_SECTIONS = ['store', 'shipping', 'general', 'payments']
 
 router.get('/settings/public', async (req, res) => {
   try {

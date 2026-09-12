@@ -12,6 +12,7 @@ import Home from './views/Home'
 import CartView from './views/CartView'
 import ProductDetail from './views/ProductDetail'
 import OrderStatus from './views/OrderStatus'
+import InfoPage from './views/InfoPage'
 import Dashboard from './views/Dashboard'
 import './App.css'
 
@@ -130,6 +131,8 @@ function AppContent() {
         </div>
       </main>
     )
+  } else if (view.name === 'info') {
+    content = <InfoPage slug={view.payload} onNavigate={navigate} />
   }
 
   return (

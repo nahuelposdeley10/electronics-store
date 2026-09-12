@@ -30,6 +30,13 @@ const FALLBACK = {
       { minPrice: 100000, months: 12 },
     ],
   },
+  payments: {
+    methods: {
+      efectivo: true,
+      tarjeta: true,
+      transferencia: true,
+    },
+  },
 }
 
 let cached = null
@@ -76,5 +83,6 @@ export function mergeSettings(override) {
     store: { ...FALLBACK.store, ...(override?.store || {}) },
     shipping: { ...FALLBACK.shipping, ...(override?.shipping || {}) },
     general: { ...FALLBACK.general, ...(override?.general || {}) },
+    payments: { ...FALLBACK.payments, ...(override?.payments || {}) },
   }
 }
