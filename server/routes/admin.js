@@ -230,6 +230,7 @@ router.get('/products', async (req, res) => {
         category: p.category,
         price: p.price,
         oldPrice: p.oldPrice,
+        costPrice: p.costPrice || 0,
         stock: p.stock,
         minStock: p.minStock || 0,
         rating: p.rating,
@@ -253,7 +254,7 @@ router.get('/products', async (req, res) => {
 })
 
 router.post('/products', requireRole('superadmin'), upload.single('image'), async (req, res) => {
-  const { name, brand, category, price, oldPrice, stock, minStock, rating, freeShipping, badge, description, specs } = req.body || {}
+  const { name, brand, category, price, oldPrice, costPrice, stock, minStock, rating, freeShipping, badge, description, specs } = req.body || {}
 
   if (!name || !brand || !category || price === undefined || price === '') {
     return res.status(400).json({ error: 'Nombre, marca, categoría y precio son requeridos' })
@@ -275,6 +276,7 @@ router.post('/products', requireRole('superadmin'), upload.single('image'), asyn
       category,
       price: Number(price),
       oldPrice: oldPrice ? Number(oldPrice) : null,
+      costPrice: costPrice !== '' ? Number(costPrice) : 0,
       stock: stock !== '' ? Number(stock) : 0,
       minStock: minStock !== '' ? Number(minStock) : 0,
       rating: rating !== '' ? Number(rating) : 0,
@@ -312,6 +314,7 @@ router.put('/products/:id', requireRole('superadmin'), upload.single('image'), a
     category,
     price,
     oldPrice,
+    costPrice,
     stock,
     minStock,
     rating,
@@ -332,6 +335,7 @@ router.put('/products/:id', requireRole('superadmin'), upload.single('image'), a
     category: category !== undefined ? category : product.category,
     price: price !== undefined && price !== '' ? Number(price) : product.price,
     oldPrice: oldPrice !== undefined && oldPrice !== '' ? Number(oldPrice) : product.oldPrice,
+    costPrice: costPrice !== undefined && costPrice !== '' ? Math.max(0, Number(costPrice)) : product.costPrice,
     stock: stock !== undefined && stock !== '' ? Number(stock) : product.stock,
     minStock: minStock !== undefined && minStock !== '' ? Math.max(0, Number(minStock)) : product.minStock,
     rating: rating !== undefined && rating !== '' ? Number(rating) : product.rating,
@@ -367,6 +371,7 @@ router.put('/products/:id', requireRole('superadmin'), upload.single('image'), a
       category: product.category,
       price: product.price,
       oldPrice: product.oldPrice,
+      costPrice: product.costPrice || 0,
       stock: product.stock,
       minStock: product.minStock || 0,
       rating: product.rating,

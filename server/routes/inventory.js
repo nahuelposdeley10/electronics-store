@@ -1,6 +1,7 @@
 import express from 'express'
 import { Product } from '../models/Product.js'
 import { StockMovement } from '../models/StockMovement.js'
+import { Purchase } from '../models/Purchase.js'
 import { requireAuth, requireRole } from '../middleware/auth.js'
 import {
   parsePagination,
@@ -264,6 +265,148 @@ router.post('/physical', requireRole('superadmin'), async (req, res) => {
   } catch (error) {
     console.error('Physical inventory error:', error)
     return res.status(500).json({ error: 'No se pudo guardar el inventario físico' })
+  }
+})
+
+/* ---------------- Compras a proveedores ---------------- */
+
+router.get('/purchases', async (req, res) => {
+  try {
+    const { page, limit } = parsePagination(req.query)
+    const filter = {}
+    const term = String(req.query.q || '').trim()
+    if (term) {
+      filter.supplier = new RegExp(escapeRegex(term), 'i')
+    }
+
+    const [total, purchases] = await Promise.all([
+      Purchase.countDocuments(filter),
+      Purchase.find(filter)
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean(),
+    ])
+
+    return res.json({
+      items: purchases.map((p) => ({
+        id: String(p._id),
+        number: p.number,
+        supplier: p.supplier,
+        invoice: p.invoice,
+        items: p.items.map((i) => ({
+          productId: i.productId,
+          name: i.name,
+          quantity: i.quantity,
+          cost: i.cost,
+          total: i.total,
+        })),
+        total: p.total,
+        createdBy: p.createdBy,
+        createdAt: p.createdAt,
+      })),
+      page,
+      pageSize: limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    })
+  } catch (error) {
+    console.error('Purchases read error:', error)
+    return res.status(500).json({ error: 'No se pudieron leer las compras' })
+  }
+})
+
+router.post('/purchases', requireRole('superadmin'), async (req, res) => {
+  try {
+    const supplier = String(req.body?.supplier || '').trim()
+    const invoice = String(req.body?.invoice || '').trim()
+    const items = (req.body?.items || [])
+      .map((row) => ({
+        productId: Number(row?.productId),
+        quantity: Math.floor(Number(row?.quantity)),
+        cost: Number(row?.cost),
+      }))
+      .filter((row) => Number.isFinite(row.productId) && row.quantity > 0 && Number.isFinite(row.cost) && row.cost >= 0)
+
+    if (supplier.length < 2) {
+      return res.status(400).json({ error: 'Nombrá el proveedor' })
+    }
+    if (items.length === 0) {
+      return res.status(400).json({ error: 'Agregá al menos un producto a la compra' })
+    }
+
+    const ids = [...new Set(items.map((row) => row.productId))]
+    const dbProducts = await Product.find({ id: { $in: ids } }).lean()
+    const byId = new Map(dbProducts.map((p) => [p.id, p]))
+    if (byId.size !== ids.length) {
+      return res.status(400).json({ error: 'Algún producto ya no existe' })
+    }
+
+    const reference = `${supplier}${invoice ? ` · Fact. ${invoice}` : ''}`
+    const last = await Purchase.findOne().sort({ number: -1 }).lean()
+    const number = (last?.number || 0) + 1
+
+    const lines = []
+    let total = 0
+    for (const row of items) {
+      const product = byId.get(row.productId)
+      const lineTotal = row.quantity * row.cost
+      total += lineTotal
+      lines.push({
+        productId: product.id,
+        name: product.name,
+        quantity: row.quantity,
+        cost: row.cost,
+        total: lineTotal,
+      })
+    }
+
+    const purchase = await Purchase.create({
+      number,
+      supplier,
+      invoice,
+      items: lines,
+      total,
+      createdBy: req.user?.email || null,
+    })
+
+    const logged = []
+    for (const row of items) {
+      const product = byId.get(row.productId)
+      if (Number.isFinite(row.cost) && product.costPrice !== row.cost) {
+        await Product.updateOne({ id: product.id }, { $set: { costPrice: row.cost } })
+      }
+      const movement = await changeStock({
+        productId: product.id,
+        delta: row.quantity,
+        type: 'compra',
+        reason: reference,
+        ref: String(number),
+        createdBy: req.user?.email || null,
+      })
+      logged.push({
+        productId: product.id,
+        delta: movement ? movement.delta : 0,
+        stockAfter: movement ? movement.stockAfter : product.stock,
+      })
+    }
+
+    return res.status(201).json({
+      ok: true,
+      purchase: {
+        id: String(purchase._id),
+        number: purchase.number,
+        supplier: purchase.supplier,
+        invoice: purchase.invoice,
+        items: lines,
+        total: purchase.total,
+        createdAt: purchase.createdAt,
+      },
+      logged,
+    })
+  } catch (error) {
+    console.error('Purchase create error:', error)
+    return res.status(500).json({ error: 'No se pudo registrar la compra' })
   }
 })
 

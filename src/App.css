@@ -4451,3 +4451,146 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ---- Compras a proveedores ---- */
+
+.pur-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pur-line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 74px 96px 96px 28px;
+  gap: 8px;
+  align-items: end;
+}
+
+.pur-line-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.pur-line-field span {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--gal-ink-faint);
+}
+
+.pur-line-field select,
+.pur-line-field input {
+  border: 1px solid var(--gal-line-strong);
+  border-radius: 3px;
+  background: var(--gal-white);
+  color: var(--gal-ink);
+  padding: 8px 9px;
+  font-size: 13px;
+  font-family: var(--font-mono);
+  width: 100%;
+}
+
+.pur-line-field select:focus,
+.pur-line-field input:focus {
+  outline: 0;
+  border-color: var(--gal-facade);
+}
+
+.pur-line-total {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 8px 2px;
+  font-size: 12px;
+  color: var(--gal-ink-soft);
+  white-space: nowrap;
+}
+
+.pur-line-remove {
+  border: 1px solid var(--gal-line-strong);
+  border-radius: 3px;
+  background: var(--gal-white);
+  color: var(--gal-ink-faint);
+  width: 28px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.pur-line-remove svg {
+  width: 15px;
+  height: 15px;
+}
+
+.pur-line-remove:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.pur-add {
+  align-self: flex-start;
+}
+
+.pur-total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-top: 1px solid var(--gal-line-strong);
+  padding-top: 12px;
+}
+
+.pur-total span {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--gal-ink-faint);
+}
+
+.pur-total strong {
+  font-size: 17px;
+  color: var(--gal-ink);
+}
+
+.pur-item-total {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--gal-ink);
+  white-space: nowrap;
+}
+
+.inv-toolbar {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.inv-toolbar .dash-search {
+  max-width: 100%;
+}
+
+.t-cost {
+  color: var(--gal-ink-faint);
+}
+
+.t-margin {
+  color: var(--gal-ink-soft);
+}
+
+@media (max-width: 560px) {
+  .pur-line {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .pur-line-product {
+    grid-column: 1 / -1;
+  }
+}

@@ -207,6 +207,7 @@ export default function Dashboard({ onExit }) {
         { id: 'stock-overview', label: 'Stock' },
         { id: 'stock-movements', label: 'Movimientos' },
         { id: 'stock-adjustments', label: 'Ajustes' },
+        { id: 'stock-purchases', label: 'Compras' },
         { id: 'stock-min', label: 'Stock mínimo' },
         { id: 'stock-physical', label: 'Inventario físico' },
       ],
@@ -363,6 +364,9 @@ export default function Dashboard({ onExit }) {
         {gate === 'ready' && screen === 'stock-movements' && <MovementsScreen />}
         {gate === 'ready' && screen === 'stock-adjustments' && (
           <AdjustmentsScreen canManage={user?.role === 'superadmin'} />
+        )}
+        {gate === 'ready' && screen === 'stock-purchases' && (
+          <PurchasesScreen canManage={user?.role === 'superadmin'} />
         )}
         {gate === 'ready' && screen === 'stock-min' && (
           <MinStockScreen canManage={user?.role === 'superadmin'} />
@@ -759,6 +763,8 @@ function ProductsScreen({ canManage }) {
               <th>Producto</th>
               <th>Categoría</th>
               <th>Precio</th>
+              <th>Costo</th>
+              <th>Ganancia</th>
               <th>Stock</th>
               <th>Vendidos</th>
               <th>Ingresos</th>
@@ -781,6 +787,16 @@ function ProductsScreen({ canManage }) {
                   {CATEGORY_LABELS[p.category] || p.category}
                 </td>
                 <td className="mono t-num">{formatARS(p.price)}</td>
+                <td className="mono t-num t-cost">{p.costPrice ? formatARS(p.costPrice) : '—'}</td>
+                <td className="mono t-num t-margin">
+                  {p.costPrice ? (
+                    <span className={p.price - p.costPrice >= 0 ? 'mv-delta up' : 'mv-delta down'}>
+                      {formatARS(p.price - p.costPrice)}
+                    </span>
+                  ) : (
+                    '—'
+                  )}
+                </td>
                 <td className="mono t-num">{p.stock}</td>
                 <td className="mono t-num">{p.soldUnits}</td>
                 <td className="mono t-num t-money">{formatARS(p.revenue)}</td>
@@ -2014,6 +2030,7 @@ function ProductForm({ product, onClose, onSaved }) {
     brand: product?.brand || '',
     category: product?.category || 'audio',
     price: product?.price ?? '',
+    costPrice: product?.costPrice ?? '',
     stock: product?.stock ?? '',
     rating: product?.rating ?? '',
     freeShipping: product?.freeShipping ?? true,
@@ -2125,6 +2142,18 @@ function ProductForm({ product, onClose, onSaved }) {
                 onChange={set('price')}
                 placeholder="Ej. 109990"
                 required
+              />
+            </label>
+
+            <label className="pf-field">
+              <span>Costo ($)</span>
+              <input
+                type="number"
+                min="0"
+                step="1"
+                value={form.costPrice}
+                onChange={set('costPrice')}
+                placeholder="Opcional"
               />
             </label>
 
@@ -2841,6 +2870,287 @@ function MinStockScreen({ canManage }) {
           </tbody>
         </table>
         {data.items.length === 0 && <EmptyNote text="No hay productos para configurar." />}
+      </div>
+    </div>
+  )
+}
+
+function PurchasesScreen({ canManage }) {
+  const [products, setProducts] = useState([])
+  const [data, setData] = useState(null)
+  const [error, setError] = useState('')
+  const [query, setQuery] = useState('')
+  const [params, setParams] = useState({ q: '', page: 1 })
+  const [version, setVersion] = useState(0)
+  const [form, setForm] = useState({
+    supplier: '',
+    invoice: '',
+    lines: [{ productId: '', quantity: '1', cost: '' }],
+  })
+  const [saving, setSaving] = useState(false)
+  const [note, setNote] = useState('')
+
+  useEffect(() => {
+    let alive = true
+    apiGet('/api/admin/products?limit=100')
+      .then((res) => {
+        if (alive) setProducts(res.items || [])
+      })
+      .catch(() => {})
+    return () => {
+      alive = false
+    }
+  }, [])
+
+  useEffect(() => {
+    let alive = true
+    const paramsString = new URLSearchParams({
+      q: params.q,
+      page: String(params.page),
+      limit: '10',
+    })
+    apiGet(`/api/admin/inventory/purchases?${paramsString}`)
+      .then((res) => {
+        if (!alive) return
+        if (res.items.length === 0 && res.page > 1) {
+          setParams((prev) => ({ ...prev, page: res.totalPages || 1 }))
+          return
+        }
+        setData(res)
+      })
+      .catch((err) => {
+        if (alive) setError(err.message)
+      })
+    return () => {
+      alive = false
+    }
+  }, [params, version])
+
+  const submitSearch = (e) => {
+    e.preventDefault()
+    setParams((prev) => ({ ...prev, q: query.trim(), page: 1 }))
+  }
+
+  const updateLine = (index, field, value) => {
+    setForm((f) => ({
+      ...f,
+      lines: f.lines.map((line, i) => (i === index ? { ...line, [field]: value } : line)),
+    }))
+  }
+
+  const addLine = () => {
+    setForm((f) => ({ ...f, lines: [...f.lines, { productId: '', quantity: '1', cost: '' }] }))
+  }
+
+  const removeLine = (index) => {
+    setForm((f) => ({
+      ...f,
+      lines: f.lines.length > 1 ? f.lines.filter((_, i) => i !== index) : f.lines,
+    }))
+  }
+
+  const submitPurchase = async (e) => {
+    e.preventDefault()
+    setSaving(true)
+    setNote('')
+    try {
+      const items = form.lines
+        .map((l) => ({
+          productId: Number(l.productId),
+          quantity: Math.floor(Number(l.quantity)),
+          cost: Number(l.cost),
+        }))
+        .filter((l) => Number.isFinite(l.productId) && l.quantity > 0 && Number.isFinite(l.cost) && l.cost >= 0)
+      if (items.length === 0) {
+        setNote('Elegí un producto y cargá cantidad y costo.')
+        setSaving(false)
+        return
+      }
+      const res = await apiPost('/api/admin/inventory/purchases', {
+        supplier: form.supplier.trim(),
+        invoice: form.invoice.trim(),
+        items,
+      })
+      setNote(`Compra #${res.purchase.number} registrada — total ${formatARS(res.purchase.total)}. Stock actualizado.`)
+      setForm({
+        supplier: '',
+        invoice: '',
+        lines: [{ productId: '', quantity: '1', cost: '' }],
+      })
+      setVersion((v) => v + 1)
+    } catch (err) {
+      setNote(err.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (!data && !error) return <ScreenLoading label="Preparando compras…" />
+  if (error) return <ScreenBlocked message={error} />
+
+  const lineTotal = (line) => (Number(line.quantity) || 0) * (Number(line.cost) || 0)
+  const purchaseTotal = form.lines.reduce((sum, line) => sum + lineTotal(line), 0)
+
+  return (
+    <div className="dash-screen">
+      <header className="dash-head">
+        <div>
+          <span className="dash-eyebrow">Inventario</span>
+          <h1>Compras a proveedores</h1>
+        </div>
+        <div className="dash-head-today">
+          <strong className="mono">{data.total}</strong>
+          <em>compras registradas</em>
+        </div>
+      </header>
+
+      {note && <p className="sale-note">{note}</p>}
+      {!canManage && (
+        <p className="sale-note">Solo el superadmin puede cargar compras.</p>
+      )}
+
+      <div className="inv-grid">
+        <form className="inv-panel" onSubmit={submitPurchase}>
+          <h2>Nueva compra</h2>
+          <label className="inv-field">
+            <span>Proveedor</span>
+            <input
+              type="text"
+              value={form.supplier}
+              onChange={(e) => setForm((f) => ({ ...f, supplier: e.target.value }))}
+              placeholder="Ej. Full Hogar - Distribuidora"
+              required
+            />
+          </label>
+          <label className="inv-field">
+            <span>Nº factura / remito</span>
+            <input
+              type="text"
+              value={form.invoice}
+              onChange={(e) => setForm((f) => ({ ...f, invoice: e.target.value }))}
+              placeholder="Opcional"
+            />
+          </label>
+
+          <div className="pur-lines">
+            {form.lines.map((line, index) => (
+              <div key={index} className="pur-line">
+                <div className="pur-line-field pur-line-product">
+                  <span>Producto</span>
+                  <select
+                    value={line.productId}
+                    onChange={(e) => updateLine(index, 'productId', e.target.value)}
+                    required
+                  >
+                    <option value="">Elegí…</option>
+                    {products.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} · {p.brand} (stock {p.stock})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="pur-line-field">
+                  <span>Cant.</span>
+                  <input
+                    type="number"
+                    min="1"
+                    value={line.quantity}
+                    onChange={(e) => updateLine(index, 'quantity', e.target.value)}
+                  />
+                </div>
+                <div className="pur-line-field">
+                  <span>Costo/u</span>
+                  <input
+                    type="number"
+                    min="0"
+                    value={line.cost}
+                    onChange={(e) => updateLine(index, 'cost', e.target.value)}
+                    placeholder="0"
+                  />
+                </div>
+                <div className="pur-line-total mono">{formatARS(lineTotal(line))}</div>
+                <button
+                  type="button"
+                  className="pur-line-remove"
+                  aria-label="Quitar línea"
+                  onClick={() => removeLine(index)}
+                  disabled={form.lines.length <= 1}
+                >
+                  <IconCross />
+                </button>
+              </div>
+            ))}
+          </div>
+
+          <button type="button" className="ghost-btn pur-add" onClick={addLine}>
+            <IconPlus /> Agregar producto
+          </button>
+
+          <div className="pur-total">
+            <span>Total de la compra</span>
+            <strong className="mono">{formatARS(purchaseTotal)}</strong>
+          </div>
+
+          <button type="submit" className="primary-btn" disabled={saving || !canManage}>
+            {saving ? 'Guardando…' : 'Registrar compra'}
+          </button>
+        </form>
+
+        <div className="inv-panel">
+          <h2>Últimas compras</h2>
+          <div className="dash-toolbar inv-toolbar">
+            <form className="dash-search" role="search" onSubmit={submitSearch}>
+              <IconSearch />
+              <input
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Buscá por proveedor…"
+                aria-label="Buscar compras"
+              />
+            </form>
+          </div>
+          {data.items.length === 0 && <p className="inv-empty">Todavía no hay compras.</p>}
+          <div className="inv-mov-list">
+            {data.items.map((p) => (
+              <div key={p.id} className="inv-mov-item">
+                <div className="inv-mov-top">
+                  <strong>
+                    #{p.number} · {p.supplier}
+                  </strong>
+                  <span className="mono pur-item-total">{formatARS(p.total)}</span>
+                </div>
+                <div className="inv-mov-sub">
+                  <span>{itemsSummary(p.items)}</span>
+                  <em>{shortDate(p.createdAt)}</em>
+                </div>
+                {p.invoice && <div className="inv-mov-stock">Fact. {p.invoice}</div>}
+              </div>
+            ))}
+          </div>
+          {data.total > data.pageSize && (
+            <div className="dash-pager">
+              <button
+                type="button"
+                disabled={data.page <= 1}
+                onClick={() => setParams((prev) => ({ ...prev, page: prev.page - 1 }))}
+              >
+                ← Anterior
+              </button>
+              <span className="mono">
+                página {data.page} de {data.totalPages}
+              </span>
+              <button
+                type="button"
+                disabled={data.page >= data.totalPages}
+                onClick={() => setParams((prev) => ({ ...prev, page: prev.page + 1 }))}
+              >
+                Siguiente →
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )
