@@ -9,20 +9,17 @@ import {
   parseMulti,
   buildCatalogSort,
 } from '../lib/catalog-query.js'
-import { loadActiveDiscounts, effectiveUnitPrice } from '../lib/discounts.js'
 
 const router = express.Router()
 
-function toPublicProduct(p, rules) {
-  const eff = effectiveUnitPrice(p, rules)
+function toPublicProduct(p) {
   return {
     id: p.id,
     name: p.name,
     brand: p.brand,
     category: p.category,
-    price: eff.price,
-    oldPrice: p.oldPrice || (eff.discountRate > 0 ? p.price : null),
-    discountRate: eff.discountRate,
+    price: p.price,
+    oldPrice: p.oldPrice || null,
     freeShipping: p.freeShipping,
     rating: p.rating,
     stock: p.stock,
@@ -47,18 +44,17 @@ router.get('/products', async (req, res) => {
 
     const sort = buildCatalogSort(req.query.sort)
 
-    const [total, products, rules] = await Promise.all([
+    const [total, products] = await Promise.all([
       Product.countDocuments(filter),
       Product.find(filter)
         .sort(sort)
         .skip((page - 1) * limit)
         .limit(limit)
         .lean(),
-      loadActiveDiscounts(),
     ])
 
     return res.json({
-      items: products.map((p) => toPublicProduct(p, rules)),
+      items: products.map((p) => toPublicProduct(p)),
       page,
       limit,
       total,

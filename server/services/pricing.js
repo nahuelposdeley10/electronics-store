@@ -1,6 +1,5 @@
 import { Product } from '../models/Product.js'
 import { Coupon } from '../models/Coupon.js'
-import { loadActiveDiscounts, effectiveUnitPrice } from '../lib/discounts.js'
 
 const FREE_SHIPPING_THRESHOLD = 300000
 const SHIPPING_COST = 5999
@@ -17,24 +16,19 @@ export async function buildCart(items, coupon) {
   const dbProducts = await Product.find({ id: { $in: ids } }).lean()
   const byId = new Map(dbProducts.map((p) => [p.id, p]))
 
-  const rules = await loadActiveDiscounts()
-
   const lineItems = rows
     .map((row) => {
       const product = byId.get(row.id)
       if (!product) return null
-      const eff = effectiveUnitPrice(product, rules)
       return {
         product,
         quantity: row.quantity,
-        unitPrice: eff.price,
-        discountRate: eff.discountRate,
       }
     })
     .filter(Boolean)
 
   const subtotal = lineItems.reduce(
-    (sum, line) => sum + line.unitPrice * line.quantity,
+    (sum, line) => sum + line.product.price * line.quantity,
     0,
   )
 

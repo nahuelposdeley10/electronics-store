@@ -72,7 +72,7 @@ router.post('/checkout', async (req, res) => {
       items: cart.lineItems.map((line) => ({
         productId: line.product.id,
         name: line.product.name,
-        unitPrice: line.unitPrice,
+        unitPrice: line.product.price,
         quantity: line.quantity,
       })),
       coupon: cart.coupon,
@@ -92,7 +92,7 @@ router.post('/checkout', async (req, res) => {
       title: line.product.name,
       picture_url: line.product.image,
       quantity: line.quantity,
-      unit_price: line.unitPrice,
+      unit_price: line.product.price,
       currency_id: 'ARS',
     }))
 
