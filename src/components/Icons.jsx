@@ -277,3 +277,13 @@ export function IconInventory(props) {
     </svg>
   )
 }
+
+export function IconReport(props) {
+  return (
+    <svg {...S} {...props}>
+      <path d="M4 20V4M4 20h16" />
+      <rect x="8" y="12" width="3" height="8" />
+      <rect x="13" y="6" width="3" height="14" />
+    </svg>
+  )
+}

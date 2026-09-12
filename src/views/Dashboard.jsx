@@ -18,6 +18,7 @@ import {
   IconMinus,
   IconPlus,
   IconRefresh,
+  IconReport,
   IconSearch,
   IconSearchOff,
   IconTrash,
@@ -212,6 +213,19 @@ export default function Dashboard({ onExit }) {
         { id: 'stock-physical', label: 'Inventario físico' },
       ],
     },
+    {
+      id: 'reports',
+      label: 'Reportes',
+      icon: IconReport,
+      prefix: 'report-',
+      children: [
+        { id: 'report-sales', label: 'Ventas' },
+        { id: 'report-products', label: 'Productos' },
+        { id: 'report-profit', label: 'Ganancias' },
+        { id: 'report-stock', label: 'Stock' },
+        { id: 'report-customers', label: 'Clientes' },
+      ],
+    },
   ]
 
   return (
@@ -374,6 +388,11 @@ export default function Dashboard({ onExit }) {
         {gate === 'ready' && screen === 'stock-physical' && (
           <PhysicalInventoryScreen canManage={user?.role === 'superadmin'} />
         )}
+        {gate === 'ready' && screen === 'report-sales' && <SalesReportScreen />}
+        {gate === 'ready' && screen === 'report-products' && <ProductsReportScreen />}
+        {gate === 'ready' && screen === 'report-profit' && <ProfitReportScreen />}
+        {gate === 'ready' && screen === 'report-stock' && <StockReportScreen />}
+        {gate === 'ready' && screen === 'report-customers' && <CustomersReportScreen />}
       </main>
     </div>
   )
@@ -3318,6 +3337,587 @@ function PhysicalInventoryScreen({ canManage }) {
           </button>
         </div>
       </form>
+    </div>
+  )
+}
+
+const REPORT_PERIODS = [
+  { days: 7, label: '7 días' },
+  { days: 30, label: '30 días' },
+  { days: 90, label: '90 días' },
+  { days: 365, label: '1 año' },
+  { days: 0, label: 'Todo' },
+]
+
+function ReportPeriodBar({ days, onChange }) {
+  return (
+    <div className="sale-chips" role="group" aria-label="Periodo del reporte">
+      {REPORT_PERIODS.map((p) => (
+        <button
+          key={p.days}
+          type="button"
+          className={`sale-chip mono${days === p.days ? ' active' : ''}`}
+          onClick={() => onChange(p.days)}
+        >
+          {p.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function ReportBar({ label, value, max, format }) {
+  const pct = max > 0 ? Math.max(2, Math.round((value / max) * 100)) : 0
+  return (
+    <div className="rep-bar">
+      <div className="rep-bar-label">
+        <span>{label}</span>
+        <em className="mono">{format ? format(value) : value}</em>
+      </div>
+      <div className="rep-bar-track">
+        <span className="rep-bar-fill" style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  )
+}
+
+function reportPaymentLabel(key) {
+  if (key === 'unknown' || !key) return 'Web (MP)'
+  return PAYMENT_LABELS[key] || key
+}
+
+function SalesReportScreen() {
+  const [data, setData] = useState(null)
+  const [error, setError] = useState('')
+  const [days, setDays] = useState(30)
+
+  useEffect(() => {
+    let alive = true
+    apiGet(`/api/admin/reports/sales?${days ? `days=${days}` : ''}`)
+      .then((res) => {
+        if (alive) setData(res)
+      })
+      .catch((err) => {
+        if (alive) setError(err.message)
+      })
+    return () => {
+      alive = false
+    }
+  }, [days])
+
+  if (!data && !error) return <ScreenLoading label="Armando el reporte de ventas…" />
+  if (error) return <ScreenBlocked message={error} />
+
+  const maxBar = Math.max(...data.series.map((s) => s.count), 1)
+  const maxPay = Math.max(...data.byPayment.map((p) => p.total), 1)
+
+  return (
+    <div className="dash-screen">
+      <header className="dash-head">
+        <div>
+          <span className="dash-eyebrow">Reportes</span>
+          <h1>Ventas</h1>
+        </div>
+        <div className="dash-head-today">
+          <strong className="mono">{formatARS(data.totals.total)}</strong>
+          <em>{data.totals.count} ventas en el período</em>
+        </div>
+      </header>
+
+      <ReportPeriodBar days={days} onChange={setDays} />
+
+      <div className="kpi-rack">
+        <KpiTicket label="Facturado" value={formatARS(data.totals.total)} note="en el período" />
+        <KpiTicket label="Ventas" value={data.totals.count} note={`${data.totals.units} unidades`} />
+        <KpiTicket label="Ticket promedio" value={formatARS(data.totals.avgTicket)} note="por venta" />
+        <KpiTicket label="Devoluciones" value={data.refunded.count} note={formatARS(data.refunded.total)} />
+      </div>
+
+      <div className="rep-grid">
+        <section className="dash-card">
+          <div className="dash-card-head">
+            <h2>Ventas por día</h2>
+            <span className="dash-count">{data.series.length} días</span>
+          </div>
+          {data.series.length === 0 ? (
+            <EmptyNote text="Sin ventas en el período." />
+          ) : (
+            <div className="rep-bars">
+              {data.series.map((s) => (
+                <ReportBar key={s.date} label={s.date} value={s.count} max={maxBar} />
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="dash-card">
+          <div className="dash-card-head">
+            <h2>Por forma de pago</h2>
+            <span className="dash-count">facturado</span>
+          </div>
+          {data.byPayment.length === 0 ? (
+            <EmptyNote text="Sin datos todavía." />
+          ) : (
+            <div className="rep-bars">
+              {data.byPayment.map((p) => (
+                <ReportBar
+                  key={p.key}
+                  label={reportPaymentLabel(p.key)}
+                  value={p.total}
+                  max={maxPay}
+                  format={formatARS}
+                />
+              ))}
+            </div>
+          )}
+          {data.bySource.length > 0 && (
+            <div className="rep-breakdown">
+              {data.bySource.map((s) => (
+                <span key={s.key} className="payment-tag">{s.key} · {s.count}</span>
+              ))}
+            </div>
+          )}
+          <div className="rep-note mono">
+            {data.totals.discount > 0 && (
+              <span>descuentos: {formatARS(data.totals.discount)}</span>
+            )}
+          </div>
+        </section>
+      </div>
+    </div>
+  )
+}
+
+function ProductsReportScreen() {
+  const [data, setData] = useState(null)
+  const [error, setError] = useState('')
+  const [days, setDays] = useState(30)
+
+  useEffect(() => {
+    let alive = true
+    apiGet(`/api/admin/reports/products?${days ? `days=${days}` : ''}`)
+      .then((res) => {
+        if (alive) setData(res)
+      })
+      .catch((err) => {
+        if (alive) setError(err.message)
+      })
+    return () => {
+      alive = false
+    }
+  }, [days])
+
+  if (!data && !error) return <ScreenLoading label="Armando el reporte de productos…" />
+  if (error) return <ScreenBlocked message={error} />
+
+  const maxUnits = Math.max(...data.items.map((i) => i.units), 1)
+
+  return (
+    <div className="dash-screen">
+      <header className="dash-head">
+        <div>
+          <span className="dash-eyebrow">Reportes</span>
+          <h1>Productos vendidos</h1>
+        </div>
+        <div className="dash-head-today">
+          <strong className="mono">{data.totals.units}</strong>
+          <em>unidades · {data.totals.uniqueProducts} productos</em>
+        </div>
+      </header>
+
+      <ReportPeriodBar days={days} onChange={setDays} />
+
+      <div className="kpi-rack">
+        <KpiTicket label="Unidades" value={data.totals.units} note="vendidas" />
+        <KpiTicket label="Productos" value={data.totals.uniqueProducts} note="con movimiento" />
+        <KpiTicket label="Facturado" value={formatARS(data.totals.revenue)} note="en el período" />
+      </div>
+
+      <div className="table-wrap">
+        <table className="dash-table">
+          <thead>
+            <tr>
+              <th>Producto</th>
+              <th>Unidades</th>
+              <th>Precio medio</th>
+              <th>Facturado</th>
+              <th>Stock hoy</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.items.map((p) => (
+              <tr key={p.productId}>
+                <td>
+                  <span className="t-cell-name">
+                    <strong>{p.name}</strong>
+                    <em>{p.brand || `#${p.productId}`}</em>
+                  </span>
+                </td>
+                <td className="mono t-num">{p.units}</td>
+                <td className="mono t-num">{formatARS(p.avgPrice)}</td>
+                <td className="mono t-num t-money">{formatARS(p.revenue)}</td>
+                <td>
+                  <span className="stock-cell">
+                    <strong className="mono">{p.stock}</strong>
+                    <StockBadge status={p.stock <= 0 ? 'sin' : p.stock <= (p.minStock || 0) ? 'bajo' : 'ok'} />
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {data.items.length === 0 && <EmptyNote text="Sin ventas en el período." />}
+      </div>
+
+      <section className="dash-card">
+        <div className="dash-card-head">
+          <h2>Más vendidos</h2>
+          <span className="dash-count">por unidades</span>
+        </div>
+        {data.items.length === 0 ? null : (
+          <div className="rep-bars">
+            {data.items.slice(0, 8).map((p) => (
+              <ReportBar key={p.productId} label={p.name} value={p.units} max={maxUnits} />
+            ))}
+          </div>
+        )}
+      </section>
+    </div>
+  )
+}
+
+function ProfitReportScreen() {
+  const [data, setData] = useState(null)
+  const [error, setError] = useState('')
+  const [days, setDays] = useState(30)
+
+  useEffect(() => {
+    let alive = true
+    apiGet(`/api/admin/reports/profit?${days ? `days=${days}` : ''}`)
+      .then((res) => {
+        if (alive) setData(res)
+      })
+      .catch((err) => {
+        if (alive) setError(err.message)
+      })
+    return () => {
+      alive = false
+    }
+  }, [days])
+
+  if (!data && !error) return <ScreenLoading label="Calculando ganancias…" />
+  if (error) return <ScreenBlocked message={error} />
+
+  const maxMargin = Math.max(...data.items.map((i) => i.profit), 1)
+
+  return (
+    <div className="dash-screen">
+      <header className="dash-head">
+        <div>
+          <span className="dash-eyebrow">Reportes</span>
+          <h1>Ganancias</h1>
+        </div>
+        <div className="dash-head-today">
+          <strong className="mono">{formatARS(data.totals.profit)}</strong>
+          <em>{data.totals.marginPct.toFixed(1)}% de margen</em>
+        </div>
+      </header>
+
+      <ReportPeriodBar days={days} onChange={setDays} />
+
+      <div className="kpi-rack">
+        <KpiTicket label="Facturado" value={formatARS(data.totals.revenue)} note="ventas" />
+        <KpiTicket label="Costo" value={formatARS(data.totals.cogs)} note={`${data.totals.units} uds`} />
+        <KpiTicket label="Ganancia bruta" value={formatARS(data.totals.profit)} note={`${data.totals.marginPct.toFixed(1)}%`} />
+        <KpiTicket label="Compras a proveedores" value={formatARS(data.totals.spentOnPurchases)} note={`${data.totals.purchaseCount} compras`} />
+      </div>
+
+      <div className="table-wrap">
+        <table className="dash-table">
+          <thead>
+            <tr>
+              <th>Producto</th>
+              <th>Unidades</th>
+              <th>Facturado</th>
+              <th>Costo</th>
+              <th>Ganancia</th>
+              <th>Margen</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.items.map((p) => (
+              <tr key={p.productId}>
+                <td>
+                  <span className="t-cell-name">
+                    <strong>{p.name}</strong>
+                    <em>{p.brand || `#${p.productId}`}</em>
+                  </span>
+                </td>
+                <td className="mono t-num">{p.units}</td>
+                <td className="mono t-num">{formatARS(p.revenue)}</td>
+                <td className="mono t-num t-cost">{formatARS(p.cogs)}</td>
+                <td className="mono t-num t-money">
+                  <span className={`mv-delta ${p.profit >= 0 ? 'up' : 'down'}`}>{formatARS(p.profit)}</span>
+                </td>
+                <td className="mono t-num">{p.marginPct.toFixed(1)}%</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {data.items.length === 0 && <EmptyNote text="Sin ventas en el período." />}
+      </div>
+
+      {data.items.length > 0 && (
+        <section className="dash-card">
+          <div className="dash-card-head">
+            <h2>Ganancia por producto</h2>
+            <span className="dash-count">bruta</span>
+          </div>
+          <div className="rep-bars">
+            {data.items.slice(0, 8).map((p) => (
+              <ReportBar key={p.productId} label={p.name} value={p.profit} max={maxMargin} format={formatARS} />
+            ))}
+          </div>
+        </section>
+      )}
+    </div>
+  )
+}
+
+function StockReportScreen() {
+  const [data, setData] = useState(null)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    let alive = true
+    apiGet('/api/admin/reports/stock')
+      .then((res) => {
+        if (alive) setData(res)
+      })
+      .catch((err) => {
+        if (alive) setError(err.message)
+      })
+    return () => {
+      alive = false
+    }
+  }, [])
+
+  if (!data && !error) return <ScreenLoading label="Leyendo el stock…" />
+  if (error) return <ScreenBlocked message={error} />
+
+  const maxValue = Math.max(...data.topValue.map((p) => p.value), 1)
+
+  return (
+    <div className="dash-screen">
+      <header className="dash-head">
+        <div>
+          <span className="dash-eyebrow">Reportes</span>
+          <h1>Stock</h1>
+        </div>
+        <div className="dash-head-today">
+          <strong className="mono">{formatARS(data.totals.value)}</strong>
+          <em>valor del inventario · {data.totals.units} unidades</em>
+        </div>
+      </header>
+
+      <div className="kpi-rack">
+        <KpiTicket label="Productos" value={data.totals.products} note="en catálogo" />
+        <KpiTicket label="Unidades" value={data.totals.units} note="en depósito" />
+        <KpiTicket label="Valor del stock" value={formatARS(data.totals.value)} note="a precio venta" />
+        <KpiTicket label="Ganancia potencial" value={formatARS(data.totals.potentialProfit)} note="valor − costo" />
+      </div>
+
+      <div className="rep-grid">
+        <section className="dash-card">
+          <div className="dash-card-head">
+            <h2>Estado del stock</h2>
+            <span className="dash-count">{data.totals.products} productos</span>
+          </div>
+          <div className="rep-status">
+            <div className="rep-status-row">
+              <StockBadge status="ok" />
+              <strong>{data.statusCounts.ok}</strong>
+              <em>en óptimo nivel</em>
+            </div>
+            <div className="rep-status-row">
+              <StockBadge status="bajo" />
+              <strong>{data.statusCounts.bajo}</strong>
+              <em>por debajo del mínimo</em>
+            </div>
+            <div className="rep-status-row">
+              <StockBadge status="sin" />
+              <strong>{data.statusCounts.sin}</strong>
+              <em>sin stock</em>
+            </div>
+          </div>
+        </section>
+
+        <section className="dash-card">
+          <div className="dash-card-head">
+            <h2>Top por valor</h2>
+            <span className="dash-count">a precio venta</span>
+          </div>
+          {data.topValue.length === 0 ? (
+            <EmptyNote text="Catálogo vacío." />
+          ) : (
+            <div className="rep-bars">
+              {data.topValue.map((p) => (
+                <ReportBar key={p.id} label={p.name} value={p.value} max={maxValue} format={formatARS} />
+              ))}
+            </div>
+          )}
+        </section>
+      </div>
+
+      <section className="dash-card">
+        <div className="dash-card-head">
+          <h2>Stock bajo / agotado</h2>
+          <span className="dash-count">{data.low.length} productos</span>
+        </div>
+        {data.low.length === 0 ? (
+          <EmptyNote text="Nada bajo el mínimo. Stock en orden." />
+        ) : (
+          <div className="table-wrap">
+            <table className="dash-table">
+              <thead>
+                <tr>
+                  <th>Producto</th>
+                  <th>Stock</th>
+                  <th>Mínimo</th>
+                  <th>Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.low.map((p) => (
+                  <tr key={p.id} className="inv-alert-row">
+                    <td>
+                      <span className="t-cell-name">
+                        <strong>{p.name}</strong>
+                        <em>{p.brand}</em>
+                      </span>
+                    </td>
+                    <td className="mono t-num">{p.stock}</td>
+                    <td className="mono t-num">{p.minStock}</td>
+                    <td><StockBadge status={p.status} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+    </div>
+  )
+}
+
+function CustomersReportScreen() {
+  const [data, setData] = useState(null)
+  const [error, setError] = useState('')
+  const [days, setDays] = useState(30)
+
+  useEffect(() => {
+    let alive = true
+    apiGet(`/api/admin/reports/customers?${days ? `days=${days}` : ''}`)
+      .then((res) => {
+        if (alive) setData(res)
+      })
+      .catch((err) => {
+        if (alive) setError(err.message)
+      })
+    return () => {
+      alive = false
+    }
+  }, [days])
+
+  if (!data && !error) return <ScreenLoading label="Agrupando clientes…" />
+  if (error) return <ScreenBlocked message={error} />
+
+  const maxTotal = Math.max(...data.items.map((c) => c.total), 1)
+
+  return (
+    <div className="dash-screen">
+      <header className="dash-head">
+        <div>
+          <span className="dash-eyebrow">Reportes</span>
+          <h1>Clientes</h1>
+        </div>
+        <div className="dash-head-today">
+          <strong className="mono">{data.totals.customers}</strong>
+          <em>clientes identificados · {data.totals.total ? formatARS(data.totals.total) : ''} en compras</em>
+        </div>
+      </header>
+
+      <ReportPeriodBar days={days} onChange={setDays} />
+
+      <div className="kpi-rack">
+        <KpiTicket label="Clientes" value={data.totals.customers} note="identificados" />
+        <KpiTicket label="Compras totales" value={data.items.reduce((s, c) => s + c.count, 0)} note="en el período" />
+        <KpiTicket label="Facturado" value={formatARS(data.totals.total)} note="en el período" />
+      </div>
+
+      <div className="rep-grid">
+        <section className="dash-card">
+          <div className="dash-card-head">
+            <h2>Top clientes</h2>
+            <span className="dash-count">por gasto</span>
+          </div>
+          {data.items.length === 0 ? (
+            <EmptyNote text="Sin compras en el período." />
+          ) : (
+            <div className="rep-bars">
+              {data.items.slice(0, 10).map((c, idx) => (
+                <ReportBar key={idx} label={c.name} value={c.total} max={maxTotal} format={formatARS} />
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="dash-card">
+          <div className="dash-card-head">
+            <h2>Recientes</h2>
+            <span className="dash-count">montos</span>
+          </div>
+          <div className="rep-bars">
+            {data.items
+              .filter((c) => c.name !== 'Sin identificar')
+              .slice(0, 10)
+              .map((c, idx) => (
+                <ReportBar key={idx} label={c.name} value={c.total} max={maxTotal} format={formatARS} />
+              ))}
+          </div>
+        </section>
+      </div>
+
+      <div className="table-wrap">
+        <table className="dash-table">
+          <thead>
+            <tr>
+              <th>Cliente</th>
+              <th>Compras</th>
+              <th>Total</th>
+              <th>Ticket promedio</th>
+              <th>Última</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.items.map((c, idx) => (
+              <tr key={idx}>
+                <td>
+                  <span className="t-cell-name">
+                    <strong>{c.name}</strong>
+                    {c.email && <em>{c.email}</em>}
+                  </span>
+                </td>
+                <td className="mono t-num">{c.count}</td>
+                <td className="mono t-num t-money">{formatARS(c.total)}</td>
+                <td className="mono t-num">{formatARS(c.avg)}</td>
+                <td className="t-date">{c.last ? shortDate(c.last) : '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {data.items.length === 0 && <EmptyNote text="Sin compras en el período." />}
+      </div>
     </div>
   )
 }
