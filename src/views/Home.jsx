@@ -10,12 +10,20 @@ function Section({ title, items, onView, offer = false }) {
   return (
     <section className="home-section" aria-labelledby={`section-${title}`}>
       <div className="section-head">
-        <h2 id={`section-${title}`}>{title}</h2>
+        <h2 id={`section-${title}`} data-reveal="sweep">
+          {title}
+        </h2>
         <span className="count-tag">{items.length} productos</span>
       </div>
       <div className="product-grid">
-        {items.map((product) => (
-          <ProductCard key={product.id} product={product} onView={onView} offer={offer} />
+        {items.map((product, i) => (
+          <ProductCard
+            key={product.id}
+            product={product}
+            onView={onView}
+            offer={offer}
+            revealDelay={i * 55}
+          />
         ))}
       </div>
     </section>
@@ -84,11 +92,13 @@ function GallerySection({ onView, brands }) {
   return (
     <section className="home-section gallery-section">
       <div className="section-head">
-        <h2 id="section-galeria">Toda la galería</h2>
+        <h2 id="section-galeria" data-reveal="sweep">
+          Toda la galería
+        </h2>
         <span className="count-tag">{data ? `${data.total} productos` : '…'}</span>
       </div>
 
-      <div className="gallery-tools">
+      <div className="gallery-tools" data-reveal="up">
         <div className="gallery-chips" role="group" aria-label="Filtrar por categoría">
           <button
             type="button"
@@ -161,8 +171,13 @@ function GallerySection({ onView, brands }) {
       ) : (
         <>
           <div className="product-grid">
-            {data.items.map((product) => (
-              <ProductCard key={product.id} product={product} onView={onView} />
+            {data.items.map((product, i) => (
+              <ProductCard
+                key={product.id}
+                product={product}
+                onView={onView}
+                revealDelay={i * 45}
+              />
             ))}
           </div>
           {data.totalPages > 1 && (
@@ -206,6 +221,7 @@ export default function Home({ onView }) {
   const [email, setEmail] = useState('')
   const [bayLive, setBayLive] = useState(false)
   const heroRef = useRef(null)
+  const stageRef = useRef(null)
 
   useEffect(() => {
     const el = heroRef.current
@@ -216,6 +232,27 @@ export default function Home({ onView }) {
     )
     io.observe(el)
     return () => io.disconnect()
+  }, [])
+
+  useEffect(() => {
+    const stage = stageRef.current
+    if (!stage || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      return undefined
+    }
+    let ticking = false
+    const update = () => {
+      ticking = false
+      stage.style.transform = `translate3d(0, ${Math.min(window.scrollY * 0.22, 150)}px, 0)`
+    }
+    const onScroll = () => {
+      if (!ticking) {
+        ticking = true
+        window.requestAnimationFrame(update)
+      }
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    update()
+    return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
   const topDeals = useMemo(() => {
@@ -244,17 +281,19 @@ export default function Home({ onView }) {
   return (
     <main className="home">
       <section ref={heroRef} className={bayLive ? 'hero-bay bay-live' : 'hero-bay'}>
-        {settings.store.coverUrl && (
-          <img
-            className="bay-bg"
-            src={settings.store.coverUrl}
-            alt=""
-            aria-hidden="true"
-            loading="eager"
-            fetchPriority="high"
-          />
-        )}
-        <div className="bay-shade" aria-hidden="true" />
+        <div className="bay-stage" ref={stageRef}>
+          {settings.store.coverUrl && (
+            <img
+              className="bay-bg"
+              src={settings.store.coverUrl}
+              alt=""
+              aria-hidden="true"
+              loading="eager"
+              fetchPriority="high"
+            />
+          )}
+          <div className="bay-shade" aria-hidden="true" />
+        </div>
         <div className="bay-inner">
           <div className="bay-copy">
             <span className="bay-eyebrow">
@@ -309,14 +348,14 @@ export default function Home({ onView }) {
 
       <Section title="Ofertas de la semana" items={topDeals} onView={onView} offer />
 
-      <div className="band-shipping">
+      <div className="band-shipping" data-reveal="up">
         <span className="stamp">ENVÍO GRATIS</span>
         <p>En compras superiores a {formatARS(freeThreshold)} · 24 a 48 hs en CABA y GBA</p>
       </div>
 
       <Section title="Recién llegados" items={newest} onView={onView} />
 
-      <section className="gaming-bay">
+      <section className="gaming-bay" data-reveal="up">
         <div className="gaming-copy">
           <span className="gaming-kicker">Sala 04</span>
           <h2>GAMING</h2>
@@ -343,17 +382,22 @@ export default function Home({ onView }) {
       <GallerySection onView={onView} brands={brands} />
 
       <section className="brands-strip" aria-label="Marcas oficiales">
-        <h2>Marcas oficiales</h2>
+        <h2 data-reveal="sweep">Marcas oficiales</h2>
         <div className="brands">
-          {brands.map((brand) => (
-            <span key={brand} className="brand-tag">
+          {brands.map((brand, i) => (
+            <span
+              key={brand}
+              className="brand-tag"
+              data-reveal="up"
+              style={{ '--reveal-delay': `${i * 45}ms` }}
+            >
               {brand}
             </span>
           ))}
         </div>
       </section>
 
-      <section className="newsletter-counter">
+      <section className="newsletter-counter" data-reveal="up">
         <div className="nl-copy">
           <h2>Ofertas de la galería, por mail</h2>
           <p>Suscribite y enterate primero de descuentos, lanzamientos y stock restockeado.</p>

@@ -57,11 +57,11 @@ export default function InfoPage({ slug, onNavigate }) {
       <div className="info-head section-head">
         <div>
           <span className="info-eyebrow">{meta.eyebrow}</span>
-          <h1>{meta.title}</h1>
+          <h1 data-reveal="sweep">{meta.title}</h1>
         </div>
       </div>
 
-      <div className="info-cols">
+      <div className="info-cols" data-reveal="up">
         <section className="info-card info-steps-card">
           <h2>Pasos para comprar</h2>
           <ol className="info-steps">

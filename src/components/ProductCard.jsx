@@ -14,9 +14,14 @@ function Stars({ rating }) {
   )
 }
 
-export default function ProductCard({ product, onView, offer = false }) {
+export default function ProductCard({ product, onView, offer = false, revealDelay }) {
   const { addItem } = useCart()
   const settings = mergeSettings(useSiteSettings())
+
+  const delayProps =
+    revealDelay !== undefined
+      ? { 'data-reveal': 'up', style: { '--reveal-delay': `${revealDelay}ms` } }
+      : {}
 
   const discount = product.oldPrice
     ? Math.round(100 - (product.price / product.oldPrice) * 100)
@@ -30,7 +35,7 @@ export default function ProductCard({ product, onView, offer = false }) {
     : `${product.brand} · ${product.category}`
 
   return (
-    <article className="product-box">
+    <article className="product-box" {...delayProps}>
       <div className="box-media" onClick={() => onView(product)}>
         <img className="box-img" src={product.image} alt={product.name} loading="lazy" />
         {offer && discount > 0 && (

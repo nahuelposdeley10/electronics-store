@@ -65,9 +65,10 @@ export default function Header({ onNavigate, view, onSearch }) {
     <>
       <div className="marquee" role="marquee">
         <div className="marquee-track">
-          {[...announcementItems, ...announcementItems].map((item, i) => (
-            <span key={i} className="marquee-item">
-              <IconBolt className="marquee-bolt" />
+          {[...announcementItems, ...announcementItems, ...announcementItems, ...announcementItems].map(
+            (item, i) => (
+              <span key={i} className="marquee-item">
+                <IconBolt className="marquee-bolt" />
               {item}
             </span>
           ))}

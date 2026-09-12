@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import CatalogProvider from './context/CatalogProvider'
 import CartProvider from './context/CartProvider'
 import { useCatalog } from './context/useCatalog'
@@ -80,6 +80,74 @@ function AppContent() {
     if (p) navigate('product', p)
   }
 
+  const tapeRef = useRef(null)
+
+  useEffect(() => {
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+
+    let tick = false
+    let io
+    const seen = new Set()
+
+    const updateTape = (p) => {
+      tick = false
+      const el = tapeRef.current
+      if (el) el.style.transform = `scaleX(${p})`
+    }
+
+    const measure = () => {
+      const h = document.documentElement.scrollHeight - window.innerHeight
+      const p = h > 0 ? Math.min(1, Math.max(0, window.scrollY / h)) : 0
+      updateTape(p)
+    }
+
+    const onScroll = () => {
+      if (!reduce && !tick) {
+        tick = true
+        window.requestAnimationFrame(measure)
+      }
+    }
+
+    const configIO = () => {
+      if (!io) {
+        io = new IntersectionObserver(
+          (entries) => {
+            for (const entry of entries) {
+              const el = entry.target
+              if (entry.isIntersecting) {
+                const rect = el.getBoundingClientRect()
+                el.classList.toggle('reveal-from-top', rect.top < window.innerHeight * 0.3)
+                el.classList.add('is-revealed')
+              } else {
+                el.classList.remove('is-revealed')
+              }
+            }
+          },
+          { threshold: 0.12, rootMargin: '0px 0px -6% 0px' },
+        )
+      }
+      document.querySelectorAll('[data-reveal]').forEach((el) => {
+        if (!seen.has(el)) {
+          seen.add(el)
+          io.observe(el)
+        }
+      })
+    }
+
+    configIO()
+    measure()
+    const mo = new MutationObserver(configIO)
+    mo.observe(document.documentElement, { childList: true, subtree: true })
+    window.addEventListener('scroll', onScroll, { passive: true })
+    window.addEventListener('resize', onScroll, { passive: true })
+    return () => {
+      mo.disconnect()
+      io?.disconnect()
+      window.removeEventListener('scroll', onScroll)
+      window.removeEventListener('resize', onScroll)
+    }
+  }, [view.name])
+
   const needsCatalog = ['home', 'product', 'results'].includes(view.name)
   if (needsCatalog && loading && products.length === 0) {
     return <CatalogLoading />
@@ -141,6 +209,7 @@ function AppContent() {
         <Dashboard onExit={() => navigate('home')} />
       ) : (
         <>
+          <div className="scroll-tape" ref={tapeRef} aria-hidden="true" />
           <Header onNavigate={(n) => navigate(n)} view={view.name} onSearch={handleSearch} />
           {content}
           <Footer onNavigate={(n) => navigate(n)} />
