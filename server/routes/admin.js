@@ -3,7 +3,7 @@ import multer from 'multer'
 import { Order } from '../models/Order.js'
 import { Product } from '../models/Product.js'
 import { Quote } from '../models/Quote.js'
-import { requireAuth, requireRole } from '../middleware/auth.js'
+import { requireAuth, requirePermission } from '../middleware/auth.js'
 import { uploadToCloudinary } from '../services/cloudinary.js'
 import { parsePagination, buildProductSearchFilter, escapeRegex, parseMulti } from '../lib/catalog-query.js'
 import { getValidCategoryKeys } from '../lib/catalog-meta.js'
@@ -261,7 +261,7 @@ router.get('/products', async (req, res) => {
   }
 })
 
-router.post('/products', requireRole('superadmin'), upload.single('image'), async (req, res) => {
+router.post('/products', requirePermission('catalog.manage'), upload.single('image'), async (req, res) => {
   const { name, brand, category, price, oldPrice, costPrice, stock, minStock, rating, freeShipping, badge, description, specs } = req.body || {}
 
   if (!name || !brand || !category || price === undefined || price === '') {
@@ -315,7 +315,7 @@ router.post('/products', requireRole('superadmin'), upload.single('image'), asyn
   }
 })
 
-router.put('/products/:id', requireRole('superadmin'), upload.single('image'), async (req, res) => {
+router.put('/products/:id', requirePermission('catalog.manage'), upload.single('image'), async (req, res) => {
   const {
     name,
     brand,
@@ -395,7 +395,7 @@ router.put('/products/:id', requireRole('superadmin'), upload.single('image'), a
   }
 })
 
-router.delete('/products/:id', requireRole('superadmin'), async (req, res) => {
+router.delete('/products/:id', requirePermission('catalog.manage'), async (req, res) => {
   const product = await Product.findOne({ id: Number(req.params.id) })
   if (!product) {
     return res.status(404).json({ error: 'Producto no encontrado' })
@@ -489,7 +489,7 @@ router.post('/pos', async (req, res) => {
   }
 })
 
-router.post('/orders/:id/return', requireRole('superadmin'), async (req, res) => {
+router.post('/orders/:id/return', requirePermission('sales.return'), async (req, res) => {
   try {
     const order = await Order.findById(req.params.id)
     if (!order) {
@@ -653,7 +653,7 @@ router.put('/quotes/:id', async (req, res) => {
   }
 })
 
-router.delete('/quotes/:id', requireRole('superadmin'), async (req, res) => {
+router.delete('/quotes/:id', requirePermission('quotes.delete'), async (req, res) => {
   try {
     const quote = await Quote.findByIdAndDelete(req.params.id)
     if (!quote) {

@@ -1,6 +1,6 @@
 import express from 'express'
 import { Coupon } from '../models/Coupon.js'
-import { requireAuth, requireRole } from '../middleware/auth.js'
+import { requireAuth, requirePermission } from '../middleware/auth.js'
 
 const router = express.Router()
 
@@ -26,7 +26,7 @@ function toCouponDoc(c) {
   }
 }
 
-router.get('/coupons', requireRole('superadmin'), async (req, res) => {
+router.get('/coupons', requirePermission('coupons.manage'), async (req, res) => {
   try {
     const items = await Coupon.find().sort({ createdAt: -1 }).lean()
     return res.json({ items: items.map(toCouponDoc), total: items.length })
@@ -36,7 +36,7 @@ router.get('/coupons', requireRole('superadmin'), async (req, res) => {
   }
 })
 
-router.post('/coupons', requireRole('superadmin'), async (req, res) => {
+router.post('/coupons', requirePermission('coupons.manage'), async (req, res) => {
   const { code, percent, active, description } = req.body || {}
 
   const codeClean = String(code || '').trim().toUpperCase()
@@ -69,7 +69,7 @@ router.post('/coupons', requireRole('superadmin'), async (req, res) => {
   }
 })
 
-router.put('/coupons/:id', requireRole('superadmin'), async (req, res) => {
+router.put('/coupons/:id', requirePermission('coupons.manage'), async (req, res) => {
   try {
     const coupon = await Coupon.findById(req.params.id)
     if (!coupon) {
@@ -107,7 +107,7 @@ router.put('/coupons/:id', requireRole('superadmin'), async (req, res) => {
   }
 })
 
-router.delete('/coupons/:id', requireRole('superadmin'), async (req, res) => {
+router.delete('/coupons/:id', requirePermission('coupons.manage'), async (req, res) => {
   try {
     const coupon = await Coupon.findByIdAndDelete(req.params.id)
     if (!coupon) {

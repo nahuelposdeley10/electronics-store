@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { useCart } from '../context/useCart'
+import { useSiteSettings, mergeSettings } from '../lib/siteSettings'
+import { formatARS } from '../data/format'
 import {
   IconBolt,
   IconSearch,
@@ -11,7 +13,7 @@ import {
   IconPickup,
 } from './Icons'
 
-const announcementItems = [
+const fallbackAnnouncements = [
   'Envíos a todo el país',
   'Hasta 12 cuotas sin interés',
   'Garantía oficial',
@@ -19,17 +21,33 @@ const announcementItems = [
   'Retiro en Villa Urquiza, CABA',
 ]
 
-const counters = [
-  { icon: IconCard, title: 'Cuotas', text: 'hasta 12 sin interés' },
-  { icon: IconTruck, title: 'Envío', text: 'gratis + $300.000' },
-  { icon: IconShield, title: 'Garantía', text: 'oficial de fábrica' },
-  { icon: IconWrench, title: 'Técnico', text: 'servicio propio' },
-  { icon: IconPickup, title: 'Retiro', text: 'Villa Urquiza, CABA' },
-]
-
 export default function Header({ onNavigate, view, onSearch }) {
   const { totalItems } = useCart()
   const [query, setQuery] = useState('')
+  const settings = mergeSettings(useSiteSettings())
+
+  const announcementItems =
+    Array.isArray(settings.general.marquee) && settings.general.marquee.length
+      ? settings.general.marquee
+      : fallbackAnnouncements
+
+  const steps =
+    Array.isArray(settings.general.installments) && settings.general.installments.length
+      ? settings.general.installments.map((s) => Number(s.months) || 1)
+      : [12]
+  const maxMonths = Math.max(...steps)
+
+  const counters = [
+    { icon: IconCard, title: 'Cuotas', text: `hasta ${maxMonths} sin interés` },
+    {
+      icon: IconTruck,
+      title: 'Envío',
+      text: `gratis + ${formatARS(settings.shipping.freeThreshold)}`,
+    },
+    { icon: IconShield, title: 'Garantía', text: 'oficial de fábrica' },
+    { icon: IconWrench, title: 'Técnico', text: 'servicio propio' },
+    { icon: IconPickup, title: 'Retiro', text: settings.store.addressShort },
+  ]
 
   const handleSearch = (e) => {
     e.preventDefault()
@@ -55,15 +73,21 @@ export default function Header({ onNavigate, view, onSearch }) {
             type="button"
             className="brand"
             onClick={() => onNavigate('home')}
-            aria-label="TechStore — ir al inicio"
+            aria-label={`${settings.store.name} — ir al inicio`}
           >
             <span className="brand-chip">
               <IconBolt />
             </span>
             <span className="brand-word">
-              Tech<span className="brand-accent">Store</span>
+              {settings.store.name === 'TechStore' ? (
+                <>
+                  Tech<span className="brand-accent">Store</span>
+                </>
+              ) : (
+                settings.store.name
+              )}
             </span>
-            <span className="brand-sub">galería de tecnología</span>
+            <span className="brand-sub">{settings.store.tagline}</span>
           </button>
 
           <form className="search-bar" onSubmit={handleSearch} role="search">
@@ -95,7 +119,7 @@ export default function Header({ onNavigate, view, onSearch }) {
           </div>
         </div>
 
-        <div className="counter-strip" aria-label="Servicios de TechStore">
+        <div className="counter-strip" aria-label={`Servicios de ${settings.store.name}`}>
           {counters.map(({ icon: Icon, title, text }) => (
             <div key={title} className="counter-tab">
               <Icon className="counter-icon" />

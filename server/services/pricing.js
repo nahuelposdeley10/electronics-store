@@ -1,10 +1,15 @@
 import { Product } from '../models/Product.js'
 import { Coupon } from '../models/Coupon.js'
-
-const FREE_SHIPPING_THRESHOLD = 300000
-const SHIPPING_COST = 5999
+import { getSettings } from '../lib/settings.js'
 
 export async function buildCart(items, coupon) {
+  const { shipping } = await getSettings()
+  const shippingCostSetting = Number(shipping?.cost)
+  const shippingFreeThreshold = Number(shipping?.freeThreshold)
+  const shippingLabel = String(shipping?.label || 'Envío a domicilio')
+  const SHIPPING_COST = shippingCostSetting > 0 ? shippingCostSetting : 0
+  const FREE_SHIPPING_THRESHOLD =
+    shippingFreeThreshold > 0 ? shippingFreeThreshold : Infinity
   const rows = (items || [])
     .map((row) => ({
       id: Number(row?.id),
@@ -62,6 +67,7 @@ export async function buildCart(items, coupon) {
     coupon: couponCode,
     hasFreeShipping,
     shippingCost,
+    shippingLabel,
     total,
   }
 }

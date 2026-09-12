@@ -3,7 +3,7 @@ import { Category } from '../models/Category.js'
 import { Brand } from '../models/Brand.js'
 import { Variant } from '../models/Variant.js'
 import { Product } from '../models/Product.js'
-import { requireAuth, requireRole } from '../middleware/auth.js'
+import { requireAuth, requirePermission } from '../middleware/auth.js'
 import {
   parsePagination,
   buildProductSearchFilter,
@@ -43,7 +43,7 @@ async function productCountBy(field) {
 
 /* ---------------- Categorías ---------------- */
 
-router.get('/categories', requireRole('superadmin'), async (req, res) => {
+router.get('/categories', requirePermission('catalog.manage'), async (req, res) => {
   try {
     await ensureCatalogMeta()
     const [categories, used] = await Promise.all([
@@ -59,7 +59,7 @@ router.get('/categories', requireRole('superadmin'), async (req, res) => {
   }
 })
 
-router.post('/categories', requireRole('superadmin'), async (req, res) => {
+router.post('/categories', requirePermission('catalog.manage'), async (req, res) => {
   const { name, key, active } = req.body || {}
   const cleanName = String(name || '').trim()
   if (!cleanName) {
@@ -90,7 +90,7 @@ router.post('/categories', requireRole('superadmin'), async (req, res) => {
   }
 })
 
-router.put('/categories/:key', requireRole('superadmin'), async (req, res) => {
+router.put('/categories/:key', requirePermission('catalog.manage'), async (req, res) => {
   const { name, key, active } = req.body || {}
   const category = await Category.findOne({ key: req.params.key })
   if (!category) {
@@ -128,7 +128,7 @@ router.put('/categories/:key', requireRole('superadmin'), async (req, res) => {
   }
 })
 
-router.delete('/categories/:key', requireRole('superadmin'), async (req, res) => {
+router.delete('/categories/:key', requirePermission('catalog.manage'), async (req, res) => {
   const category = await Category.findOne({ key: req.params.key })
   if (!category) {
     return res.status(404).json({ error: 'Categoría no encontrada' })
@@ -150,7 +150,7 @@ router.delete('/categories/:key', requireRole('superadmin'), async (req, res) =>
 
 /* ---------------- Marcas ---------------- */
 
-router.get('/brands', requireRole('superadmin'), async (req, res) => {
+router.get('/brands', requirePermission('catalog.manage'), async (req, res) => {
   try {
     await ensureCatalogMeta()
     const [brands, used] = await Promise.all([
@@ -166,7 +166,7 @@ router.get('/brands', requireRole('superadmin'), async (req, res) => {
   }
 })
 
-router.post('/brands', requireRole('superadmin'), async (req, res) => {
+router.post('/brands', requirePermission('catalog.manage'), async (req, res) => {
   const { name, active } = req.body || {}
   const cleanName = String(name || '').trim()
   if (!cleanName) {
@@ -189,7 +189,7 @@ router.post('/brands', requireRole('superadmin'), async (req, res) => {
   }
 })
 
-router.put('/brands/:name', requireRole('superadmin'), async (req, res) => {
+router.put('/brands/:name', requirePermission('catalog.manage'), async (req, res) => {
   const { name, active } = req.body || {}
   const brand = await Brand.findOne({ name: req.params.name })
   if (!brand) {
@@ -222,7 +222,7 @@ router.put('/brands/:name', requireRole('superadmin'), async (req, res) => {
   }
 })
 
-router.delete('/brands/:name', requireRole('superadmin'), async (req, res) => {
+router.delete('/brands/:name', requirePermission('catalog.manage'), async (req, res) => {
   const brand = await Brand.findOne({ name: req.params.name })
   if (!brand) {
     return res.status(404).json({ error: 'Marca no encontrada' })
@@ -244,7 +244,7 @@ router.delete('/brands/:name', requireRole('superadmin'), async (req, res) => {
 
 /* ---------------- Variantes ---------------- */
 
-router.get('/variants', requireRole('superadmin'), async (req, res) => {
+router.get('/variants', requirePermission('catalog.manage'), async (req, res) => {
   try {
     const { page, limit } = parsePagination(req.query)
     const q = String(req.query.q || '').trim()
@@ -300,7 +300,7 @@ router.get('/variants', requireRole('superadmin'), async (req, res) => {
   }
 })
 
-router.post('/variants', requireRole('superadmin'), async (req, res) => {
+router.post('/variants', requirePermission('catalog.manage'), async (req, res) => {
   const { product, name, sku, price, stock } = req.body || {}
   const productId = Number(product)
   const variantName = String(name || '').trim()
@@ -336,7 +336,7 @@ router.post('/variants', requireRole('superadmin'), async (req, res) => {
   }
 })
 
-router.put('/variants/:id', requireRole('superadmin'), async (req, res) => {
+router.put('/variants/:id', requirePermission('catalog.manage'), async (req, res) => {
   const { product, name, sku, price, stock } = req.body || {}
   const variant = await Variant.findById(req.params.id)
   if (!variant) {
@@ -382,7 +382,7 @@ router.put('/variants/:id', requireRole('superadmin'), async (req, res) => {
   }
 })
 
-router.delete('/variants/:id', requireRole('superadmin'), async (req, res) => {
+router.delete('/variants/:id', requirePermission('catalog.manage'), async (req, res) => {
   const variant = await Variant.findById(req.params.id)
   if (!variant) {
     return res.status(404).json({ error: 'Variante no encontrada' })
@@ -398,7 +398,7 @@ router.delete('/variants/:id', requireRole('superadmin'), async (req, res) => {
 
 /* ---------------- Precios ---------------- */
 
-router.get('/prices', requireRole('superadmin'), async (req, res) => {
+router.get('/prices', requirePermission('catalog.manage'), async (req, res) => {
   try {
     const { page, limit } = parsePagination(req.query)
     const filter = buildProductSearchFilter(req.query.q)
@@ -432,7 +432,7 @@ router.get('/prices', requireRole('superadmin'), async (req, res) => {
   }
 })
 
-router.post('/prices', requireRole('superadmin'), async (req, res) => {
+router.post('/prices', requirePermission('catalog.manage'), async (req, res) => {
   const { productId, price, oldPrice } = req.body || {}
   const product = await Product.findOne({ id: Number(productId) })
   if (!product) {
@@ -455,7 +455,7 @@ router.post('/prices', requireRole('superadmin'), async (req, res) => {
   }
 })
 
-router.post('/prices/bulk', requireRole('superadmin'), async (req, res) => {
+router.post('/prices/bulk', requirePermission('catalog.manage'), async (req, res) => {
   const { mode, value, category } = req.body || {}
   const modeValue = String(mode || 'percent')
   const number = Number(value)
@@ -499,7 +499,7 @@ router.post('/prices/bulk', requireRole('superadmin'), async (req, res) => {
 
 /* ---------------- Ofertas ---------------- */
 
-router.get('/offers', requireRole('superadmin'), async (req, res) => {
+router.get('/offers', requirePermission('offers.manage'), async (req, res) => {
   try {
     const { page, limit } = parsePagination(req.query)
     const filter = buildProductSearchFilter(req.query.q)
@@ -542,7 +542,7 @@ router.get('/offers', requireRole('superadmin'), async (req, res) => {
   }
 })
 
-router.post('/offers', requireRole('superadmin'), async (req, res) => {
+router.post('/offers', requirePermission('offers.manage'), async (req, res) => {
   const { productId, oldPrice, price } = req.body || {}
   const product = await Product.findOne({ id: Number(productId) })
   if (!product) {
@@ -588,7 +588,7 @@ router.post('/offers', requireRole('superadmin'), async (req, res) => {
   }
 })
 
-router.delete('/offers/:id', requireRole('superadmin'), async (req, res) => {
+router.delete('/offers/:id', requirePermission('offers.manage'), async (req, res) => {
   const product = await Product.findOne({ id: Number(req.params.id) })
   if (!product) {
     return res.status(404).json({ error: 'Producto no encontrado' })
@@ -606,7 +606,7 @@ router.delete('/offers/:id', requireRole('superadmin'), async (req, res) => {
 
 /* ---------------- Importar productos ---------------- */
 
-router.post('/import/products', requireRole('superadmin'), async (req, res) => {
+router.post('/import/products', requirePermission('catalog.manage'), async (req, res) => {
   const rows = Array.isArray(req.body?.products)
     ? req.body.products
     : Array.isArray(req.body)

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useCart } from '../context/useCart'
 import { useCatalog } from '../context/useCatalog'
 import { formatARS, installmentsFor } from '../data/format'
+import { useSiteSettings, mergeSettings } from '../lib/siteSettings'
 import {
   IconBack,
   IconBolt,
@@ -26,9 +27,10 @@ function Stars({ rating }) {
 export default function ProductDetail({ product, onBack, onHome }) {
   const { addItem } = useCart()
   const { products } = useCatalog()
+  const settings = mergeSettings(useSiteSettings())
   const [buyNow, setBuyNow] = useState(false)
 
-  const inst = installmentsFor(product.price)
+  const inst = installmentsFor(product.price, settings.general.installments)
   const discount = product.oldPrice
     ? Math.round(100 - (product.price / product.oldPrice) * 100)
     : 0

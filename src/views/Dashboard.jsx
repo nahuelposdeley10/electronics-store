@@ -14,6 +14,7 @@ import {
   YAxis,
 } from 'recharts'
 import { formatARS } from '../data/format'
+import SearchSelect from '../components/SearchSelect'
 import { apiConfirmOrder, apiDelete, apiGet, apiPost, apiPut, apiUpdate, apiUpload, clearSession, getSession, login as apiLogin } from '../lib/api'
 import { useOrderEvents } from '../lib/useOrderEvents'
 import {
@@ -37,6 +38,7 @@ import {
   IconSearchOff,
   IconTicket,
   IconTrash,
+  IconWrench,
 } from '../components/Icons'
 
 const STATUS_META = {
@@ -112,7 +114,37 @@ export default function Dashboard({ onExit }) {
   const [loginAttempts, setLoginAttempts] = useState(0)
   const [overview, setOverview] = useState(null)
   const [user, setUser] = useState(() => getSession().user)
+  const [perms, setPerms] = useState(() => {
+    const session = getSession()
+    return session.user?.role === 'superadmin'
+      ? [
+          'settings.manage',
+          'users.manage',
+          'catalog.manage',
+          'coupons.manage',
+          'offers.manage',
+          'inventory.write',
+          'sales.return',
+          'quotes.delete',
+        ]
+      : []
+  })
   const [attempt, setAttempt] = useState(0)
+
+  useEffect(() => {
+    let alive = true
+    if (!getSession().token) return undefined
+    apiGet('/api/auth/me')
+      .then((data) => {
+        if (!alive) return
+        setUser(data.user || getSession().user)
+        setPerms(data.perms || [])
+      })
+      .catch(() => {})
+    return () => {
+      alive = false
+    }
+  }, [attempt, loginAttempts])
 
   useEffect(() => {
     let alive = true
@@ -140,6 +172,9 @@ export default function Dashboard({ onExit }) {
     setScreen(id)
     sessionStorage.setItem('ts-admin-screen', id)
   }
+
+  const can = (code) =>
+    user?.role === 'superadmin' || (perms || []).includes(code)
 
   const retry = () => {
     setGate('loading')
@@ -172,6 +207,7 @@ export default function Dashboard({ onExit }) {
     clearSession()
     sessionStorage.removeItem('ts-admin-screen')
     setUser(null)
+    setPerms([])
     setOverview(null)
     setGate('login')
   }
@@ -192,7 +228,7 @@ export default function Dashboard({ onExit }) {
       prefix: 'product-',
       children: [
         { id: 'products', label: 'Productos' },
-        ...(user?.role === 'superadmin'
+        ...(can('catalog.manage')
           ? [
               { id: 'product-categories', label: 'Categorías' },
               { id: 'product-brands', label: 'Marcas' },
@@ -207,11 +243,11 @@ export default function Dashboard({ onExit }) {
       icon: IconTicket,
       prefix: 'promo-',
       children: [
-        ...(user?.role === 'superadmin'
-          ? [
-              { id: 'promo-coupons', label: 'Cupones' },
-              { id: 'promo-offers', label: 'Ofertas' },
-            ]
+        ...(can('coupons.manage')
+          ? [{ id: 'promo-coupons', label: 'Cupones' }]
+          : []),
+        ...(can('offers.manage')
+          ? [{ id: 'promo-offers', label: 'Ofertas' }]
           : []),
       ],
     },
@@ -254,7 +290,26 @@ export default function Dashboard({ onExit }) {
         { id: 'report-customers', label: 'Clientes' },
       ],
     },
-  ]
+    {
+      id: 'settings',
+      label: 'Configuración',
+      icon: IconWrench,
+      prefix: 'settings-',
+      children: [
+        ...(can('users.manage')
+          ? [{ id: 'settings-users', label: 'Usuarios' }]
+          : []),
+        ...(can('settings.manage')
+          ? [
+              { id: 'settings-roles', label: 'Roles y permisos' },
+              { id: 'settings-payments', label: 'Métodos de pago' },
+              { id: 'settings-store', label: 'Datos del negocio' },
+              { id: 'settings-general', label: 'Configuración general' },
+            ]
+          : []),
+      ],
+    },
+  ].filter((item) => !item.children || item.children.length > 0)
 
   return (
     <div className="dash">
@@ -364,7 +419,7 @@ export default function Dashboard({ onExit }) {
           <OverviewScreen data={overview} onView={changeScreen} />
         )}
         {gate === 'ready' && screen === 'products' && (
-          <ProductsScreen canManage={user?.role === 'superadmin'} />
+          <ProductsScreen canManage={can('catalog.manage')} />
         )}
         {gate === 'ready' && screen === 'product-categories' && (
           <MetaScreen
@@ -372,7 +427,7 @@ export default function Dashboard({ onExit }) {
             title="Categorías"
             eyebrow="Estantería"
             empty="Todavía no hay categorías."
-            canManage={user?.role === 'superadmin'}
+            canManage={can('catalog.manage')}
           />
         )}
         {gate === 'ready' && screen === 'product-brands' && (
@@ -381,49 +436,54 @@ export default function Dashboard({ onExit }) {
             title="Marcas"
             eyebrow="Estantería"
             empty="Todavía no hay marcas."
-            canManage={user?.role === 'superadmin'}
+            canManage={can('catalog.manage')}
           />
         )}
         {gate === 'ready' && screen === 'product-import' && (
-          <ImportScreen canManage={user?.role === 'superadmin'} />
+          <ImportScreen canManage={can('catalog.manage')} />
         )}
         {gate === 'ready' && screen === 'promo-coupons' && (
-          <CouponsScreen canManage={user?.role === 'superadmin'} />
+          <CouponsScreen canManage={can('coupons.manage')} />
         )}
         {gate === 'ready' && screen === 'promo-offers' && (
-          <OffersScreen canManage={user?.role === 'superadmin'} />
+          <OffersScreen canManage={can('offers.manage')} />
         )}
         {gate === 'ready' && screen === 'sales-pos' && (
           <PosScreen canManage={user?.role === 'superadmin'} />
         )}
         {gate === 'ready' && screen === 'sales-history' && <SalesScreen />}
         {gate === 'ready' && screen === 'sales-returns' && (
-          <ReturnsScreen canManage={user?.role === 'superadmin'} />
+          <ReturnsScreen canManage={can('sales.return')} />
         )}
         {gate === 'ready' && screen === 'sales-quotes' && (
-          <QuotesScreen canManage={user?.role === 'superadmin'} />
+          <QuotesScreen canManage={can('quotes.delete')} />
         )}
         {gate === 'ready' && screen === 'stock-overview' && (
-          <StockScreen canManage={user?.role === 'superadmin'} />
+          <StockScreen canManage={can('inventory.write')} />
         )}
         {gate === 'ready' && screen === 'stock-movements' && <MovementsScreen />}
         {gate === 'ready' && screen === 'stock-adjustments' && (
-          <AdjustmentsScreen canManage={user?.role === 'superadmin'} />
+          <AdjustmentsScreen canManage={can('inventory.write')} />
         )}
         {gate === 'ready' && screen === 'stock-purchases' && (
-          <PurchasesScreen canManage={user?.role === 'superadmin'} />
+          <PurchasesScreen canManage={can('inventory.write')} />
         )}
         {gate === 'ready' && screen === 'stock-min' && (
-          <MinStockScreen canManage={user?.role === 'superadmin'} />
+          <MinStockScreen canManage={can('inventory.write')} />
         )}
         {gate === 'ready' && screen === 'stock-physical' && (
-          <PhysicalInventoryScreen canManage={user?.role === 'superadmin'} />
+          <PhysicalInventoryScreen canManage={can('inventory.write')} />
         )}
         {gate === 'ready' && screen === 'report-sales' && <SalesReportScreen />}
         {gate === 'ready' && screen === 'report-products' && <ProductsReportScreen />}
         {gate === 'ready' && screen === 'report-profit' && <ProfitReportScreen />}
         {gate === 'ready' && screen === 'report-stock' && <StockReportScreen />}
         {gate === 'ready' && screen === 'report-customers' && <CustomersReportScreen />}
+        {gate === 'ready' && screen === 'settings-users' && <UsersScreen />}
+        {gate === 'ready' && screen === 'settings-roles' && <RolesScreen />}
+        {gate === 'ready' && screen === 'settings-payments' && <PaymentsScreen />}
+        {gate === 'ready' && screen === 'settings-store' && <StoreScreen />}
+        {gate === 'ready' && screen === 'settings-general' && <GeneralScreen />}
       </main>
     </div>
   )
@@ -653,11 +713,11 @@ function ProductsScreen({ canManage }) {
     setParams((prev) => ({ ...prev, q: query.trim(), page: 1 }))
   }
 
-  const onCategory = (e) =>
-    setParams((prev) => ({ ...prev, category: e.target.value, page: 1 }))
+  const onCategory = (value) =>
+    setParams((prev) => ({ ...prev, category: value, page: 1 }))
 
-  const onBrand = (e) =>
-    setParams((prev) => ({ ...prev, brand: e.target.value, page: 1 }))
+  const onBrand = (value) =>
+    setParams((prev) => ({ ...prev, brand: value, page: 1 }))
 
   const openForm = (product = null) => {
     setEditing(product)
@@ -745,24 +805,20 @@ function ProductsScreen({ canManage }) {
           />
         </form>
         <div className="dash-filters">
-          <label className="dash-filter-field">
-            <span>Categoría</span>
-            <select value={params.category} onChange={onCategory}>
-              <option value="">Todas</option>
-              {cats.map((c) => (
-                <option key={c.key} value={c.key}>{c.name}</option>
-              ))}
-            </select>
-          </label>
-          <label className="dash-filter-field">
-            <span>Marca</span>
-            <select value={params.brand} onChange={onBrand}>
-              <option value="">Todas</option>
-              {brands.map((b) => (
-                <option key={b} value={b}>{b}</option>
-              ))}
-            </select>
-          </label>
+          <SearchSelect
+            id="products-category-filter"
+            label="Categoría"
+            value={params.category}
+            onChange={onCategory}
+            options={cats.map((c) => ({ value: c.key, label: c.name }))}
+          />
+          <SearchSelect
+            id="products-brand-filter"
+            label="Marca"
+            value={params.brand}
+            onChange={onBrand}
+            options={brands.map((b) => ({ value: b, label: b }))}
+          />
         </div>
         <span className="count-tag mono">
           {data.items.length} de {data.total}
@@ -784,17 +840,14 @@ function ProductsScreen({ canManage }) {
           <strong>Ajuste masivo</strong>
           <label className="bulk-field">
             <span>Categoría</span>
-            <select
+            <SearchSelect
+              id="bulk-category-filter"
               value={bulk.category}
-              onChange={(e) => setBulk((b) => ({ ...b, category: e.target.value }))}
-            >
-              <option value="todas">Todas</option>
-              {cats.map((c) => (
-                <option key={c.key} value={c.key}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
+              onChange={(v) => setBulk((b) => ({ ...b, category: v }))}
+              allLabel="Todas"
+              allValue="todas"
+              options={cats.map((c) => ({ value: c.key, label: c.name }))}
+            />
           </label>
           <label className="bulk-field">
             <span>Modo</span>
@@ -1419,13 +1472,13 @@ function PosScreen({ canManage }) {
     setPage(1)
   }
 
-  const onCategory = (e) => {
-    setCategory(e.target.value)
+  const onCategory = (value) => {
+    setCategory(value)
     setPage(1)
   }
 
-  const onBrand = (e) => {
-    setBrand(e.target.value)
+  const onBrand = (value) => {
+    setBrand(value)
     setPage(1)
   }
 
@@ -1518,24 +1571,20 @@ function PosScreen({ canManage }) {
             />
           </div>
           <div className="pos-filters">
-            <label className="dash-filter-field">
-              <span>Categoría</span>
-              <select value={category} onChange={onCategory}>
-                <option value="">Todas</option>
-                {catOptions.map((c) => (
-                  <option key={c.key} value={c.key}>{c.name}</option>
-                ))}
-              </select>
-            </label>
-            <label className="dash-filter-field">
-              <span>Marca</span>
-              <select value={brand} onChange={onBrand}>
-                <option value="">Todas</option>
-                {brandOptions.map((b) => (
-                  <option key={b} value={b}>{b}</option>
-                ))}
-              </select>
-            </label>
+            <SearchSelect
+              id="pos-category-filter"
+              label="Categoría"
+              value={category}
+              onChange={onCategory}
+              options={catOptions.map((c) => ({ value: c.key, label: c.name }))}
+            />
+            <SearchSelect
+              id="pos-brand-filter"
+              label="Marca"
+              value={brand}
+              onChange={onBrand}
+              options={brandOptions.map((b) => ({ value: b, label: b }))}
+            />
             <span className="dash-count mono">{totalItems} productos</span>
           </div>
           <div className="pos-list">
@@ -2535,11 +2584,11 @@ function StockScreen() {
     setParams((prev) => ({ ...prev, q: query.trim(), page: 1 }))
   }
 
-  const onCategory = (e) =>
-    setParams((prev) => ({ ...prev, category: e.target.value, page: 1 }))
+  const onCategory = (value) =>
+    setParams((prev) => ({ ...prev, category: value, page: 1 }))
 
-  const onBrand = (e) =>
-    setParams((prev) => ({ ...prev, brand: e.target.value, page: 1 }))
+  const onBrand = (value) =>
+    setParams((prev) => ({ ...prev, brand: value, page: 1 }))
 
   const toggleLow = () => {
     setParams((prev) => ({ ...prev, low: prev.low ? '' : '1', page: 1 }))
@@ -2575,24 +2624,20 @@ function StockScreen() {
           />
         </form>
         <div className="dash-filters">
-          <label className="dash-filter-field">
-            <span>Categoría</span>
-            <select value={params.category} onChange={onCategory}>
-              <option value="">Todas</option>
-              {cats.map((c) => (
-                <option key={c.key} value={c.key}>{c.name}</option>
-              ))}
-            </select>
-          </label>
-          <label className="dash-filter-field">
-            <span>Marca</span>
-            <select value={params.brand} onChange={onBrand}>
-              <option value="">Todas</option>
-              {brands.map((b) => (
-                <option key={b} value={b}>{b}</option>
-              ))}
-            </select>
-          </label>
+          <SearchSelect
+            id="stock-category-filter"
+            label="Categoría"
+            value={params.category}
+            onChange={onCategory}
+            options={cats.map((c) => ({ value: c.key, label: c.name }))}
+          />
+          <SearchSelect
+            id="stock-brand-filter"
+            label="Marca"
+            value={params.brand}
+            onChange={onBrand}
+            options={brands.map((b) => ({ value: b, label: b }))}
+          />
         </div>
         <span className="count-tag mono">
           {data.items.length} de {data.total}
@@ -2883,6 +2928,14 @@ function AdjustmentsScreen({ canManage }) {
 
   if (!movements) return <ScreenLoading label="Preparando ajustes…" />
 
+  const selectedProduct = form.productId
+    ? products.find((p) => p.id === Number(form.productId))
+    : null
+  const resultingStock =
+    selectedProduct && form.delta !== ''
+      ? selectedProduct.stock + Number(form.delta)
+      : null
+
   return (
     <div className="dash-screen">
       <header className="dash-head">
@@ -2919,6 +2972,16 @@ function AdjustmentsScreen({ canManage }) {
               ))}
             </select>
           </label>
+          {selectedProduct && (
+            <div className="inv-stock-hint mono">
+              <span>Stock actual: <strong>{selectedProduct.stock}</strong></span>
+              {resultingStock !== null && !Number.isNaN(resultingStock) && (
+                <span className={resultingStock < 0 ? 'inv-stock-neg' : ''}>
+                  después: <strong>{resultingStock}</strong>
+                </span>
+              )}
+            </div>
+          )}
           <label className="inv-field">
             <span>Cantidad (+o −)</span>
             <input
@@ -3047,11 +3110,11 @@ function MinStockScreen({ canManage }) {
     setParams((prev) => ({ ...prev, q: query.trim(), page: 1 }))
   }
 
-  const onCategory = (e) =>
-    setParams((prev) => ({ ...prev, category: e.target.value, page: 1 }))
+  const onCategory = (value) =>
+    setParams((prev) => ({ ...prev, category: value, page: 1 }))
 
-  const onBrand = (e) =>
-    setParams((prev) => ({ ...prev, brand: e.target.value, page: 1 }))
+  const onBrand = (value) =>
+    setParams((prev) => ({ ...prev, brand: value, page: 1 }))
 
   if (!data && !error) return <ScreenLoading label="Leyendo los mínimos…" />
   if (error) return <ScreenBlocked message={error} />
@@ -3091,24 +3154,20 @@ function MinStockScreen({ canManage }) {
           />
         </form>
         <div className="dash-filters">
-          <label className="dash-filter-field">
-            <span>Categoría</span>
-            <select value={params.category} onChange={onCategory}>
-              <option value="">Todas</option>
-              {cats.map((c) => (
-                <option key={c.key} value={c.key}>{c.name}</option>
-              ))}
-            </select>
-          </label>
-          <label className="dash-filter-field">
-            <span>Marca</span>
-            <select value={params.brand} onChange={onBrand}>
-              <option value="">Todas</option>
-              {brands.map((b) => (
-                <option key={b} value={b}>{b}</option>
-              ))}
-            </select>
-          </label>
+          <SearchSelect
+            id="stock-category-filter"
+            label="Categoría"
+            value={params.category}
+            onChange={onCategory}
+            options={cats.map((c) => ({ value: c.key, label: c.name }))}
+          />
+          <SearchSelect
+            id="stock-brand-filter"
+            label="Marca"
+            value={params.brand}
+            onChange={onBrand}
+            options={brands.map((b) => ({ value: b, label: b }))}
+          />
         </div>
         <span className="count-tag mono">
           {data.items.length} de {data.total}
@@ -3570,11 +3629,11 @@ function PhysicalInventoryScreen({ canManage }) {
     setParams((prev) => ({ ...prev, q: query.trim(), page: 1 }))
   }
 
-  const onCategory = (e) =>
-    setParams((prev) => ({ ...prev, category: e.target.value, page: 1 }))
+  const onCategory = (value) =>
+    setParams((prev) => ({ ...prev, category: value, page: 1 }))
 
-  const onBrand = (e) =>
-    setParams((prev) => ({ ...prev, brand: e.target.value, page: 1 }))
+  const onBrand = (value) =>
+    setParams((prev) => ({ ...prev, brand: value, page: 1 }))
 
   if (!data && !error) return <ScreenLoading label="Preparando el conteo…" />
   if (error) return <ScreenBlocked message={error} />
@@ -3615,24 +3674,20 @@ function PhysicalInventoryScreen({ canManage }) {
           />
         </form>
         <div className="dash-filters">
-          <label className="dash-filter-field">
-            <span>Categoría</span>
-            <select value={params.category} onChange={onCategory}>
-              <option value="">Todas</option>
-              {cats.map((c) => (
-                <option key={c.key} value={c.key}>{c.name}</option>
-              ))}
-            </select>
-          </label>
-          <label className="dash-filter-field">
-            <span>Marca</span>
-            <select value={params.brand} onChange={onBrand}>
-              <option value="">Todas</option>
-              {brands.map((b) => (
-                <option key={b} value={b}>{b}</option>
-              ))}
-            </select>
-          </label>
+          <SearchSelect
+            id="stock-category-filter"
+            label="Categoría"
+            value={params.category}
+            onChange={onCategory}
+            options={cats.map((c) => ({ value: c.key, label: c.name }))}
+          />
+          <SearchSelect
+            id="stock-brand-filter"
+            label="Marca"
+            value={params.brand}
+            onChange={onBrand}
+            options={brands.map((b) => ({ value: b, label: b }))}
+          />
         </div>
         <span className="count-tag mono">
           {data.items.length} de {data.total}
@@ -5102,11 +5157,11 @@ function OffersScreen({ canManage }) {
     setParams((prev) => ({ ...prev, q: query.trim(), page: 1 }))
   }
 
-  const onCategory = (e) =>
-    setParams((prev) => ({ ...prev, category: e.target.value, page: 1 }))
+  const onCategory = (value) =>
+    setParams((prev) => ({ ...prev, category: value, page: 1 }))
 
-  const onBrand = (e) =>
-    setParams((prev) => ({ ...prev, brand: e.target.value, page: 1 }))
+  const onBrand = (value) =>
+    setParams((prev) => ({ ...prev, brand: value, page: 1 }))
 
   const oldPriceOf = (p) => edits[p.id]?.oldPrice ?? p.oldPrice ?? ''
 
@@ -5193,24 +5248,20 @@ function OffersScreen({ canManage }) {
           />
         </form>
         <div className="dash-filters">
-          <label className="dash-filter-field">
-            <span>Categoría</span>
-            <select value={params.category} onChange={onCategory}>
-              <option value="">Todas</option>
-              {cats.map((c) => (
-                <option key={c.key} value={c.key}>{c.name}</option>
-              ))}
-            </select>
-          </label>
-          <label className="dash-filter-field">
-            <span>Marca</span>
-            <select value={params.brand} onChange={onBrand}>
-              <option value="">Todas</option>
-              {brands.map((b) => (
-                <option key={b} value={b}>{b}</option>
-              ))}
-            </select>
-          </label>
+          <SearchSelect
+            id="stock-category-filter"
+            label="Categoría"
+            value={params.category}
+            onChange={onCategory}
+            options={cats.map((c) => ({ value: c.key, label: c.name }))}
+          />
+          <SearchSelect
+            id="stock-brand-filter"
+            label="Marca"
+            value={params.brand}
+            onChange={onBrand}
+            options={brands.map((b) => ({ value: b, label: b }))}
+          />
         </div>
         <span className="count-tag mono">
           {data.items.length} de {data.total}
@@ -5631,6 +5682,807 @@ function ImportScreen({ canManage }) {
           <EmptyNote text="Solo superadmins pueden importar productos." />
         </div>
       )}
+    </div>
+  )
+}
+
+const PERM_CODES = [
+  'settings.manage',
+  'users.manage',
+  'catalog.manage',
+  'coupons.manage',
+  'offers.manage',
+  'inventory.write',
+  'sales.return',
+  'quotes.delete',
+]
+
+const PERM_LABELS = {
+  'settings.manage': 'Configuración del negocio',
+  'users.manage': 'Usuarios del panel',
+  'catalog.manage': 'Productos, categorías, marcas y precios',
+  'coupons.manage': 'Cupones de descuento',
+  'offers.manage': 'Ofertas de la semana',
+  'inventory.write': 'Editar stock (ajustes, compras, mínimo y físico)',
+  'sales.return': 'Devoluciones y reembolsos',
+  'quotes.delete': 'Eliminar presupuestos',
+}
+
+function ToggleRow({ label, hint, checked, onChange, disabled = false }) {
+  return (
+    <label className="set-wrap">
+      <span className="set-wrap-txt">
+        <strong>{label}</strong>
+        {hint && <em>{hint}</em>}
+      </span>
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        disabled={disabled}
+      />
+    </label>
+  )
+}
+
+function isErrorNote(text) {
+  return /(No se pudo|No pod|No tenés|Ya existe|requeridos|inválido|vencida|incorrectas)/i.test(
+    text || '',
+  )
+}
+
+function SettingsNote({ text }) {
+  if (!text) return null
+  const error = isErrorNote(text)
+  return (
+    <p className={`sale-note ${error ? 'sale-note-err' : 'sale-note-ok'}`}>
+      {text}
+    </p>
+  )
+}
+
+function UsersScreen() {
+  const [users, setUsers] = useState(null)
+  const [error, setError] = useState('')
+  const [note, setNote] = useState('')
+  const [formOpen, setFormOpen] = useState(false)
+  const [editing, setEditing] = useState(null)
+  const [form, setForm] = useState(null)
+  const [saving, setSaving] = useState(false)
+  const [generatedPassword, setGeneratedPassword] = useState('')
+  const [refresh, setRefresh] = useState(0)
+
+  useEffect(() => {
+    let alive = true
+    apiGet('/api/admin/users')
+      .then((data) => {
+        if (alive) setUsers(data)
+      })
+      .catch((err) => {
+        if (alive) setError(err.message)
+      })
+    return () => {
+      alive = false
+    }
+  }, [refresh])
+
+  const openNew = () => {
+    setEditing(null)
+    setGeneratedPassword('')
+    setForm({ name: '', email: '', role: 'admin' })
+    setFormOpen(true)
+  }
+
+  const openEdit = (u) => {
+    setEditing(u.id)
+    setGeneratedPassword('')
+    setForm({ name: u.name, role: u.role, password: '' })
+    setFormOpen(true)
+  }
+
+  const set = (key) => (e) =>
+    setForm((f) => ({ ...f, [key]: e.target.value }))
+
+  const submit = async (e) => {
+    e.preventDefault()
+    setSaving(true)
+    setNote('')
+    setGeneratedPassword('')
+    try {
+      if (editing) {
+        const payload = { name: form.name, role: form.role }
+        if (form.password) payload.password = form.password
+        await apiPut(`/api/admin/users/${editing}`, payload)
+        setNote('Usuario actualizado.')
+      } else {
+        const created = await apiPost('/api/admin/users', {
+          name: form.name,
+          email: form.email,
+          role: form.role,
+        })
+        setGeneratedPassword(created.password)
+        setNote(`Usuario ${created.email} creado.`)
+      }
+      setFormOpen(false)
+      setRefresh((n) => n + 1)
+    } catch (err) {
+      setNote(err.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const toggleActive = async (u) => {
+    setNote('')
+    try {
+      await apiPut(`/api/admin/users/${u.id}`, { active: !u.active })
+      setNote(u.active ? 'Usuario desactivado.' : 'Usuario activado.')
+      setRefresh((n) => n + 1)
+    } catch (err) {
+      setNote(err.message)
+    }
+  }
+
+  if (!users && !error) return <ScreenLoading label="Cargando usuarios…" />
+  if (error) return <ScreenBlocked message={error} />
+
+  const activeCount = users.filter((u) => u.active).length
+
+  return (
+    <div className="dash-screen">
+      <header className="dash-head">
+        <div>
+          <span className="dash-eyebrow">Configuración</span>
+          <h1>Usuarios</h1>
+        </div>
+        <div className="dash-head-today">
+          <strong className="mono">{activeCount}</strong>
+          <em>usuarios activos</em>
+        </div>
+      </header>
+
+      <div className="dash-toolbar">
+        <p className="list-note">
+          Quienes entran al panel deben activar acceso. Las contraseñas son generadas y no se guardan en texto plano.
+        </p>
+        <button type="button" className="primary-btn dash-add" onClick={openNew}>
+          <IconPlus />
+          Nuevo usuario
+        </button>
+      </div>
+
+      <SettingsNote text={note} />
+
+      {generatedPassword && (
+        <div className="set-password-box">
+          <span>Contraseña generada (mostrala una sola vez):</span>
+          <code className="mono">{generatedPassword}</code>
+        </div>
+      )}
+
+      {formOpen && (
+        <section className="dash-card set-card">
+          <div className="dash-card-head">
+            <h2>{editing ? `Editar ${form.name || 'usuario'}` : 'Nuevo usuario'}</h2>
+            <button type="button" className="ghost-btn" onClick={() => setFormOpen(false)}>
+              <IconCross />
+              Cerrar
+            </button>
+          </div>
+          <form className="set-form" onSubmit={submit}>
+            <label className="inv-field">
+              <span>Nombre</span>
+              <input
+                value={form.name}
+                onChange={set('name')}
+                required
+                minLength={2}
+              />
+            </label>
+            <label className="inv-field">
+              <span>Email</span>
+              <input
+                type="email"
+                value={form.email || ''}
+                onChange={set('email')}
+                required
+                disabled={!!editing}
+              />
+            </label>
+            <label className="inv-field">
+              <span>Rol</span>
+              <select value={form.role} onChange={set('role')}>
+                <option value="admin">admin</option>
+                <option value="superadmin">superadmin</option>
+              </select>
+            </label>
+            {editing && (
+              <label className="inv-field">
+                <span>Nueva contraseña (opcional)</span>
+                <input
+                  type="password"
+                  value={form.password || ''}
+                  onChange={set('password')}
+                  autoComplete="new-password"
+                />
+              </label>
+            )}
+            <div className="set-actions">
+              <button type="submit" className="primary-btn" disabled={saving}>
+                {saving ? 'Guardando…' : editing ? 'Guardar cambios' : 'Crear usuario'}
+              </button>
+            </div>
+          </form>
+        </section>
+      )}
+
+      <div className="table-wrap">
+        <table className="dash-table">
+          <thead>
+            <tr>
+              <th>Usuario</th>
+              <th>Rol</th>
+              <th>Estado</th>
+              <th>Alta</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {users.map((u) => (
+              <tr key={u.id}>
+                <td>
+                  <span className="t-cell-product">
+                    <span className="user-avatar mono" aria-hidden="true">
+                      {initials(u.name)}
+                    </span>
+                    <span>
+                      <strong>{u.name}</strong>
+                      <em>{u.email}</em>
+                    </span>
+                  </span>
+                </td>
+                <td>
+                  <span className={`role-chip role-${u.role}`}>{u.role}</span>
+                </td>
+                <td>
+                  <span className={`status-tag${u.active ? '' : ' status-muted'}`}>
+                    {u.active ? <IconCheck /> : <IconCross />}
+                    {u.active ? 'Activo' : 'Desactivado'}
+                  </span>
+                </td>
+                <td className="t-date">{shortDate(u.createdAt)}</td>
+                <td>
+                  <span className="row-actions">
+                    <button type="button" className="row-btn" aria-label={`Editar ${u.name}`} onClick={() => openEdit(u)}>
+                      <IconEdit />
+                    </button>
+                    <button
+                      type="button"
+                      className={`row-btn ${u.active ? 'row-btn-danger' : ''}`}
+                      aria-label={u.active ? `Desactivar ${u.name}` : `Activar ${u.name}`}
+                      onClick={() => toggleActive(u)}
+                    >
+                      {u.active ? <IconCross /> : <IconCheck />}
+                    </button>
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+function SettingsFetcher({ render }) {
+  const [data, setData] = useState(null)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    let alive = true
+    apiGet('/api/admin/settings')
+      .then((res) => {
+        if (alive) setData(res)
+      })
+      .catch((err) => {
+        if (alive) setError(err.message)
+      })
+    return () => {
+      alive = false
+    }
+  }, [])
+
+  if (error) return <ScreenBlocked message={error} />
+  if (!data) return <ScreenLoading label="Leyendo ajustes…" />
+  return render(data)
+}
+
+function RolesScreen() {
+  const save = async (selected) => {
+    await apiPut('/api/admin/settings', {
+      section: 'roles',
+      value: { admin: selected },
+    })
+    return 'Permisos de admin guardados.'
+  }
+
+  return (
+    <SettingsFetcher
+      render={(settings) => {
+        const adminPerms = new Set(settings.roles?.admin || [])
+        return (
+          <RolesScreenBody
+            adminPerms={adminPerms}
+            save={save}
+          />
+        )
+      }}
+    />
+  )
+}
+
+function RolesScreenBody({ adminPerms, save }) {
+  const [selected, setSelected] = useState([...adminPerms].sort())
+  const [saving, setSaving] = useState(false)
+  const [note, setNote] = useState('')
+
+  const applyToggle = (code) => {
+    setNote('')
+    setSelected((prev) =>
+      prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code],
+    )
+  }
+
+  const submit = async (e) => {
+    e.preventDefault()
+    setSaving(true)
+    setNote('')
+    try {
+      const msg = await save(selected)
+      setNote(msg)
+    } catch (err) {
+      setNote(err.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="dash-screen">
+      <header className="dash-head">
+        <div>
+          <span className="dash-eyebrow">Configuración</span>
+          <h1>Roles y permisos</h1>
+        </div>
+      </header>
+
+      <div className="dash-toolbar">
+        <p className="list-note">
+          El rol <strong>superadmin</strong> siempre tiene acceso total. El rol{' '}
+          <strong>admin</strong> ve únicamente los módulos marcados acá.
+        </p>
+      </div>
+
+      <SettingsNote text={note} />
+
+      <form className="set-card set-roles" onSubmit={submit}>
+        <h3>Permisos del rol admin</h3>
+        <div className="set-toggles">
+          {PERM_CODES.map((code) => (
+            <ToggleRow
+              key={code}
+              label={PERM_LABELS[code]}
+              hint={code}
+              checked={selected.includes(code)}
+              onChange={() => applyToggle(code)}
+            />
+          ))}
+        </div>
+        <div className="set-actions">
+          <button type="submit" className="primary-btn" disabled={saving}>
+            {saving ? 'Guardando…' : 'Guardar permisos'}
+          </button>
+        </div>
+      </form>
+    </div>
+  )
+}
+
+function PaymentsScreen() {
+  const [saving, setSaving] = useState(false)
+  const [note, setNote] = useState('')
+
+  const saveAll = async (payments, checkout) => {
+    setSaving(true)
+    setNote('')
+    try {
+      await apiPut('/api/admin/settings', { section: 'payments', value: payments })
+      await apiPut('/api/admin/settings', { section: 'checkout', value: checkout })
+      setNote('Medios de pago guardados.')
+    } catch (err) {
+      setNote(err.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <SettingsFetcher
+      render={(settings) => (
+        <PaymentsScreenBody
+          settings={settings}
+          saving={saving}
+          note={note}
+          onSave={saveAll}
+        />
+      )}
+    />
+  )
+}
+
+function PaymentsScreenBody({ settings, saving, note, onSave }) {
+  const methods = settings.payments?.methods || { efectivo: true, tarjeta: true, transferencia: true }
+  const [form, setForm] = useState({
+    efectivo: methods.efectivo !== false,
+    tarjeta: methods.tarjeta !== false,
+    transferencia: methods.transferencia !== false,
+    statementDescriptor: settings.checkout?.statementDescriptor || 'TechStore',
+  })
+
+  const toggle = (key) => (on) => setForm((f) => ({ ...f, [key]: on }))
+
+  const submit = (e) => {
+    e.preventDefault()
+    onSave(
+      { methods: { efectivo: form.efectivo, tarjeta: form.tarjeta, transferencia: form.transferencia } },
+      { statementDescriptor: form.statementDescriptor.trim() || 'TechStore' },
+    )
+  }
+
+  return (
+    <div className="dash-screen">
+      <header className="dash-head">
+        <div>
+          <span className="dash-eyebrow">Configuración</span>
+          <h1>Métodos de pago</h1>
+        </div>
+      </header>
+
+      <div className="dash-toolbar">
+        <p className="list-note">
+          Qué medios podés cobrar desde la caja del panel. La web siempre cobra con Mercado Pago.
+        </p>
+      </div>
+
+      <SettingsNote text={note} />
+
+      <form className="set-card" onSubmit={submit}>
+        <h3>En la caja (panel)</h3>
+        <div className="set-toggles">
+          <ToggleRow label="Efectivo" hint="Pago en el local" checked={form.efectivo} onChange={toggle('efectivo')} />
+          <ToggleRow label="Tarjeta" hint="Tarjeta de débito o crédito" checked={form.tarjeta} onChange={toggle('tarjeta')} />
+          <ToggleRow label="Transferencia" hint="Transferencia bancaria" checked={form.transferencia} onChange={toggle('transferencia')} />
+        </div>
+
+        <h3>Mercado Pago</h3>
+        <label className="inv-field">
+          <span>Descriptor en el resumen (statement descriptor)</span>
+          <input value={form.statementDescriptor} onChange={(e) => setForm((f) => ({ ...f, statementDescriptor: e.target.value }))} maxLength={32} />
+        </label>
+        <p className="set-hint">
+          El texto que ven tus clientes en el resumen de la tarjeta al pagar por la web.
+        </p>
+
+        <div className="set-card set-info">
+          <strong>Credenciales de Mercado Pago</strong>
+          <p>
+            La access token y la public key se leen del archivo <code>.env</code> del servidor
+            (variables <code>MP_ACCESS_TOKEN</code> y <code>MP_PUBLIC_KEY</code>). No se guardan en
+            la base de datos por seguridad.
+          </p>
+        </div>
+
+        <div className="set-actions">
+          <button type="submit" className="primary-btn" disabled={saving}>
+            {saving ? 'Guardando…' : 'Guardar cambios'}
+          </button>
+        </div>
+      </form>
+    </div>
+  )
+}
+
+function StoreScreen() {
+  const [saving, setSaving] = useState(false)
+  const [note, setNote] = useState('')
+
+  const save = async (store) => {
+    setSaving(true)
+    setNote('')
+    try {
+      await apiPut('/api/admin/settings', { section: 'store', value: store })
+      setNote('Datos del negocio guardados.')
+    } catch (err) {
+      setNote(err.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <SettingsFetcher
+      render={(settings) => (
+        <StoreScreenBody settings={settings} saving={saving} note={note} onSave={save} />
+      )}
+    />
+  )
+}
+
+function StoreScreenBody({ settings, saving, note, onSave }) {
+  const store = settings.store || {}
+  const [form, setForm] = useState({
+    name: store.name || '',
+    tagline: store.tagline || '',
+    phone: store.phone || '',
+    whatsapp: store.whatsapp || '',
+    email: store.email || '',
+    addressFull: store.addressFull || '',
+    addressShort: store.addressShort || '',
+    hours: store.hours || '',
+    band: store.band || '',
+  })
+
+  const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }))
+
+  const submit = (e) => {
+    e.preventDefault()
+    onSave({ ...form, phone: form.phone.trim(), email: form.email.trim() })
+  }
+
+  return (
+    <div className="dash-screen">
+      <header className="dash-head">
+        <div>
+          <span className="dash-eyebrow">Configuración</span>
+          <h1>Datos del negocio</h1>
+        </div>
+      </header>
+
+      <div className="dash-toolbar">
+        <p className="list-note">
+          Estos datos se muestran en la tienda: cabecera, pie de página, mapa y botón de WhatsApp.
+        </p>
+      </div>
+
+      <SettingsNote text={note} />
+
+      <form className="set-card set-form" onSubmit={submit}>
+        <h3>Identidad</h3>
+        <div className="set-row">
+          <label className="inv-field">
+            <span>Nombre de la tienda</span>
+            <input value={form.name} onChange={set('name')} required minLength={2} />
+          </label>
+          <label className="inv-field">
+            <span>Frase corta (bajo el logo)</span>
+            <input value={form.tagline} onChange={set('tagline')} />
+          </label>
+        </div>
+
+        <h3>Contacto</h3>
+        <div className="set-row">
+          <label className="inv-field">
+            <span>Teléfono fijo</span>
+            <input value={form.phone} onChange={set('phone')} placeholder="11 5555 4294" />
+          </label>
+          <label className="inv-field">
+            <span>WhatsApp (sin + ni espacios)</span>
+            <input value={form.whatsapp} onChange={set('whatsapp')} placeholder="5491155554294" />
+          </label>
+          <label className="inv-field">
+            <span>Email</span>
+            <input type="email" value={form.email} onChange={set('email')} />
+          </label>
+        </div>
+
+        <h3>Ubicación y horarios</h3>
+        <div className="set-row">
+          <label className="inv-field set-grow">
+            <span>Dirección completa (para el mapa)</span>
+            <input value={form.addressFull} onChange={set('addressFull')} />
+          </label>
+          <label className="inv-field">
+            <span>Dirección corta (marcas de la tienda)</span>
+            <input value={form.addressShort} onChange={set('addressShort')} />
+          </label>
+        </div>
+        <label className="inv-field">
+          <span>Horarios de atención</span>
+          <input value={form.hours} onChange={set('hours')} />
+        </label>
+
+        <h3>Franja del pie de página</h3>
+        <label className="inv-field">
+          <span>Texto promocional</span>
+          <textarea value={form.band} onChange={set('band')} rows={2} />
+        </label>
+
+        <div className="set-actions">
+          <button type="submit" className="primary-btn" disabled={saving}>
+            {saving ? 'Guardando…' : 'Guardar cambios'}
+          </button>
+        </div>
+      </form>
+    </div>
+  )
+}
+
+function GeneralScreen() {
+  const [saving, setSaving] = useState(false)
+  const [note, setNote] = useState('')
+
+  const save = async (shipping, general) => {
+    setSaving(true)
+    setNote('')
+    try {
+      await apiPut('/api/admin/settings', { section: 'shipping', value: shipping })
+      await apiPut('/api/admin/settings', { section: 'general', value: general })
+      setNote('Configuración general guardada.')
+    } catch (err) {
+      setNote(err.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <SettingsFetcher
+      render={(settings) => (
+        <GeneralScreenBody settings={settings} saving={saving} note={note} onSave={save} />
+      )}
+    />
+  )
+}
+
+function GeneralScreenBody({ settings, saving, note, onSave }) {
+  const shipping = settings.shipping || {}
+  const general = settings.general || {}
+  const [form, setForm] = useState({
+    cost: String(shipping.cost || 5999),
+    freeThreshold: String(shipping.freeThreshold || 300000),
+    label: shipping.label || 'Envío a domicilio',
+  })
+  const [marquee, setMarquee] = useState(
+    (Array.isArray(general.marquee) ? general.marquee : []).filter(Boolean),
+  )
+  const [marqueeInput, setMarqueeInput] = useState('')
+  const [steps, setSteps] = useState(
+    (Array.isArray(general.installments) ? general.installments : []).map((s) => ({
+      minPrice: String(s.minPrice || 0),
+      months: String(s.months || 3),
+    })),
+  )
+
+  const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }))
+
+  const addMarquee = () => {
+    const text = marqueeInput.trim()
+    if (!text) return
+    setMarquee((prev) => [...prev, text])
+    setMarqueeInput('')
+  }
+
+  const addStep = () => {
+    const last = steps[steps.length - 1]
+    const nextMin = last ? Number(last.minPrice) * 2 : 50000
+    setSteps((prev) => [...prev, { minPrice: String(nextMin), months: '3' }])
+  }
+
+  const submit = (e) => {
+    e.preventDefault()
+    onSave(
+      {
+        cost: Math.max(0, Number(form.cost) || 0),
+        freeThreshold: Math.max(0, Number(form.freeThreshold) || 0),
+        label: form.label.trim() || 'Envío a domicilio',
+      },
+      {
+        marquee: marquee.filter(Boolean),
+        installments: steps
+          .map((s) => ({
+            minPrice: Math.max(0, Number(s.minPrice) || 0),
+            months: Math.max(1, Number(s.months) || 3),
+          }))
+          .sort((a, b) => a.minPrice - b.minPrice),
+      },
+    )
+  }
+
+  return (
+    <div className="dash-screen">
+      <header className="dash-head">
+        <div>
+          <span className="dash-eyebrow">Configuración</span>
+          <h1>Configuración general</h1>
+        </div>
+      </header>
+
+      <div className="dash-toolbar">
+        <p className="list-note">
+          Envíos, cuotas y la cinta superior de la tienda. Afecta el checkout, el carrito y las tarjetas de producto.
+        </p>
+      </div>
+
+      <SettingsNote text={note} />
+
+      <form className="set-card set-form" onSubmit={submit}>
+        <h3>Envíos</h3>
+        <div className="set-row">
+          <label className="inv-field">
+            <span>Costo de envío (ARS)</span>
+            <input type="number" min="0" value={form.cost} onChange={set('cost')} className="mono" />
+          </label>
+          <label className="inv-field">
+            <span>Envío gratis desde (ARS)</span>
+            <input type="number" min="0" value={form.freeThreshold} onChange={set('freeThreshold')} className="mono" />
+          </label>
+          <label className="inv-field">
+            <span>Nombre del envío</span>
+            <input value={form.label} onChange={set('label')} />
+          </label>
+        </div>
+        <p className="set-hint">Si el costo es 0, el envío es siempre gratis.</p>
+
+        <h3>Cinta superior (marquee)</h3>
+        <div className="set-list">
+          {marquee.map((item, index) => (
+            <div key={`${item}-${index}`} className="set-chip">
+              <span>{item}</span>
+              <button type="button" className="x-btn" aria-label={`Quitar ${item}`} onClick={() => setMarquee((prev) => prev.filter((_, i) => i !== index))}>
+                <IconCross />
+              </button>
+            </div>
+          ))}
+          {marquee.length === 0 && <p className="set-empty">Sin mensajes. La cinta queda oculta.</p>}
+        </div>
+        <div className="set-inline-add">
+          <input value={marqueeInput} onChange={(e) => setMarqueeInput(e.target.value)} placeholder="Nuevo mensaje…" />
+          <button type="button" className="ghost-btn" onClick={addMarquee}>
+            <IconPlus />
+            Agregar
+          </button>
+        </div>
+
+        <h3>Cuotas sin interés</h3>
+        <p className="set-hint">Cada tramo define el tope de cuotas para compras desde el precio mínimo. Ordenalas sin importar el orden: se ordenan solas al guardar.</p>
+        <div className="set-steps">
+          {steps.map((step, index) => (
+            <div key={index} className="set-inline-add">
+              <label className="inv-field">
+                <span>Desde (ARS)</span>
+                <input type="number" min="0" className="mono" value={step.minPrice} onChange={(e) => setSteps((prev) => prev.map((s, i) => (i === index ? { ...s, minPrice: e.target.value } : s)))} />
+              </label>
+              <label className="inv-field">
+                <span>Cuotas</span>
+                <input type="number" min="1" className="mono" value={step.months} onChange={(e) => setSteps((prev) => prev.map((s, i) => (i === index ? { ...s, months: e.target.value } : s)))} />
+              </label>
+              <button type="button" className="x-btn" aria-label="Quitar tramo" onClick={() => setSteps((prev) => prev.filter((_, i) => i !== index))}>
+                <IconCross />
+              </button>
+            </div>
+          ))}
+        </div>
+        <div className="set-actions">
+          <button type="button" className="ghost-btn" onClick={addStep}>
+            <IconPlus />
+            Agregar tramo
+          </button>
+          <button type="submit" className="primary-btn" disabled={saving}>
+            {saving ? 'Guardando…' : 'Guardar cambios'}
+          </button>
+        </div>
+      </form>
     </div>
   )
 }

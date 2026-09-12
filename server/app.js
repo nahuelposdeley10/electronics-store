@@ -14,6 +14,7 @@ import inventoryRouter from './routes/inventory.js'
 import reportsRouter from './routes/reports.js'
 import usersRouter from './routes/users.js'
 import authRouter from './routes/auth.js'
+import settingsRouter from './routes/settings.js'
 
 const DIST_DIR = path.resolve('dist')
 
@@ -37,6 +38,7 @@ export function createApp() {
   app.use('/api', webhooksRouter)
   app.use('/api', catalogRouter)
   app.use('/api/auth', authRouter)
+  app.use('/api', settingsRouter)
   app.use('/api/admin', adminRouter)
   app.use('/api/admin', catalogAdminRouter)
   app.use('/api/admin', promosRouter)

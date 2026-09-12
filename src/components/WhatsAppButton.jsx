@@ -1,7 +1,25 @@
+import { useState, useEffect } from 'react'
+import { fetchSiteSettings } from '../lib/siteSettings'
+
 export default function WhatsAppButton() {
+  const [number, setNumber] = useState('5491155554294')
+
+  useEffect(() => {
+    let alive = true
+    fetchSiteSettings().then((settings) => {
+      if (alive && settings.store?.whatsapp) {
+        const digits = String(settings.store.whatsapp).replace(/\D/g, '')
+        if (digits) setNumber(digits)
+      }
+    })
+    return () => {
+      alive = false
+    }
+  }, [])
+
   return (
     <a
-      href="https://wa.me/5491155554294"
+      href={`https://wa.me/${number}`}
       target="_blank"
       rel="noreferrer"
       className="whatsapp-btn"

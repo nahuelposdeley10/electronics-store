@@ -1,5 +1,6 @@
 import { useCart } from '../context/useCart'
 import { formatARS, installmentsFor } from '../data/format'
+import { useSiteSettings, mergeSettings } from '../lib/siteSettings'
 import { IconStar, IconPlus, IconCross } from './Icons'
 
 function Stars({ rating }) {
@@ -15,13 +16,14 @@ function Stars({ rating }) {
 
 export default function ProductCard({ product, onView, offer = false }) {
   const { addItem } = useCart()
+  const settings = mergeSettings(useSiteSettings())
 
   const discount = product.oldPrice
     ? Math.round(100 - (product.price / product.oldPrice) * 100)
     : 0
 
   const lowStock = product.stock <= 5
-  const inst = installmentsFor(product.price)
+  const inst = installmentsFor(product.price, settings.general.installments)
   const brand = ['audio', 'moviles', 'computacion', 'entretenimiento']
     .includes(product.category)
     ? product.brand

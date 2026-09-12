@@ -11,8 +11,23 @@ export function formatARS(value) {
   }).format(value)
 }
 
-export function installmentsFor(price) {
-  const count = price >= 100000 ? 12 : price >= 50000 ? 6 : 3
+const DEFAULT_STEPS = [
+  { minPrice: 0, months: 3 },
+  { minPrice: 50000, months: 6 },
+  { minPrice: 100000, months: 12 },
+]
+
+export function installmentsFor(price, steps) {
+  const list =
+    Array.isArray(steps) && steps.length
+      ? steps
+          .map((s) => ({ minPrice: Number(s.minPrice) || 0, months: Number(s.months) || 3 }))
+          .sort((a, b) => a.minPrice - b.minPrice)
+      : DEFAULT_STEPS
+  let count = list[0]?.months || 3
+  for (const step of list) {
+    if (price >= step.minPrice) count = step.months
+  }
   const value = Math.ceil(price / count)
   return { count, value }
 }

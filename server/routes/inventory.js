@@ -2,7 +2,7 @@ import express from 'express'
 import { Product } from '../models/Product.js'
 import { StockMovement } from '../models/StockMovement.js'
 import { Purchase } from '../models/Purchase.js'
-import { requireAuth, requireRole } from '../middleware/auth.js'
+import { requireAuth, requirePermission } from '../middleware/auth.js'
 import {
   parsePagination,
   buildProductSearchFilter,
@@ -127,7 +127,7 @@ router.get('/movements', async (req, res) => {
 
 /* ---------------- Ajustes de stock ---------------- */
 
-router.post('/adjustments', requireRole('superadmin'), async (req, res) => {
+router.post('/adjustments', requirePermission('inventory.write'), async (req, res) => {
   try {
     const { productId, delta, reason } = req.body || {}
 
@@ -181,7 +181,7 @@ router.post('/adjustments', requireRole('superadmin'), async (req, res) => {
 
 /* ---------------- Stock mínimo ---------------- */
 
-router.put('/min-stock', requireRole('superadmin'), async (req, res) => {
+router.put('/min-stock', requirePermission('inventory.write'), async (req, res) => {
   try {
     const { productId, minStock } = req.body || {}
 
@@ -214,7 +214,7 @@ router.put('/min-stock', requireRole('superadmin'), async (req, res) => {
 
 /* ---------------- Inventario físico ---------------- */
 
-router.post('/physical', requireRole('superadmin'), async (req, res) => {
+router.post('/physical', requirePermission('inventory.write'), async (req, res) => {
   try {
     const counts = (req.body?.counts || [])
       .map((row) => ({
@@ -323,7 +323,7 @@ router.get('/purchases', async (req, res) => {
   }
 })
 
-router.post('/purchases', requireRole('superadmin'), async (req, res) => {
+router.post('/purchases', requirePermission('inventory.write'), async (req, res) => {
   try {
     const supplier = String(req.body?.supplier || '').trim()
     const invoice = String(req.body?.invoice || '').trim()

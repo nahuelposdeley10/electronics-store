@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useEffect, useMemo } from 'react'
 import { CartContext } from './cartContext'
 import { useCatalog } from './useCatalog'
+import { fetchSiteSettings } from '../lib/siteSettings'
 
 const STORAGE_KEY = 'electronics-store-cart'
 const COUPON_STORAGE_KEY = 'electronics-store-coupon'
@@ -25,6 +26,24 @@ export default function CartProvider({ children }) {
   })
   const [couponMap, setCouponMap] = useState({})
   const [toast, setToast] = useState(null)
+  const [shippingConfig, setShippingConfig] = useState({
+    cost: 5999,
+    freeThreshold: 300000,
+  })
+
+  useEffect(() => {
+    fetchSiteSettings().then((data) => {
+      if (data.shipping) {
+        setShippingConfig({
+          cost: Number(data.shipping.cost) > 0 ? Number(data.shipping.cost) : 5999,
+          freeThreshold:
+            Number(data.shipping.freeThreshold) > 0
+              ? Number(data.shipping.freeThreshold)
+              : 300000,
+        })
+      }
+    })
+  }, [])
 
   useEffect(() => {
     let alive = true
@@ -137,11 +156,11 @@ export default function CartProvider({ children }) {
   const discountRate = appliedCoupon ? couponMap[appliedCoupon] || 0 : 0
   const discount = (subtotal * discountRate) / 100
 
-  const freeShippingThreshold = 300000
+  const freeShippingThreshold = shippingConfig.freeThreshold
   const hasFreeShipping =
     items.some((item) => item.freeShipping) ||
     subtotal >= freeShippingThreshold
-  const shippingCost = items.length === 0 ? 0 : hasFreeShipping ? 0 : 5999
+  const shippingCost = items.length === 0 ? 0 : hasFreeShipping ? 0 : shippingConfig.cost
 
   const total = subtotal - discount + shippingCost
 

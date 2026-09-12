@@ -1,3 +1,4 @@
+import { useSiteSettings, mergeSettings } from '../lib/siteSettings'
 import {
   IconBolt,
   IconMap,
@@ -6,19 +7,36 @@ import {
   IconClock,
 } from './Icons'
 
+function maxInstallmentMonths(settings) {
+  const steps =
+    Array.isArray(settings.general.installments) && settings.general.installments.length
+      ? settings.general.installments
+      : [{ months: 12 }]
+  return Math.max(...steps.map((s) => Number(s.months) || 1))
+}
+
 export default function Footer({ onNavigate }) {
+  const settings = mergeSettings(useSiteSettings())
+  const year = new Date().getFullYear()
+
   return (
     <footer className="site-footer">
-      <div className="footer-band">TechStore — Abierto lun a vie 9–19 · Sáb 9–13</div>
+      <div className="footer-band">{settings.store.band}</div>
       <div className="footer-grid">
         <div className="footer-col footer-about">
           <span className="footer-brand">
             <IconBolt />
-            Tech<span className="footer-accent">Store</span>
+            {settings.store.name === 'TechStore' ? (
+              <>
+                Tech<span className="footer-accent">Store</span>
+              </>
+            ) : (
+              settings.store.name
+            )}
           </span>
           <p>
-            La galería de tecnología del barrio, ahora online. Precio de
-            mostrador, hasta 12 cuotas sin interés y servicio técnico propio.
+            {settings.store.tagline}. Precio de mostrador, hasta {maxInstallmentMonths(settings)} cuotas sin
+            interés y servicio técnico propio.
           </p>
         </div>
 
@@ -45,15 +63,15 @@ export default function Footer({ onNavigate }) {
         <div className="footer-col footer-contact">
           <h3>El local</h3>
           <ul>
-            <li><IconMap /> Av. Triunvirato 4600, Villa Urquiza, CABA</li>
-            <li><IconPhone /> +54 11 5555-4294</li>
-            <li><IconMail /> ventas@techstore.com.ar</li>
-            <li><IconClock /> Lun a Vie 9–19h · Sáb 9–13h</li>
+            <li><IconMap /> {settings.store.addressFull}</li>
+            <li><IconPhone /> {settings.store.phone}</li>
+            <li><IconMail /> {settings.store.email}</li>
+            <li><IconClock /> {settings.store.hours}</li>
           </ul>
           <div className="footer-map">
             <iframe
-              title="Ubicación TechStore"
-              src="https://www.google.com/maps?q=Av.+Triunvirato+4600,+Villa+Urquiza,+Buenos+Aires&output=embed"
+              title={`Ubicación ${settings.store.name}`}
+              src={`https://www.google.com/maps?q=${encodeURIComponent(settings.store.addressFull)}&output=embed`}
               loading="lazy"
               referrerPolicy="no-referrer-when-downgrade"
               allowFullScreen
@@ -63,7 +81,7 @@ export default function Footer({ onNavigate }) {
       </div>
 
       <div className="footer-bottom">
-        <p>© 2026 TechStore. Todos los derechos reservados.</p>
+        <p>© {year} {settings.store.name}. Todos los derechos reservados.</p>
         <button type="button" className="footer-panel-link" onClick={() => onNavigate('dashboard')}>
           Panel de ventas
         </button>

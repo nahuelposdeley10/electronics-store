@@ -4,6 +4,7 @@ import { buildCart } from '../services/pricing.js'
 import { preferenceService } from '../services/mercadopago.js'
 import { verifyOrderPayment } from '../lib/order-verify.js'
 import { trackOrder } from '../lib/order-tracker.js'
+import { getSettings } from '../lib/settings.js'
 import { env } from '../config/env.js'
 
 const router = express.Router()
@@ -99,7 +100,7 @@ router.post('/checkout', async (req, res) => {
     if (cart.shippingCost > 0) {
       items.push({
         id: 'envio',
-        title: 'Envío a domicilio',
+        title: cart.shippingLabel || 'Envío a domicilio',
         quantity: 1,
         unit_price: cart.shippingCost,
         currency_id: 'ARS',
@@ -124,7 +125,7 @@ router.post('/checkout', async (req, res) => {
         failure: env.clientUrl,
         pending: env.clientUrl,
       },
-      statement_descriptor: 'TechStore',
+      statement_descriptor: (await getSettings()).checkout?.statementDescriptor || 'TechStore',
     }
 
     if (env.clientUrl.startsWith('https://')) {

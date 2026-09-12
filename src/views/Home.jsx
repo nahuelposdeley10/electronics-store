@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useCatalog } from '../context/useCatalog'
 import ProductCard from '../components/ProductCard'
+import SearchSelect from '../components/SearchSelect'
 import { formatARS } from '../data/format'
+import { useSiteSettings, mergeSettings } from '../lib/siteSettings'
 import { IconArrow, IconCheck, IconBolt } from '../components/Icons'
 
 function Section({ title, items, onView, offer = false }) {
@@ -108,20 +110,15 @@ function GallerySection({ onView, brands }) {
         </div>
 
         <div className="gallery-meta">
-          <label className="gallery-select">
-            <span>Marca</span>
-            <select
-              value={brand}
-              onChange={(e) => resetPage(() => setBrand(e.target.value))}
-            >
-              <option value="all">Todas las marcas</option>
-              {brands.map((b) => (
-                <option key={b} value={b}>
-                  {b}
-                </option>
-              ))}
-            </select>
-          </label>
+          <SearchSelect
+            id="home-brand-filter"
+            label="Marca"
+            value={brand}
+            onChange={(v) => resetPage(() => setBrand(v))}
+            allLabel="Todas las marcas"
+            allValue="all"
+            options={brands.map((b) => ({ value: b, label: b }))}
+          />
 
           <div className="gallery-sort" role="group" aria-label="Ordenar por precio">
             <button
@@ -197,6 +194,14 @@ function GallerySection({ onView, brands }) {
 
 export default function Home({ onView }) {
   const { products, brands } = useCatalog()
+  const settings = mergeSettings(useSiteSettings())
+  const maxMonths = Math.max(
+    ...((settings.general.installments && settings.general.installments.length
+      ? settings.general.installments
+      : [{ months: 12 }]
+    ).map((s) => Number(s.months) || 1)),
+  )
+  const freeThreshold = settings.shipping.freeThreshold
   const [newsletter, setNewsletter] = useState(false)
   const [email, setEmail] = useState('')
 
@@ -271,12 +276,12 @@ export default function Home({ onView }) {
         </div>
         <div className="bay-stats" aria-hidden="true">
           <div className="bay-stat">
-            <strong>Hasta 12 cuotas</strong>
+            <strong>Hasta {maxMonths} cuotas</strong>
             <span>sin interés</span>
           </div>
           <div className="bay-stat">
             <strong>Envío gratis</strong>
-            <span>en compras +$300.000</span>
+            <span>en compras +{formatARS(freeThreshold)}</span>
           </div>
           <div className="bay-stat">
             <strong>Garantía oficial</strong>
@@ -291,7 +296,7 @@ export default function Home({ onView }) {
 
       <div className="band-shipping">
         <span className="stamp">ENVÍO GRATIS</span>
-        <p>En compras superiores a {formatARS(300000)} · 24 a 48 hs en CABA y GBA</p>
+        <p>En compras superiores a {formatARS(freeThreshold)} · 24 a 48 hs en CABA y GBA</p>
       </div>
 
       <Section title="Recién llegados" items={newest} onView={onView} />
