@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken'
 import { env } from '../config/env.js'
-import { permissionsForRole } from '../lib/settings.js'
+import { User } from '../models/User.js'
+import { permissionsForUser } from '../lib/settings.js'
 
 export function requireAuth(req, res, next) {
   const header = req.get('authorization') || ''
@@ -31,7 +32,8 @@ export function requirePermission(code) {
       return res.status(401).json({ error: 'Sesión requerida' })
     }
     try {
-      const perms = await permissionsForRole(req.user.role)
+      const user = await User.findById(req.user.sub).lean()
+      const perms = await permissionsForUser(user, req.user.adminId)
       if (!perms.includes(code)) {
         return res.status(403).json({ error: 'No tenés permiso para esto' })
       }

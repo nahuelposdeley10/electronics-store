@@ -3,6 +3,7 @@ import { useEffect, useMemo } from 'react'
 import { CartContext } from './cartContext'
 import { useCatalog } from './useCatalog'
 import { fetchSiteSettings } from '../lib/siteSettings'
+import { getTenantHeaders } from '../lib/tenant'
 
 const STORAGE_KEY = 'electronics-store-cart'
 const COUPON_STORAGE_KEY = 'electronics-store-coupon'
@@ -47,7 +48,7 @@ export default function CartProvider({ children }) {
 
   useEffect(() => {
     let alive = true
-    fetch('/api/coupons')
+    fetch('/api/coupons', { headers: getTenantHeaders() })
       .then((res) =>
         res.ok ? res.json() : Promise.reject(new Error('No se pudieron leer los cupones')),
       )

@@ -2,10 +2,15 @@ import mongoose from 'mongoose'
 
 const couponSchema = new mongoose.Schema(
   {
+    adminId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+      index: true,
+    },
     code: {
       type: String,
       required: true,
-      unique: true,
       uppercase: true,
       trim: true,
     },
@@ -15,5 +20,7 @@ const couponSchema = new mongoose.Schema(
   },
   { timestamps: true },
 )
+
+couponSchema.index({ adminId: 1, code: 1 }, { unique: true })
 
 export const Coupon = mongoose.model('Coupon', couponSchema)

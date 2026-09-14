@@ -6,6 +6,7 @@ import { verifyOrderPayment } from '../lib/order-verify.js'
 import { trackOrder } from '../lib/order-tracker.js'
 import { getSettings } from '../lib/settings.js'
 import { env } from '../config/env.js'
+import { publicTenantId } from '../lib/tenant.js'
 
 const router = express.Router()
 
@@ -60,7 +61,8 @@ router.post('/orders/:id/refresh', async (req, res) => {
 
 router.post('/checkout', async (req, res) => {
   try {
-    const cart = await buildCart(req.body.items, req.body.coupon)
+    const tenant = await publicTenantId(req)
+    const cart = await buildCart(req.body.items, req.body.coupon, tenant)
     if (cart.lineItems.length === 0) {
       return res.status(400).json({ error: 'El carrito está vacío' })
     }
@@ -70,6 +72,7 @@ router.post('/checkout', async (req, res) => {
     const lastNameIdx = fullName.lastIndexOf(' ') + 1
 
     const order = await Order.create({
+      adminId: tenant,
       items: cart.lineItems.map((line) => ({
         productId: line.product.id,
         name: line.product.name,
@@ -117,15 +120,19 @@ router.post('/checkout', async (req, res) => {
       })
     }
 
+    const origin = req.headers.origin || env.clientUrl
+    const slug = String(req.headers['x-tenant-slug'] || '').trim().toLowerCase()
+    const storePath = slug ? `/u/${slug}` : ''
+
     const body = {
       items,
       external_reference: String(order._id),
       back_urls: {
-        success: env.clientUrl,
-        failure: env.clientUrl,
-        pending: env.clientUrl,
+        success: `${origin}${storePath}`,
+        failure: `${origin}${storePath}`,
+        pending: `${origin}${storePath}`,
       },
-      statement_descriptor: (await getSettings()).checkout?.statementDescriptor || 'TechStore',
+      statement_descriptor: (await getSettings({ tenant })).checkout?.statementDescriptor || 'TechStore',
     }
 
     if (env.clientUrl.startsWith('https://')) {

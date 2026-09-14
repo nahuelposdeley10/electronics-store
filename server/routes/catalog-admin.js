@@ -15,12 +15,24 @@ import {
   getValidCategoryKeys,
   slugify,
 } from '../lib/catalog-meta.js'
+import { requireTenantIdOf } from '../lib/tenant.js'
 
 const router = express.Router()
 
 router.use(requireAuth)
 
 const KEY_PATTERN = /^[a-z0-9_-]+$/
+
+function requireTenant(req, res, next) {
+  try {
+    requireTenantIdOf(req)
+    next()
+  } catch (error) {
+    return res.status(error.status || 400).json({ error: error.message })
+  }
+}
+
+router.use(requireTenant)
 
 function publicCategory(c, used = 0) {
   return { key: c.key, name: c.name, active: c.active, productCount: used }
@@ -30,8 +42,8 @@ function publicBrand(b, used = 0) {
   return { name: b.name, active: b.active, productCount: used }
 }
 
-async function productCountBy(field) {
-  const products = await Product.find().lean()
+async function productCountBy(field, scope) {
+  const products = await Product.find(scope).lean()
   const counts = new Map()
   for (const p of products) {
     const value = p[field]
@@ -44,11 +56,12 @@ async function productCountBy(field) {
 /* ---------------- Categorías ---------------- */
 
 router.get('/categories', requirePermission('catalog.manage'), async (req, res) => {
+  const tenant = requireTenantIdOf(req)
   try {
-    await ensureCatalogMeta()
+    await ensureCatalogMeta({ tenant })
     const [categories, used] = await Promise.all([
-      Category.find().sort({ name: 1 }).lean(),
-      productCountBy('category'),
+      Category.find({ adminId: tenant }).sort({ name: 1 }).lean(),
+      productCountBy('category', { adminId: tenant }),
     ])
     return res.json({
       items: categories.map((c) => publicCategory(c, used.get(c.key) || 0)),
@@ -60,6 +73,7 @@ router.get('/categories', requirePermission('catalog.manage'), async (req, res) 
 })
 
 router.post('/categories', requirePermission('catalog.manage'), async (req, res) => {
+  const tenant = requireTenantIdOf(req)
   const { name, key, active } = req.body || {}
   const cleanName = String(name || '').trim()
   if (!cleanName) {
@@ -71,14 +85,16 @@ router.post('/categories', requirePermission('catalog.manage'), async (req, res)
   }
 
   try {
-    await ensureCatalogMeta()
+    await ensureCatalogMeta({ tenant })
     const dup = await Category.findOne({
+      adminId: tenant,
       $or: [{ key: cleanKey }, { name: { $regex: `^${escapeRegex(cleanName)}$`, $options: 'i' } }],
     })
     if (dup) {
       return res.status(409).json({ error: 'Ya existe una categoría con ese nombre o clave' })
     }
     const category = await Category.create({
+      adminId: tenant,
       key: cleanKey,
       name: cleanName,
       active: active === false ? false : true,
@@ -91,8 +107,9 @@ router.post('/categories', requirePermission('catalog.manage'), async (req, res)
 })
 
 router.put('/categories/:key', requirePermission('catalog.manage'), async (req, res) => {
+  const tenant = requireTenantIdOf(req)
   const { name, key, active } = req.body || {}
-  const category = await Category.findOne({ key: req.params.key })
+  const category = await Category.findOne({ key: req.params.key, adminId: tenant })
   if (!category) {
     return res.status(404).json({ error: 'Categoría no encontrada' })
   }
@@ -108,6 +125,7 @@ router.put('/categories/:key', requirePermission('catalog.manage'), async (req, 
 
   try {
     const dup = await Category.findOne({
+      adminId: tenant,
       $or: [{ key: cleanKey }, { name: { $regex: `^${escapeRegex(cleanName)}$`, $options: 'i' } }],
     })
     if (dup && dup.key !== category.key) {
@@ -115,7 +133,7 @@ router.put('/categories/:key', requirePermission('catalog.manage'), async (req, 
     }
 
     if (cleanKey !== category.key) {
-      await Product.updateMany({ category: category.key }, { $set: { category: cleanKey } })
+      await Product.updateMany({ category: category.key, adminId: tenant }, { $set: { category: cleanKey } })
     }
     category.key = cleanKey
     category.name = cleanName
@@ -129,12 +147,13 @@ router.put('/categories/:key', requirePermission('catalog.manage'), async (req, 
 })
 
 router.delete('/categories/:key', requirePermission('catalog.manage'), async (req, res) => {
-  const category = await Category.findOne({ key: req.params.key })
+  const tenant = requireTenantIdOf(req)
+  const category = await Category.findOne({ key: req.params.key, adminId: tenant })
   if (!category) {
     return res.status(404).json({ error: 'Categoría no encontrada' })
   }
   try {
-    const used = await Product.countDocuments({ category: category.key })
+    const used = await Product.countDocuments({ category: category.key, adminId: tenant })
     if (used > 0) {
       return res.status(409).json({
         error: `No se puede eliminar: ${used} producto(s) la usan`,
@@ -151,11 +170,12 @@ router.delete('/categories/:key', requirePermission('catalog.manage'), async (re
 /* ---------------- Marcas ---------------- */
 
 router.get('/brands', requirePermission('catalog.manage'), async (req, res) => {
+  const tenant = requireTenantIdOf(req)
   try {
-    await ensureCatalogMeta()
+    await ensureCatalogMeta({ tenant })
     const [brands, used] = await Promise.all([
-      Brand.find().sort({ name: 1 }).lean(),
-      productCountBy('brand'),
+      Brand.find({ adminId: tenant }).sort({ name: 1 }).lean(),
+      productCountBy('brand', { adminId: tenant }),
     ])
     return res.json({
       items: brands.map((b) => publicBrand(b, used.get(b.name) || 0)),
@@ -167,6 +187,7 @@ router.get('/brands', requirePermission('catalog.manage'), async (req, res) => {
 })
 
 router.post('/brands', requirePermission('catalog.manage'), async (req, res) => {
+  const tenant = requireTenantIdOf(req)
   const { name, active } = req.body || {}
   const cleanName = String(name || '').trim()
   if (!cleanName) {
@@ -174,14 +195,15 @@ router.post('/brands', requirePermission('catalog.manage'), async (req, res) => 
   }
 
   try {
-    await ensureCatalogMeta()
+    await ensureCatalogMeta({ tenant })
     const dup = await Brand.findOne({
+      adminId: tenant,
       name: { $regex: `^${escapeRegex(cleanName)}$`, $options: 'i' },
     })
     if (dup) {
       return res.status(409).json({ error: 'Ya existe una marca con ese nombre' })
     }
-    const brand = await Brand.create({ name: cleanName, active: active === false ? false : true })
+    const brand = await Brand.create({ adminId: tenant, name: cleanName, active: active === false ? false : true })
     return res.status(201).json(publicBrand(brand))
   } catch (error) {
     console.error('Brands create error:', error)
@@ -190,8 +212,9 @@ router.post('/brands', requirePermission('catalog.manage'), async (req, res) => 
 })
 
 router.put('/brands/:name', requirePermission('catalog.manage'), async (req, res) => {
+  const tenant = requireTenantIdOf(req)
   const { name, active } = req.body || {}
-  const brand = await Brand.findOne({ name: req.params.name })
+  const brand = await Brand.findOne({ name: req.params.name, adminId: tenant })
   if (!brand) {
     return res.status(404).json({ error: 'Marca no encontrada' })
   }
@@ -203,6 +226,7 @@ router.put('/brands/:name', requirePermission('catalog.manage'), async (req, res
 
   try {
     const dup = await Brand.findOne({
+      adminId: tenant,
       name: { $regex: `^${escapeRegex(cleanName)}$`, $options: 'i' },
     })
     if (dup && dup.name !== brand.name) {
@@ -210,7 +234,7 @@ router.put('/brands/:name', requirePermission('catalog.manage'), async (req, res
     }
 
     if (cleanName !== brand.name) {
-      await Product.updateMany({ brand: brand.name }, { $set: { brand: cleanName } })
+      await Product.updateMany({ brand: brand.name, adminId: tenant }, { $set: { brand: cleanName } })
     }
     brand.name = cleanName
     if (active !== undefined) brand.active = active === true
@@ -223,12 +247,13 @@ router.put('/brands/:name', requirePermission('catalog.manage'), async (req, res
 })
 
 router.delete('/brands/:name', requirePermission('catalog.manage'), async (req, res) => {
-  const brand = await Brand.findOne({ name: req.params.name })
+  const tenant = requireTenantIdOf(req)
+  const brand = await Brand.findOne({ name: req.params.name, adminId: tenant })
   if (!brand) {
     return res.status(404).json({ error: 'Marca no encontrada' })
   }
   try {
-    const used = await Product.countDocuments({ brand: brand.name })
+    const used = await Product.countDocuments({ brand: brand.name, adminId: tenant })
     if (used > 0) {
       return res.status(409).json({
         error: `No se puede eliminar: ${used} producto(s) la usan`,
@@ -245,14 +270,16 @@ router.delete('/brands/:name', requirePermission('catalog.manage'), async (req, 
 /* ---------------- Variantes ---------------- */
 
 router.get('/variants', requirePermission('catalog.manage'), async (req, res) => {
+  const tenant = requireTenantIdOf(req)
   try {
     const { page, limit } = parsePagination(req.query)
     const q = String(req.query.q || '').trim()
 
-    let filter = {}
+    let filter = { adminId: tenant }
     if (q) {
       const regex = new RegExp(escapeRegex(q), 'i')
       const ids = await Product.find({
+        adminId: tenant,
         $or: [{ name: regex }, { brand: regex }],
       })
         .select('id')
@@ -272,7 +299,7 @@ router.get('/variants', requirePermission('catalog.manage'), async (req, res) =>
         .lean(),
     ])
 
-    const products = await Product.find().lean()
+    const products = await Product.find({ adminId: tenant }).lean()
     const productMap = new Map(products.map((p) => [p.id, p]))
 
     return res.json({
@@ -301,6 +328,7 @@ router.get('/variants', requirePermission('catalog.manage'), async (req, res) =>
 })
 
 router.post('/variants', requirePermission('catalog.manage'), async (req, res) => {
+  const tenant = requireTenantIdOf(req)
   const { product, name, sku, price, stock } = req.body || {}
   const productId = Number(product)
   const variantName = String(name || '').trim()
@@ -309,11 +337,12 @@ router.post('/variants', requirePermission('catalog.manage'), async (req, res) =
   }
 
   try {
-    const exists = await Product.findOne({ id: productId }).lean()
+    const exists = await Product.findOne({ id: productId, adminId: tenant }).lean()
     if (!exists) {
       return res.status(400).json({ error: 'Producto no encontrado' })
     }
     const variant = await Variant.create({
+      adminId: tenant,
       product: productId,
       name: variantName,
       sku: sku !== undefined && sku !== '' ? String(sku).trim() : '',
@@ -337,8 +366,9 @@ router.post('/variants', requirePermission('catalog.manage'), async (req, res) =
 })
 
 router.put('/variants/:id', requirePermission('catalog.manage'), async (req, res) => {
+  const tenant = requireTenantIdOf(req)
   const { product, name, sku, price, stock } = req.body || {}
-  const variant = await Variant.findById(req.params.id)
+  const variant = await Variant.findOne({ _id: req.params.id, adminId: tenant })
   if (!variant) {
     return res.status(404).json({ error: 'Variante no encontrada' })
   }
@@ -351,7 +381,7 @@ router.put('/variants/:id', requirePermission('catalog.manage'), async (req, res
 
   try {
     if (productId !== variant.product) {
-      const exists = await Product.findOne({ id: productId }).lean()
+      const exists = await Product.findOne({ id: productId, adminId: tenant }).lean()
       if (!exists) {
         return res.status(400).json({ error: 'Producto no encontrado' })
       }
@@ -363,7 +393,7 @@ router.put('/variants/:id', requirePermission('catalog.manage'), async (req, res
     if (stock !== undefined && stock !== '') variant.stock = Number(stock)
     await variant.save()
 
-    const products = await Product.find().lean()
+    const products = await Product.find({ adminId: tenant }).lean()
     const productMap = new Map(products.map((p) => [p.id, p]))
     const productData = productMap.get(variant.product)
     return res.json({
@@ -383,7 +413,8 @@ router.put('/variants/:id', requirePermission('catalog.manage'), async (req, res
 })
 
 router.delete('/variants/:id', requirePermission('catalog.manage'), async (req, res) => {
-  const variant = await Variant.findById(req.params.id)
+  const tenant = requireTenantIdOf(req)
+  const variant = await Variant.findOne({ _id: req.params.id, adminId: tenant })
   if (!variant) {
     return res.status(404).json({ error: 'Variante no encontrada' })
   }
@@ -399,9 +430,10 @@ router.delete('/variants/:id', requirePermission('catalog.manage'), async (req, 
 /* ---------------- Precios ---------------- */
 
 router.get('/prices', requirePermission('catalog.manage'), async (req, res) => {
+  const tenant = requireTenantIdOf(req)
   try {
     const { page, limit } = parsePagination(req.query)
-    const filter = buildProductSearchFilter(req.query.q)
+    const filter = { ...buildProductSearchFilter(req.query.q), adminId: tenant }
     const [total, products] = await Promise.all([
       Product.countDocuments(filter),
       Product.find(filter)
@@ -433,8 +465,9 @@ router.get('/prices', requirePermission('catalog.manage'), async (req, res) => {
 })
 
 router.post('/prices', requirePermission('catalog.manage'), async (req, res) => {
+  const tenant = requireTenantIdOf(req)
   const { productId, price, oldPrice } = req.body || {}
-  const product = await Product.findOne({ id: Number(productId) })
+  const product = await Product.findOne({ id: Number(productId), adminId: tenant })
   if (!product) {
     return res.status(404).json({ error: 'Producto no encontrado' })
   }
@@ -456,6 +489,7 @@ router.post('/prices', requirePermission('catalog.manage'), async (req, res) => 
 })
 
 router.post('/prices/bulk', requirePermission('catalog.manage'), async (req, res) => {
+  const tenant = requireTenantIdOf(req)
   const { mode, value, category } = req.body || {}
   const modeValue = String(mode || 'percent')
   const number = Number(value)
@@ -465,7 +499,8 @@ router.post('/prices/bulk', requirePermission('catalog.manage'), async (req, res
   }
 
   try {
-    const filter = category && category !== 'todas' && category !== 'all' ? { category } : {}
+    const filter = { adminId: tenant }
+    if (category && category !== 'todas' && category !== 'all') filter.category = category
     const products = await Product.find(filter)
 
     const apply = (price) => {
@@ -500,9 +535,10 @@ router.post('/prices/bulk', requirePermission('catalog.manage'), async (req, res
 /* ---------------- Ofertas ---------------- */
 
 router.get('/offers', requirePermission('offers.manage'), async (req, res) => {
+  const tenant = requireTenantIdOf(req)
   try {
     const { page, limit } = parsePagination(req.query)
-    const filter = buildProductSearchFilter(req.query.q)
+    const filter = { ...buildProductSearchFilter(req.query.q), adminId: tenant }
 
     const categories = parseMulti(req.query.category)
     if (categories) filter.category = { $in: categories }
@@ -543,8 +579,9 @@ router.get('/offers', requirePermission('offers.manage'), async (req, res) => {
 })
 
 router.post('/offers', requirePermission('offers.manage'), async (req, res) => {
+  const tenant = requireTenantIdOf(req)
   const { productId, oldPrice, price } = req.body || {}
-  const product = await Product.findOne({ id: Number(productId) })
+  const product = await Product.findOne({ id: Number(productId), adminId: tenant })
   if (!product) {
     return res.status(404).json({ error: 'Producto no encontrado' })
   }
@@ -589,7 +626,8 @@ router.post('/offers', requirePermission('offers.manage'), async (req, res) => {
 })
 
 router.delete('/offers/:id', requirePermission('offers.manage'), async (req, res) => {
-  const product = await Product.findOne({ id: Number(req.params.id) })
+  const tenant = requireTenantIdOf(req)
+  const product = await Product.findOne({ id: Number(req.params.id), adminId: tenant })
   if (!product) {
     return res.status(404).json({ error: 'Producto no encontrado' })
   }
@@ -607,6 +645,7 @@ router.delete('/offers/:id', requirePermission('offers.manage'), async (req, res
 /* ---------------- Importar productos ---------------- */
 
 router.post('/import/products', requirePermission('catalog.manage'), async (req, res) => {
+  const tenant = requireTenantIdOf(req)
   const rows = Array.isArray(req.body?.products)
     ? req.body.products
     : Array.isArray(req.body)
@@ -621,7 +660,7 @@ router.post('/import/products', requirePermission('catalog.manage'), async (req,
   }
 
   try {
-    const validKeys = await getValidCategoryKeys()
+    const validKeys = await getValidCategoryKeys({ tenant })
     const seen = new Set()
     const errors = []
     const valid = []
@@ -680,8 +719,8 @@ router.post('/import/products', requirePermission('catalog.manage'), async (req,
 
     let created = 0
     for (const data of valid) {
-      const last = await Product.findOne().sort({ id: -1 }).lean()
-      await Product.create({ id: (last?.id || 0) + 1, ...data })
+      const last = await Product.findOne({ adminId: tenant }).sort({ id: -1 }).lean()
+      await Product.create({ adminId: tenant, id: (last?.id || 0) + 1, ...data })
       created++
     }
 

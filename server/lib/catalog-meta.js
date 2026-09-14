@@ -21,24 +21,32 @@ export function slugify(text) {
     .replace(/^-+|-+$/g, '')
 }
 
-export async function getValidCategoryKeys() {
-  const count = await Category.countDocuments()
+function tenantFilter(tenant) {
+  return tenant ? { adminId: tenant } : { adminId: null }
+}
+
+export async function getValidCategoryKeys({ tenant } = {}) {
+  const filter = tenantFilter(tenant)
+  const count = await Category.countDocuments(filter)
   if (count === 0) {
     return new Set(LEGACY_CATEGORIES.map((c) => c.key))
   }
-  const docs = await Category.find({}).lean()
+  const docs = await Category.find(filter).lean()
   return new Set(docs.map((d) => d.key))
 }
 
-export async function ensureCatalogMeta() {
-  const categoryCount = await Category.countDocuments()
+export async function ensureCatalogMeta({ tenant } = {}) {
+  const filter = tenantFilter(tenant)
+  const categoryCount = await Category.countDocuments(filter)
   if (categoryCount === 0) {
-    await Category.insertMany(LEGACY_CATEGORIES)
+    await Category.insertMany(
+      LEGACY_CATEGORIES.map((c) => ({ ...filter, ...c })),
+    )
   }
 
-  const brandCount = await Brand.countDocuments()
+  const brandCount = await Brand.countDocuments(filter)
   if (brandCount === 0) {
-    const names = await Product.distinct('brand')
+    const names = await Product.distinct('brand', filter)
     const seen = new Set()
     const brandDocs = []
     for (const name of names) {
@@ -46,7 +54,7 @@ export async function ensureCatalogMeta() {
       const norm = clean.toLowerCase()
       if (clean && !seen.has(norm)) {
         seen.add(norm)
-        brandDocs.push({ name: clean })
+        brandDocs.push({ ...filter, name: clean })
       }
     }
     if (brandDocs.length) await Brand.insertMany(brandDocs)

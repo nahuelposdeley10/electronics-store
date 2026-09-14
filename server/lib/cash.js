@@ -32,19 +32,22 @@ export async function cashNet(shiftId) {
   }
 }
 
-export async function currentShift() {
-  return CashShift.findOne({ status: 'open' }).lean()
+export async function currentShift(tenant = null) {
+  const filter = tenant ? { status: 'open', adminId: tenant } : { status: 'open', adminId: null }
+  return CashShift.findOne(filter).lean()
 }
 
-export async function openShift({ openingBalance = 0, note = '', openedBy = null }) {
-  const existing = await currentShift()
+export async function openShift({ openingBalance = 0, note = '', openedBy = null, tenant = null }) {
+  const existing = await currentShift(tenant)
   if (existing) {
     const error = new Error('Ya hay una caja abierta')
     error.status = 400
     throw error
   }
-  const number = (await CashShift.countDocuments({})) + 1
+  const filter = tenant ? { adminId: tenant } : { adminId: null }
+  const number = (await CashShift.countDocuments(filter)) + 1
   const shift = await CashShift.create({
+    adminId: tenant,
     number,
     status: 'open',
     openingBalance: Math.max(0, Number(openingBalance) || 0),
@@ -54,8 +57,9 @@ export async function openShift({ openingBalance = 0, note = '', openedBy = null
   return shift
 }
 
-export async function closeShift({ countedBalance, note = '', closedBy = null }) {
-  const shift = await CashShift.findOne({ status: 'open' })
+export async function closeShift({ countedBalance, note = '', closedBy = null, tenant = null }) {
+  const filter = tenant ? { status: 'open', adminId: tenant } : { status: 'open', adminId: null }
+  const shift = await CashShift.findOne(filter)
   if (!shift) {
     const error = new Error('No hay ninguna caja abierta')
     error.status = 400
@@ -83,6 +87,7 @@ export async function addMovement({ shiftId, kind = 'ingreso', flow = 'in', amou
     throw error
   }
   return CashMovement.create({
+    adminId: shift.adminId || null,
     shiftId,
     kind,
     flow,
@@ -93,8 +98,8 @@ export async function addMovement({ shiftId, kind = 'ingreso', flow = 'in', amou
   })
 }
 
-export async function createArqueo({ countedAmount, note = '', by = null }) {
-  const shift = await currentShift()
+export async function createArqueo({ countedAmount, note = '', by = null, tenant = null }) {
+  const shift = await currentShift(tenant)
   if (!shift) {
     const error = new Error('No hay ninguna caja abierta')
     error.status = 400
@@ -105,6 +110,7 @@ export async function createArqueo({ countedAmount, note = '', by = null }) {
   const counted = Math.max(0, Number(countedAmount) || 0)
   const diff = Math.round((counted - expected) * 100) / 100
   const count = await CashCount.create({
+    adminId: shift.adminId || null,
     shiftId: shift._id,
     expectedAmount: expected,
     countedAmount: counted,

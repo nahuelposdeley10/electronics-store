@@ -13,14 +13,6 @@ import {
   IconPickup,
 } from './Icons'
 
-const fallbackAnnouncements = [
-  'Envíos a todo el país',
-  'Hasta 12 cuotas sin interés',
-  'Garantía oficial',
-  'Servicio técnico propio',
-  'Retiro en Villa Urquiza, CABA',
-]
-
 export default function Header({ onNavigate, view, onSearch }) {
   const { totalItems } = useCart()
   const [query, setQuery] = useState('')
@@ -33,10 +25,10 @@ export default function Header({ onNavigate, view, onSearch }) {
     return undefined
   }, [settings.store.logoUrl])
 
-  const announcementItems =
+  const marqueeItems =
     Array.isArray(settings.general.marquee) && settings.general.marquee.length
       ? settings.general.marquee
-      : fallbackAnnouncements
+      : null
 
   const steps =
     Array.isArray(settings.general.installments) && settings.general.installments.length
@@ -63,17 +55,19 @@ export default function Header({ onNavigate, view, onSearch }) {
 
   return (
     <>
-      <div className="marquee" role="marquee">
-        <div className="marquee-track">
-          {[...announcementItems, ...announcementItems, ...announcementItems, ...announcementItems].map(
-            (item, i) => (
-              <span key={i} className="marquee-item">
-                <IconBolt className="marquee-bolt" />
-              {item}
-            </span>
-          ))}
+      {marqueeItems && (
+        <div className="marquee" role="marquee">
+          <div className="marquee-track">
+            {[...marqueeItems, ...marqueeItems, ...marqueeItems, ...marqueeItems].map(
+              (item, i) => (
+                <span key={i} className="marquee-item">
+                  <IconBolt className="marquee-bolt" />
+                {item}
+              </span>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       <header className="store-header">
         <div className="fascia">

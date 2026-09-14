@@ -2,6 +2,12 @@ import mongoose from 'mongoose'
 
 const movementSchema = new mongoose.Schema(
   {
+    adminId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+      index: true,
+    },
     shiftId: { type: mongoose.Schema.Types.ObjectId, ref: 'CashShift', index: true },
     kind: { type: String, enum: ['venta', 'ingreso', 'egreso', 'devolucion'], default: 'ingreso' },
     flow: { type: String, enum: ['in', 'out'], required: true },

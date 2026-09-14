@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken'
 import { requireAuth } from '../middleware/auth.js'
 import { User } from '../models/User.js'
 import { env } from '../config/env.js'
-import { permissionsForRole } from '../lib/settings.js'
+import { permissionsForUser } from '../lib/settings.js'
 
 const router = express.Router()
 
@@ -16,8 +16,11 @@ router.post('/login', async (req, res) => {
 
   try {
     const user = await User.findOne({ email: String(email).trim().toLowerCase() })
-    if (!user || !user.active) {
+    if (!user) {
       return res.status(401).json({ error: 'Credenciales incorrectas' })
+    }
+    if (!user.active) {
+      return res.status(401).json({ error: 'Tu cuenta está desactivada; contactá al administrador' })
     }
 
     const matches = await bcrypt.compare(password, user.passwordHash)
@@ -26,7 +29,12 @@ router.post('/login', async (req, res) => {
     }
 
     const token = jwt.sign(
-      { sub: user._id.toString(), email: user.email, role: user.role },
+      {
+        sub: user._id.toString(),
+        email: user.email,
+        role: user.role,
+        adminId: user.adminId ? user.adminId.toString() : null,
+      },
       env.jwtSecret,
       { expiresIn: '12h' },
     )
@@ -38,6 +46,8 @@ router.post('/login', async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        adminId: user.adminId ? user.adminId.toString() : null,
+        businessSlug: user.businessSlug || null,
       },
     })
   } catch (error) {
@@ -49,13 +59,15 @@ router.post('/login', async (req, res) => {
 router.get('/me', requireAuth, async (req, res) => {
   try {
     const user = await User.findById(req.user.sub).lean()
-    const perms = await permissionsForRole(req.user.role)
+    const perms = await permissionsForUser(user, req.user.adminId || user?.adminId)
     return res.json({
       user: {
         id: user ? user._id : req.user.sub,
         name: user ? user.name : req.user.email,
         email: req.user.email,
-        role: req.user.role,
+        role: req.user.role || user?.role,
+        adminId: req.user.adminId || (user?.adminId ? user.adminId.toString() : null),
+        businessSlug: user?.businessSlug || null,
       },
       perms,
     })

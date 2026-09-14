@@ -2,8 +2,8 @@ import { Product } from '../models/Product.js'
 import { Coupon } from '../models/Coupon.js'
 import { getSettings } from '../lib/settings.js'
 
-export async function buildCart(items, coupon) {
-  const { shipping } = await getSettings()
+export async function buildCart(items, coupon, tenant = null) {
+  const { shipping } = await getSettings({ tenant })
   const shippingCostSetting = Number(shipping?.cost)
   const shippingFreeThreshold = Number(shipping?.freeThreshold)
   const shippingLabel = String(shipping?.label || 'Envío a domicilio')
@@ -18,7 +18,8 @@ export async function buildCart(items, coupon) {
     .filter((row) => Number.isFinite(row.id) && row.quantity > 0)
 
   const ids = [...new Set(rows.map((row) => row.id))]
-  const dbProducts = await Product.find({ id: { $in: ids } }).lean()
+  const productFilter = tenant ? { id: { $in: ids }, adminId: tenant } : { id: { $in: ids }, adminId: null }
+  const dbProducts = await Product.find(productFilter).lean()
   const byId = new Map(dbProducts.map((p) => [p.id, p]))
 
   const lineItems = rows
@@ -40,10 +41,10 @@ export async function buildCart(items, coupon) {
   let discountRate = 0
   let couponCode = null
   if (coupon) {
-    const doc = await Coupon.findOne({
-      code: String(coupon).toUpperCase(),
-      active: true,
-    }).lean()
+    const couponFilter = tenant
+      ? { code: String(coupon).toUpperCase(), active: true, adminId: tenant }
+      : { code: String(coupon).toUpperCase(), active: true, adminId: null }
+    const doc = await Coupon.findOne(couponFilter).lean()
     if (doc) {
       discountRate = doc.percent
       couponCode = doc.code

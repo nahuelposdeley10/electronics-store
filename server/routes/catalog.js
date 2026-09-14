@@ -10,6 +10,7 @@ import {
   parseMulti,
   buildCatalogSort,
 } from '../lib/catalog-query.js'
+import { publicTenantId } from '../lib/tenant.js'
 
 const router = express.Router()
 
@@ -34,8 +35,9 @@ function toPublicProduct(p) {
 
 router.get('/products', async (req, res) => {
   try {
+    const tenant = await publicTenantId(req)
     const { page, limit } = parsePagination(req.query)
-    const filter = buildProductSearchFilter(req.query.q)
+    const filter = { ...buildProductSearchFilter(req.query.q), adminId: tenant }
 
     const categories = parseMulti(req.query.category)
     if (categories) filter.category = { $in: categories }
@@ -69,7 +71,8 @@ router.get('/products', async (req, res) => {
 
 router.get('/coupons', async (req, res) => {
   try {
-    const coupons = await Coupon.find({ active: true }).sort({ createdAt: -1 }).lean()
+    const tenant = await publicTenantId(req)
+    const coupons = await Coupon.find({ active: true, adminId: tenant }).sort({ createdAt: -1 }).lean()
     return res.json({
       items: coupons.map((c) => ({
         code: c.code,
@@ -85,8 +88,9 @@ router.get('/coupons', async (req, res) => {
 
 router.get('/categories', async (req, res) => {
   try {
-    await ensureCatalogMeta()
-    const categories = await Category.find({ active: true }).sort({ key: 1 }).lean()
+    const tenant = await publicTenantId(req)
+    if (tenant) await ensureCatalogMeta({ tenant })
+    const categories = await Category.find({ active: true, adminId: tenant }).sort({ key: 1 }).lean()
     return res.json({
       categories: categories.map((c) => ({ key: c.key, name: c.name })),
     })
@@ -98,8 +102,9 @@ router.get('/categories', async (req, res) => {
 
 router.get('/brands', async (req, res) => {
   try {
-    await ensureCatalogMeta()
-    const brands = await Brand.find({ active: true }).sort({ name: 1 }).lean()
+    const tenant = await publicTenantId(req)
+    if (tenant) await ensureCatalogMeta({ tenant })
+    const brands = await Brand.find({ active: true, adminId: tenant }).sort({ name: 1 }).lean()
     return res.json({ brands: brands.map((b) => b.name) })
   } catch (error) {
     console.error('Brands error:', error)

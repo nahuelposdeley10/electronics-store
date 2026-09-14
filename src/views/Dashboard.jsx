@@ -17,6 +17,7 @@ import { formatARS } from '../data/format'
 import SearchSelect from '../components/SearchSelect'
 import { apiConfirmOrder, apiDelete, apiGet, apiPost, apiPut, apiUpdate, apiUpload, clearSession, getSession, login as apiLogin } from '../lib/api'
 import { useOrderEvents } from '../lib/useOrderEvents'
+import { clearSuperTenant, getSuperTenant, setSuperTenant } from '../lib/tenant'
 import {
   IconBack,
   IconBolt,
@@ -65,12 +66,15 @@ const CATEGORY_LABELS = {
 const PENDING_GROUP = new Set(['pending', 'in_process'])
 
 function shortDate(value) {
+  if (!value) return '—'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return '—'
   return new Intl.DateTimeFormat('es-AR', {
     day: '2-digit',
     month: 'short',
     hour: '2-digit',
     minute: '2-digit',
-  }).format(new Date(value))
+  }).format(date)
 }
 
 function shortId(id) {
@@ -110,7 +114,7 @@ export default function Dashboard({ onExit }) {
   const [screen, setScreen] = useState(
     () => sessionStorage.getItem('ts-admin-screen') || 'overview',
   )
-  const [gate, setGate] = useState('loading')
+  const [gate, setGate] = useState(() => (getSession().token ? 'loading' : 'login'))
   const [gateError, setGateError] = useState('')
   const [loginAttempts, setLoginAttempts] = useState(0)
   const [overview, setOverview] = useState(null)
@@ -132,6 +136,25 @@ export default function Dashboard({ onExit }) {
       : []
   })
   const [attempt, setAttempt] = useState(0)
+  const [superTenant, setSuperTenantState] = useState(() => getSuperTenant())
+  const [copiedStoreUrl, setCopiedStoreUrl] = useState(false)
+  const userIsSuper = user?.role === 'superadmin'
+  const needsBusiness = userIsSuper && !superTenant
+
+  const storeUrl = () =>
+    user?.businessSlug ? `${window.location.origin}/u/${user.businessSlug}` : ''
+
+  const copyStoreUrl = () => {
+    const url = storeUrl()
+    if (!url) return
+    navigator.clipboard
+      ?.writeText(url)
+      .then(() => {
+        setCopiedStoreUrl(true)
+        setTimeout(() => setCopiedStoreUrl(false), 1600)
+      })
+      .catch(() => {})
+  }
 
   useEffect(() => {
     let alive = true
@@ -150,6 +173,7 @@ export default function Dashboard({ onExit }) {
 
   useEffect(() => {
     let alive = true
+    if (!getSession().token || needsBusiness) return undefined
     apiGet('/api/admin/overview')
       .then((data) => {
         if (!alive) return
@@ -168,7 +192,7 @@ export default function Dashboard({ onExit }) {
     return () => {
       alive = false
     }
-  }, [attempt])
+  }, [attempt, needsBusiness])
 
   const changeScreen = (id) => {
     setScreen(id)
@@ -207,7 +231,9 @@ export default function Dashboard({ onExit }) {
 
   const handleLogout = () => {
     clearSession()
+    clearSuperTenant()
     sessionStorage.removeItem('ts-admin-screen')
+    setSuperTenantState(null)
     setUser(null)
     setPerms([])
     setOverview(null)
@@ -218,10 +244,26 @@ export default function Dashboard({ onExit }) {
     () => {
       setAttempt((n) => n + 1)
     },
-    gate === 'ready' && screen === 'overview',
+    gate === 'ready' && !needsBusiness && screen === 'overview',
   )
 
   const NAV = [
+    ...(userIsSuper
+      ? [
+          {
+            id: 'businesses',
+            label: 'Negocios',
+            icon: IconReport,
+            prefix: 'business-',
+            children: [
+              {
+                id: 'businesses',
+                label: superTenant ? 'Cambiar de negocio' : 'Elegir negocio',
+              },
+            ],
+          },
+        ]
+      : []),
     { id: 'overview', label: 'Panel', icon: IconChart },
     {
       id: 'products',
@@ -390,6 +432,35 @@ export default function Dashboard({ onExit }) {
           </div>
         )}
 
+        {user?.role === 'admin' && (
+          <div className="dash-side-store">
+            <span className="dash-side-store-label">URL de tu tienda</span>
+            {user.businessSlug ? (
+              <>
+                <a
+                  className="dash-side-store-url mono"
+                  href={storeUrl()}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  /u/{user.businessSlug}
+                </a>
+                <button
+                  type="button"
+                  className="dash-side-store-copy"
+                  onClick={copyStoreUrl}
+                >
+                  {copiedStoreUrl ? '¡Copiada!' : 'Copiar URL'}
+                </button>
+              </>
+            ) : (
+              <span className="dash-side-store-empty">
+                Sin URL configurada. Pedile al súper admin que la cargue.
+              </span>
+            )}
+          </div>
+        )}
+
         <div className="dash-side-foot">
           <button type="button" className="dash-exit" onClick={onExit}>
             <IconBack />
@@ -405,7 +476,18 @@ export default function Dashboard({ onExit }) {
       </aside>
 
       <main className="dash-main">
-        {gate === 'loading' && <ScreenLoading />}
+        {userIsSuper && (needsBusiness || screen === 'businesses') && (
+          <BusinessesScreen
+            current={superTenant}
+            onPick={(id) => {
+              setSuperTenant(id)
+              setSuperTenantState(id)
+              setAttempt((n) => n + 1)
+              changeScreen('overview')
+            }}
+          />
+        )}
+        {gate === 'loading' && !needsBusiness && <ScreenLoading />}
 
         {gate === 'login' && (
           <LoginPanel attempts={loginAttempts} onLogin={handleLogin} />
@@ -431,7 +513,7 @@ export default function Dashboard({ onExit }) {
           </div>
         )}
 
-        {gate === 'ready' && overview && screen === 'overview' && (
+        {gate === 'ready' && !needsBusiness && overview && screen === 'overview' && (
           <OverviewScreen data={overview} onView={changeScreen} />
         )}
         {gate === 'ready' && screen === 'products' && (
@@ -465,7 +547,7 @@ export default function Dashboard({ onExit }) {
           <OffersScreen canManage={can('offers.manage')} />
         )}
         {gate === 'ready' && screen === 'sales-pos' && (
-          <PosScreen canManage={user?.role === 'superadmin'} />
+          <PosScreen canManage={can('pos.manage')} />
         )}
         {gate === 'ready' && screen === 'sales-history' && <SalesScreen />}
         {gate === 'ready' && screen === 'sales-returns' && (
@@ -6454,6 +6536,7 @@ const PERM_CODES = [
   'sales.return',
   'quotes.delete',
   'cash.manage',
+  'pos.manage',
 ]
 
 const PERM_LABELS = {
@@ -6466,6 +6549,7 @@ const PERM_LABELS = {
   'sales.return': 'Devoluciones y reembolsos',
   'quotes.delete': 'Eliminar presupuestos',
   'cash.manage': 'Caja (apertura, movimientos y arqueos)',
+  'pos.manage': 'Nueva venta / POS',
 }
 
 function ToggleRow({ label, hint, checked, onChange, disabled = false }) {
@@ -6556,6 +6640,85 @@ function SetImageField({ label, hint, value, uploading, onFile, onRemove, wide }
   )
 }
 
+function BusinessesScreen({ current, onPick }) {
+  const [items, setItems] = useState(null)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    let alive = true
+    apiGet('/api/admin/users/businesses')
+      .then((data) => {
+        if (alive) setItems(data && data.items ? data.items : [])
+      })
+      .catch((err) => {
+        if (alive) setError(err.message)
+      })
+    return () => {
+      alive = false
+    }
+  }, [])
+
+  if (!items && !error) return <ScreenLoading label="Leyendo negocios…" />
+  if (error) return <ScreenBlocked message={error} />
+
+  return (
+    <div className="dash-screen">
+      <header className="dash-head">
+        <div>
+          <span className="dash-eyebrow">Super admin</span>
+          <h1>Elegí el negocio</h1>
+        </div>
+      </header>
+
+      <div className="dash-toolbar">
+        <p className="list-note">
+          Como super admin ves todos los negocios. Elegí uno para operar su panel:
+          ventas, inventario, caja, reportes y configuración.
+        </p>
+      </div>
+
+      {items.length === 0 && (
+        <EmptyNote text="Todavía no hay negocios. Creá un admin de negocio en Usuarios." />
+      )}
+
+      <div className="biz-grid">
+        {items.map((b) => {
+          const selected = current && String(current) === String(b.id)
+          return (
+            <button
+              key={b.id}
+              type="button"
+              className={`biz-card${selected ? ' biz-card-active' : ''}`}
+              onClick={() => onPick(b.id)}
+            >
+              <span className="user-avatar mono" aria-hidden="true">
+                {initials(b.storeName)}
+              </span>
+              <span className="biz-card-meta">
+                <strong>{b.storeName}</strong>
+                <em>{b.name} · {b.email}</em>
+                {b.businessSlug && <code className="mono">/u/{b.businessSlug}</code>}
+              </span>
+              <span className="biz-card-stats">
+                <span>{b.productCount} productos</span>
+                <span>{b.orderCount} ventas</span>
+                <span>{formatARS(b.revenue)}</span>
+                <span>{b.operatorCount} operadores</span>
+              </span>
+              {selected && (
+                <span className="status-tag">
+                  <IconCheck />
+                  Seleccionado
+                </span>
+              )}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 function UsersScreen() {
   const [users, setUsers] = useState(null)
   const [error, setError] = useState('')
@@ -6566,6 +6729,9 @@ function UsersScreen() {
   const [saving, setSaving] = useState(false)
   const [generatedPassword, setGeneratedPassword] = useState('')
   const [refresh, setRefresh] = useState(0)
+  const [sessionUser] = useState(() => getSession().user)
+  const [businesses, setBusinesses] = useState(null)
+  const isSuper = sessionUser?.role === 'superadmin'
 
   useEffect(() => {
     let alive = true
@@ -6581,17 +6747,39 @@ function UsersScreen() {
     }
   }, [refresh])
 
+  useEffect(() => {
+    if (!isSuper) return undefined
+    let alive = true
+    apiGet('/api/admin/users/businesses')
+      .then((data) => {
+        if (alive) setBusinesses(data && data.items ? data.items : [])
+      })
+      .catch(() => {
+        if (alive) setBusinesses([])
+      })
+    return () => {
+      alive = false
+    }
+  }, [isSuper])
+
   const openNew = () => {
     setEditing(null)
     setGeneratedPassword('')
-    setForm({ name: '', email: '', role: 'admin' })
+    setForm({ name: '', email: '', role: 'admin', adminId: '', password: '', businessSlug: '' })
     setFormOpen(true)
   }
 
   const openEdit = (u) => {
     setEditing(u.id)
     setGeneratedPassword('')
-    setForm({ name: u.name, role: u.role, password: '' })
+    setForm({
+      name: u.name,
+      email: u.email,
+      role: u.role,
+      password: '',
+      adminId: u.adminId || '',
+      businessSlug: u.businessSlug || '',
+    })
     setFormOpen(true)
   }
 
@@ -6605,17 +6793,23 @@ function UsersScreen() {
     setGeneratedPassword('')
     try {
       if (editing) {
-        const payload = { name: form.name, role: form.role }
+        const payload = { name: form.name, email: form.email, role: form.role }
         if (form.password) payload.password = form.password
+        if (form.role === 'operator' && form.adminId) payload.adminId = form.adminId
+        if (form.role === 'admin') payload.businessSlug = String(form.businessSlug || '').trim()
         await apiPut(`/api/admin/users/${editing}`, payload)
         setNote('Usuario actualizado.')
       } else {
-        const created = await apiPost('/api/admin/users', {
+        const payload = {
           name: form.name,
           email: form.email,
           role: form.role,
-        })
-        setGeneratedPassword(created.password)
+        }
+        if (form.password) payload.password = form.password
+        if (form.role === 'operator' && form.adminId) payload.adminId = form.adminId
+        if (form.role === 'admin') payload.businessSlug = String(form.businessSlug || '').trim()
+        const created = await apiPost('/api/admin/users', payload)
+        setGeneratedPassword(created.password || '')
         setNote(`Usuario ${created.email} creado.`)
       }
       setFormOpen(false)
@@ -6632,6 +6826,18 @@ function UsersScreen() {
     try {
       await apiPut(`/api/admin/users/${u.id}`, { active: !u.active })
       setNote(u.active ? 'Usuario desactivado.' : 'Usuario activado.')
+      setRefresh((n) => n + 1)
+    } catch (err) {
+      setNote(err.message)
+    }
+  }
+
+  const deleteUser = async (u) => {
+    if (!window.confirm(`¿Eliminar a ${u.name} (${u.email})? Esta acción no se puede deshacer.`)) return
+    setNote('')
+    try {
+      await apiDelete(`/api/admin/users/${u.id}`)
+      setNote('Usuario eliminado.')
       setRefresh((n) => n + 1)
     } catch (err) {
       setNote(err.message)
@@ -6658,7 +6864,7 @@ function UsersScreen() {
 
       <div className="dash-toolbar">
         <p className="list-note">
-          Quienes entran al panel deben activar acceso. Las contraseñas son generadas y no se guardan en texto plano.
+          Podés definir la contraseña del usuario o dejarla en blanco para generarla. Nunca se guarda en texto plano.
         </p>
         <button type="button" className="primary-btn dash-add" onClick={openNew}>
           <IconPlus />
@@ -6701,16 +6907,60 @@ function UsersScreen() {
                 value={form.email || ''}
                 onChange={set('email')}
                 required
-                disabled={!!editing}
               />
             </label>
-            <label className="inv-field">
-              <span>Rol</span>
-              <select value={form.role} onChange={set('role')}>
-                <option value="admin">admin</option>
-                <option value="superadmin">superadmin</option>
-              </select>
-            </label>
+            {isSuper && (
+              <label className="inv-field">
+                <span>Rol</span>
+                <select value={form.role} onChange={set('role')}>
+                  <option value="admin">admin</option>
+                  <option value="operator">operator</option>
+                  <option value="superadmin">superadmin</option>
+                </select>
+              </label>
+            )}
+            {isSuper && form.role === 'operator' && (
+              <label className="inv-field">
+                <span>Negocio</span>
+                <select value={form.adminId} onChange={set('adminId')} required>
+                  <option value="">Elegí el negocio…</option>
+                  {(businesses || []).map((b) => (
+                    <option key={b.id} value={b.id}>
+                      {b.storeName} — {b.email}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            {isSuper && form.role === 'admin' && (
+              <label className="inv-field">
+                <span>Slug de la tienda</span>
+                <div className="slug-input">
+                  <span className="mono slug-prefix">{`${window.location.origin}/u/`}</span>
+                  <input
+                    value={form.businessSlug || ''}
+                    onChange={set('businessSlug')}
+                    placeholder="mi-tienda"
+                    pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
+                  />
+                </div>
+                <span className="set-hint">
+                  URL pública de este negocio. Minúsculas, números y guiones. Dejala vacía para quitarla.
+                </span>
+              </label>
+            )}
+            {!editing && (
+              <label className="inv-field">
+                <span>Contraseña (dejala vacía para generar una)</span>
+                <input
+                  type="password"
+                  value={form.password || ''}
+                  onChange={set('password')}
+                  autoComplete="new-password"
+                  minLength={6}
+                />
+              </label>
+            )}
             {editing && (
               <label className="inv-field">
                 <span>Nueva contraseña (opcional)</span>
@@ -6779,6 +7029,16 @@ function UsersScreen() {
                     >
                       {u.active ? <IconCross /> : <IconCheck />}
                     </button>
+                    {!u.isSelf && (
+                      <button
+                        type="button"
+                        className="row-btn row-btn-danger"
+                        aria-label={`Eliminar ${u.name}`}
+                        onClick={() => deleteUser(u)}
+                      >
+                        <IconTrash />
+                      </button>
+                    )}
                   </span>
                 </td>
               </tr>
@@ -6814,93 +7074,268 @@ function SettingsFetcher({ render }) {
 }
 
 function RolesScreen() {
-  const save = async (selected) => {
-    await apiPut('/api/admin/settings', {
-      section: 'roles',
-      value: { admin: selected },
-    })
-    return 'Permisos de admin guardados.'
-  }
-
-  return (
-    <SettingsFetcher
-      render={(settings) => {
-        const adminPerms = new Set(settings.roles?.admin || [])
-        return (
-          <RolesScreenBody
-            adminPerms={adminPerms}
-            save={save}
-          />
-        )
-      }}
-    />
-  )
-}
-
-function RolesScreenBody({ adminPerms, save }) {
-  const [selected, setSelected] = useState([...adminPerms].sort())
-  const [saving, setSaving] = useState(false)
+  const [sessionUser] = useState(() => getSession().user)
+  const isSuper = sessionUser?.role === 'superadmin'
+  const [users, setUsers] = useState(null)
+  const [error, setError] = useState('')
+  const [expanded, setExpanded] = useState(null)
   const [note, setNote] = useState('')
+  const [query, setQuery] = useState('')
+  const [page, setPage] = useState(1)
+  const PAGE_SIZE = 8
 
-  const applyToggle = (code) => {
-    setNote('')
-    setSelected((prev) =>
-      prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code],
-    )
-  }
-
-  const submit = async (e) => {
-    e.preventDefault()
-    setSaving(true)
-    setNote('')
-    try {
-      const msg = await save(selected)
-      setNote(msg)
-    } catch (err) {
-      setNote(err.message)
-    } finally {
-      setSaving(false)
+  useEffect(() => {
+    let alive = true
+    apiGet('/api/admin/users')
+      .then((list) => {
+        if (!alive) return
+        const all = Array.isArray(list) ? list : []
+        const superTenant = isSuper ? getSuperTenant() : null
+        const scoped = isSuper
+          ? all.filter(
+              (u) =>
+                u.role !== 'superadmin' &&
+                (String(u.id) === String(superTenant) ||
+                  String(u.adminId || '') === String(superTenant)),
+            )
+          : all.filter((u) => u.role === 'operator')
+        setUsers(scoped)
+      })
+      .catch((err) => {
+        if (alive) setError(err.message)
+      })
+    return () => {
+      alive = false
     }
-  }
+  }, [isSuper])
+
+  if (!users && !error) return <ScreenLoading label="Leyendo permisos…" />
+  if (error) return <ScreenBlocked message={error} />
+
+  const superTenantNow = isSuper ? getSuperTenant() : null
+
+  const q = query.trim().toLowerCase()
+  const filtered = q
+    ? users.filter(
+        (u) =>
+          u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q),
+      )
+    : users
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+  const safePage = Math.min(page, totalPages)
+  const visible = filtered.slice(
+    (safePage - 1) * PAGE_SIZE,
+    safePage * PAGE_SIZE,
+  )
 
   return (
     <div className="dash-screen">
       <header className="dash-head">
         <div>
           <span className="dash-eyebrow">Configuración</span>
-          <h1>Roles y permisos</h1>
+          <h1>Permisos por usuario</h1>
+        </div>
+        <div className="dash-head-today">
+          <strong className="mono">{users.length}</strong>
+          <em>{isSuper ? 'usuarios del negocio' : 'operadores'}</em>
         </div>
       </header>
 
       <div className="dash-toolbar">
         <p className="list-note">
-          El rol <strong>superadmin</strong> siempre tiene acceso total. El rol{' '}
-          <strong>admin</strong> ve únicamente los módulos marcados acá.
+          {isSuper ? (
+            <>
+              Cada usuario tiene sus propios permisos: activá o desactivá los módulos que
+              puede ver y usar. Los cambios aplican al instante, sin pedirle que vuelva a
+              ingresar. El <strong>superadmin</strong> siempre tiene acceso total.
+            </>
+          ) : (
+            <>
+              Activá o desactivá qué módulos puede usar cada <strong>operador</strong> de tu
+              negocio. Los cambios aplican al instante.
+            </>
+          )}
         </p>
       </div>
 
+      <form
+        className="dash-search"
+        role="search"
+        onSubmit={(e) => e.preventDefault()}
+      >
+        <IconSearch />
+        <input
+          type="text"
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value)
+            setPage(1)
+          }}
+          placeholder={isSuper ? 'Buscar por nombre o email…' : 'Buscar operador por nombre o email…'}
+          aria-label="Buscar usuarios"
+        />
+        {query && (
+          <button
+            type="button"
+            className="ghost-btn"
+            onClick={() => {
+              setQuery('')
+              setPage(1)
+            }}
+          >
+            Limpiar
+          </button>
+        )}
+      </form>
+
       <SettingsNote text={note} />
 
-      <form className="set-card set-roles" onSubmit={submit}>
-        <h3>Permisos del rol admin</h3>
-        <div className="set-toggles">
-          {PERM_CODES.map((code) => (
-            <ToggleRow
-              key={code}
-              label={PERM_LABELS[code]}
-              hint={code}
-              checked={selected.includes(code)}
-              onChange={() => applyToggle(code)}
-            />
-          ))}
-        </div>
-        <div className="set-actions">
-          <button type="submit" className="primary-btn" disabled={saving}>
-            {saving ? 'Guardando…' : 'Guardar permisos'}
+      {isSuper && !superTenantNow && (
+        <p className="list-note">
+          Elegí un negocio con el selector para ver y editar los permisos de sus usuarios.
+        </p>
+      )}
+
+      <div className="table-wrap">
+        <table className="dash-table">
+          <thead>
+            <tr>
+              <th>Usuario</th>
+              <th>Rol</th>
+              <th>Módulos</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {visible.map((u) => (
+              <tr key={u.id}>
+                <td>
+                  <span className="t-cell-product">
+                    <span className="user-avatar mono" aria-hidden="true">
+                      {initials(u.name)}
+                    </span>
+                    <span>
+                      <strong>{u.name}</strong>
+                      <em>{u.email}</em>
+                    </span>
+                  </span>
+                </td>
+                <td>
+                  <span className={`role-chip role-${u.role}`}>{u.role}</span>
+                </td>
+                <td className="t-date">
+                  {Array.isArray(u.permissions)
+                    ? `${u.permissions.length} de ${PERM_CODES.length} módulos`
+                    : 'Sin módulos'}
+                </td>
+                <td>
+                  <button
+                    type="button"
+                    className="ghost-btn"
+                    onClick={() => setExpanded(expanded === u.id ? null : u.id)}
+                  >
+                    {expanded === u.id ? 'Ocultar' : 'Ver permisos'}
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {filtered.length === 0 && users.length > 0 && (
+        <EmptyNote text="Ningún usuario coincide con la búsqueda." />
+      )}
+
+      {totalPages > 1 && (
+        <div className="dash-pager">
+          <button
+            type="button"
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={safePage <= 1}
+          >
+            ← Anterior
+          </button>
+          <span className="mono">
+            Página {safePage} de {totalPages} · {filtered.length}{' '}
+            {isSuper ? 'usuarios' : 'operadores'}
+          </span>
+          <button
+            type="button"
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={safePage >= totalPages}
+          >
+            Siguiente →
           </button>
         </div>
-      </form>
+      )}
+
+      {users.length === 0 && !isSuper && (
+        <p className="list-note">
+          Todavía no tenés operadores. Creá uno desde la sección Usuarios.
+        </p>
+      )}
+
+      {users
+        .filter((u) => expanded === u.id)
+        .map((u) => (
+          <PermUserEditor key={u.id} user={u} onSaved={setNote} />
+        ))}
     </div>
+  )
+}
+
+function PermUserEditor({ user, onSaved }) {
+  const [perms, setPerms] = useState(user.permissions || [])
+  const [saved, setSaved] = useState(user.permissions || [])
+  const [saving, setSaving] = useState(null)
+  const [error, setError] = useState('')
+
+  const toggle = async (code) => {
+    if (saving) return
+    setError('')
+    onSaved('')
+    const next = perms.includes(code)
+      ? perms.filter((c) => c !== code)
+      : [...perms, code]
+    setPerms(next)
+    setSaving(code)
+    try {
+      const res = await apiPut(`/api/admin/users/${user.id}/permissions`, {
+        permissions: next,
+      })
+      const result = res.permissions || next
+      setPerms(result)
+      setSaved(result)
+      onSaved(`Permisos de ${user.name} actualizados.`)
+    } catch (err) {
+      setPerms(saved)
+      setError(err.message)
+    } finally {
+      setSaving(null)
+    }
+  }
+
+  return (
+    <section className="dash-card set-card set-roles">
+      <div className="dash-card-head">
+        <h2>Permisos de {user.name}</h2>
+      </div>
+      <div className="set-toggles">
+        {PERM_CODES.map((code) => (
+          <ToggleRow
+            key={code}
+            label={PERM_LABELS[code]}
+            hint={code}
+            checked={perms.includes(code)}
+            disabled={saving !== null}
+            onChange={() => toggle(code)}
+          />
+        ))}
+      </div>
+      {saving && <p className="list-note">Guardando…</p>}
+      <SettingsNote text={error} />
+    </section>
   )
 }
 
@@ -7225,12 +7660,8 @@ function GeneralScreenBody({ settings, saving, note, onSave }) {
     (Array.isArray(general.marquee) ? general.marquee : []).filter(Boolean),
   )
   const [marqueeInput, setMarqueeInput] = useState('')
-  const [steps, setSteps] = useState(
-    (Array.isArray(general.installments) ? general.installments : []).map((s) => ({
-      minPrice: String(s.minPrice || 0),
-      months: String(s.months || 3),
-    })),
-  )
+  const [editingIndex, setEditingIndex] = useState(null)
+  const [draft, setDraft] = useState('')
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }))
 
@@ -7241,10 +7672,29 @@ function GeneralScreenBody({ settings, saving, note, onSave }) {
     setMarqueeInput('')
   }
 
-  const addStep = () => {
-    const last = steps[steps.length - 1]
-    const nextMin = last ? Number(last.minPrice) * 2 : 50000
-    setSteps((prev) => [...prev, { minPrice: String(nextMin), months: '3' }])
+  const removeMarquee = (index) => {
+    setMarquee((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  const startEdit = (index) => {
+    setEditingIndex(index)
+    setDraft(marquee[index])
+  }
+
+  const saveEdit = (index) => {
+    const text = draft.trim()
+    if (text) {
+      setMarquee((prev) => prev.map((m, i) => (i === index ? text : m)))
+    }
+    setEditingIndex(null)
+    setDraft('')
+  }
+
+  const clearMarquee = () => {
+    if (marquee.length === 0) return
+    if (window.confirm('¿Quitar todos los mensajes de la cinta superior?')) {
+      setMarquee([])
+    }
   }
 
   const submit = (e) => {
@@ -7257,12 +7707,6 @@ function GeneralScreenBody({ settings, saving, note, onSave }) {
       },
       {
         marquee: marquee.filter(Boolean),
-        installments: steps
-          .map((s) => ({
-            minPrice: Math.max(0, Number(s.minPrice) || 0),
-            months: Math.max(1, Number(s.months) || 3),
-          }))
-          .sort((a, b) => a.minPrice - b.minPrice),
       },
     )
   }
@@ -7278,7 +7722,7 @@ function GeneralScreenBody({ settings, saving, note, onSave }) {
 
       <div className="dash-toolbar">
         <p className="list-note">
-          Envíos, cuotas y la cinta superior de la tienda. Afecta el checkout, el carrito y las tarjetas de producto.
+          Envíos y la cinta superior de la tienda. Afecta el checkout, el carrito y las tarjetas de producto.
         </p>
       </div>
 
@@ -7304,48 +7748,69 @@ function GeneralScreenBody({ settings, saving, note, onSave }) {
 
         <h3>Cinta superior (marquee)</h3>
         <div className="set-list">
-          {marquee.map((item, index) => (
-            <div key={`${item}-${index}`} className="set-chip">
-              <span>{item}</span>
-              <button type="button" className="x-btn" aria-label={`Quitar ${item}`} onClick={() => setMarquee((prev) => prev.filter((_, i) => i !== index))}>
-                <IconCross />
-              </button>
-            </div>
-          ))}
+          {marquee.map((item, index) =>
+            editingIndex === index ? (
+              <div key={`edit-${index}`} className="set-inline-add">
+                <input
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') saveEdit(index)
+                    if (e.key === 'Escape') setEditingIndex(null)
+                  }}
+                  autoFocus
+                  placeholder="Mensaje…"
+                />
+                <button type="button" className="ghost-btn" onClick={() => saveEdit(index)}>
+                  Guardar
+                </button>
+                <button type="button" className="ghost-btn" onClick={() => setEditingIndex(null)}>
+                  Cancelar
+                </button>
+              </div>
+            ) : (
+              <div key={`${item}-${index}`} className="set-chip">
+                <span>{item}</span>
+                <button
+                  type="button"
+                  className="x-btn"
+                  title="Editar este mensaje"
+                  aria-label={`Editar ${item}`}
+                  onClick={() => startEdit(index)}
+                >
+                  <IconEdit />
+                </button>
+                <button
+                  type="button"
+                  className="x-btn"
+                  title="Eliminar este mensaje"
+                  aria-label={`Quitar ${item}`}
+                  onClick={() => removeMarquee(index)}
+                >
+                  <IconCross />
+                </button>
+              </div>
+            ),
+          )}
           {marquee.length === 0 && <p className="set-empty">Sin mensajes. La cinta queda oculta.</p>}
         </div>
+        <p className="set-hint">
+          El lápiz edita el mensaje y la X lo elimina. Después apretá "Guardar cambios".
+        </p>
         <div className="set-inline-add">
           <input value={marqueeInput} onChange={(e) => setMarqueeInput(e.target.value)} placeholder="Nuevo mensaje…" />
           <button type="button" className="ghost-btn" onClick={addMarquee}>
             <IconPlus />
             Agregar
           </button>
+          {marquee.length > 0 && (
+            <button type="button" className="ghost-btn" onClick={clearMarquee}>
+              Vaciar cinta
+            </button>
+          )}
         </div>
 
-        <h3>Cuotas sin interés</h3>
-        <p className="set-hint">Cada tramo define el tope de cuotas para compras desde el precio mínimo. Ordenalas sin importar el orden: se ordenan solas al guardar.</p>
-        <div className="set-steps">
-          {steps.map((step, index) => (
-            <div key={index} className="set-inline-add">
-              <label className="inv-field">
-                <span>Desde (ARS)</span>
-                <input type="number" min="0" className="mono" value={step.minPrice} onChange={(e) => setSteps((prev) => prev.map((s, i) => (i === index ? { ...s, minPrice: e.target.value } : s)))} />
-              </label>
-              <label className="inv-field">
-                <span>Cuotas</span>
-                <input type="number" min="1" className="mono" value={step.months} onChange={(e) => setSteps((prev) => prev.map((s, i) => (i === index ? { ...s, months: e.target.value } : s)))} />
-              </label>
-              <button type="button" className="x-btn" aria-label="Quitar tramo" onClick={() => setSteps((prev) => prev.filter((_, i) => i !== index))}>
-                <IconCross />
-              </button>
-            </div>
-          ))}
-        </div>
         <div className="set-actions">
-          <button type="button" className="ghost-btn" onClick={addStep}>
-            <IconPlus />
-            Agregar tramo
-          </button>
           <button type="submit" className="primary-btn" disabled={saving}>
             {saving ? 'Guardando…' : 'Guardar cambios'}
           </button>

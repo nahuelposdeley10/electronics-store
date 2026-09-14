@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { CatalogContext } from './catalogContext'
+import { getTenantHeaders } from '../lib/tenant.js'
+
+const HEADERS = getTenantHeaders()
 
 export default function CatalogProvider({ children }) {
   const [products, setProducts] = useState([])
@@ -9,7 +12,7 @@ export default function CatalogProvider({ children }) {
 
   const reload = useCallback(async () => {
     try {
-      const res = await fetch('/api/products?limit=100')
+      const res = await fetch('/api/products?limit=100', { headers: HEADERS })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'No se pudo leer el catálogo')
       setProducts(data.items || [])
@@ -23,7 +26,7 @@ export default function CatalogProvider({ children }) {
 
   useEffect(() => {
     let alive = true
-    fetch('/api/products?limit=100')
+    fetch('/api/products?limit=100', { headers: HEADERS })
       .then((res) => res.json())
       .then((data) => {
         if (alive) {
@@ -37,7 +40,7 @@ export default function CatalogProvider({ children }) {
       .finally(() => {
         if (alive) setLoading(false)
       })
-    fetch('/api/brands')
+    fetch('/api/brands', { headers: HEADERS })
       .then((res) => res.json())
       .then((data) => {
         if (alive) setActiveBrands(data.brands || [])

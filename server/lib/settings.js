@@ -1,3 +1,4 @@
+import mongoose from 'mongoose'
 import { Setting } from '../models/Setting.js'
 
 export const ALL_PERMISSIONS = [
@@ -10,6 +11,7 @@ export const ALL_PERMISSIONS = [
   'sales.return',
   'quotes.delete',
   'cash.manage',
+  'pos.manage',
 ]
 
 export const PERMISSION_LABELS = {
@@ -22,7 +24,17 @@ export const PERMISSION_LABELS = {
   'sales.return': 'Devoluciones',
   'quotes.delete': 'Eliminar presupuestos',
   'cash.manage': 'Caja (apertura, movimientos y arqueos)',
+  'pos.manage': 'Nueva venta / POS',
 }
+
+export const OPERATOR_DEFAULT_PERMISSIONS = [
+  'sales.return',
+  'cash.manage',
+  'pos.manage',
+  'coupons.manage',
+  'offers.manage',
+  'inventory.write',
+]
 
 export function defaults() {
   return {
@@ -68,19 +80,28 @@ export function defaults() {
       },
     },
     roles: {
-      admin: [],
+      admin: [...ALL_PERMISSIONS],
+      operator: [...OPERATOR_DEFAULT_PERMISSIONS],
     },
   }
 }
 
-let cache = null
-let cacheAt = 0
+function tenantFilter(tenant) {
+  if (tenant && mongoose.Types.ObjectId.isValid(tenant)) {
+    return { adminId: new mongoose.Types.ObjectId(tenant) }
+  }
+  return { adminId: null }
+}
+
+const cache = new Map()
+const cacheAt = new Map()
 const CACHE_MS = 30 * 1000
 
-async function seed() {
-  const doc = await Setting.findOne({ key: 'base' }).lean()
+async function seed(tenant) {
+  const filter = tenantFilter(tenant)
+  const doc = await Setting.findOne({ key: 'base', ...filter }).lean()
   if (!doc) {
-    await Setting.create({ key: 'base', value: defaults() })
+    await Setting.create({ key: 'base', ...filter, value: defaults() })
     return defaults()
   }
   return doc.value
@@ -99,23 +120,34 @@ function hydrate(raw) {
   return out
 }
 
-export async function getSettings({ fresh } = {}) {
-  const now = Date.now()
-  if (!fresh && cache && now - cacheAt < CACHE_MS) {
-    return cache
-  }
-  const raw = await seed()
-  cache = hydrate(raw)
-  cacheAt = now
-  return cache
+function cacheKey(tenant) {
+  const id = tenant && mongoose.Types.ObjectId.isValid(tenant)
+    ? tenant.toString()
+    : null
+  return id || 'global'
 }
 
-export async function saveSettings({ section, value } = {}) {
+export async function getSettings({ fresh, tenant } = {}) {
+  const key = cacheKey(tenant)
+  const now = Date.now()
+  if (!fresh && cache.has(key) && now - cacheAt.get(key) < CACHE_MS) {
+    return cache.get(key)
+  }
+  const raw = await seed(tenant)
+  const hydrated = hydrate(raw)
+  cache.set(key, hydrated)
+  cacheAt.set(key, now)
+  return hydrated
+}
+
+export async function saveSettings({ section, value, tenant } = {}) {
   if (section && !Object.prototype.hasOwnProperty.call(defaults(), section)) {
     throw new Error(`Sección de configuración desconocida: ${section}`)
   }
-  const current = await getSettings({ fresh: true })
+  const current = await getSettings({ fresh: true, tenant })
   const merged = section ? { ...current, [section]: value } : { ...current, ...value }
+  const filter = tenantFilter(tenant)
+
   if (merged.roles && Array.isArray(merged.roles.superadmin)) {
     merged.roles.superadmin = merged.roles.superadmin.filter((p) =>
       ALL_PERMISSIONS.includes(p),
@@ -126,15 +158,35 @@ export async function saveSettings({ section, value } = {}) {
       ALL_PERMISSIONS.includes(p),
     )
   }
-  await Setting.updateOne({ key: 'base' }, { key: 'base', value: merged }, { upsert: true })
-  cache = merged
-  cacheAt = Date.now()
+  if (merged.roles && Array.isArray(merged.roles.operator)) {
+    merged.roles.operator = merged.roles.operator.filter((p) =>
+      ALL_PERMISSIONS.includes(p),
+    )
+  }
+
+  await Setting.updateOne(
+    { key: 'base', ...filter },
+    { key: 'base', ...filter, value: merged },
+    { upsert: true },
+  )
+  const key = cacheKey(tenant)
+  cache.set(key, merged)
+  cacheAt.set(key, Date.now())
   return merged
 }
 
-export async function permissionsForRole(role) {
+export async function permissionsForRole(role, tenant) {
   if (role === 'superadmin') return [...ALL_PERMISSIONS]
-  const settings = await getSettings()
+  const settings = await getSettings({ tenant })
   const list = settings.roles?.[role]
   return Array.isArray(list) ? list : []
+}
+
+export async function permissionsForUser(user, tenant) {
+  if (!user) return []
+  if (user.role === 'superadmin') return [...ALL_PERMISSIONS]
+  if (Array.isArray(user.permissions) && user.permissions.length) {
+    return user.permissions.filter((p) => ALL_PERMISSIONS.includes(p))
+  }
+  return permissionsForRole(user.role, tenant)
 }

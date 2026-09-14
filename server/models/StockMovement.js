@@ -2,7 +2,13 @@ import mongoose from 'mongoose'
 
 const stockMovementSchema = new mongoose.Schema(
   {
-    productId: { type: Number, required: true, index: true },
+    adminId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+      index: true,
+    },
+    productId: { type: Number, required: true },
     productName: { type: String, required: true, trim: true },
     delta: { type: Number, required: true },
     type: {
@@ -19,6 +25,7 @@ const stockMovementSchema = new mongoose.Schema(
   { timestamps: true },
 )
 
-stockMovementSchema.index({ createdAt: -1 })
+stockMovementSchema.index({ adminId: 1, createdAt: -1 })
+stockMovementSchema.index({ productId: 1 })
 
 export const StockMovement = mongoose.model('StockMovement', stockMovementSchema)

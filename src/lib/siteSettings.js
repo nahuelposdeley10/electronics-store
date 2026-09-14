@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { getTenantHeaders } from './tenant.js'
 
 const FALLBACK = {
   store: {
@@ -45,7 +46,7 @@ let inflight = null
 export function fetchSiteSettings() {
   if (cached) return Promise.resolve(cached)
   if (!inflight) {
-    inflight = fetch('/api/settings/public')
+    inflight = fetch('/api/settings/public', { headers: getTenantHeaders() })
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error('settings'))))
       .then((data) => {
         cached = data

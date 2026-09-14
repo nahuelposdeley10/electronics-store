@@ -15,7 +15,8 @@
     "server": "node server/index.js",
     "server:dev": "node --watch server/index.js",
     "seed": "node server/seed.js",
-    "seed:users": "node server/seed-users.js"
+    "seed:users": "node server/seed-users.js",
+    "set-passwords": "node server/seed-users.js --ask"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

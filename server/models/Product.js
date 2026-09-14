@@ -2,7 +2,13 @@ import mongoose from 'mongoose'
 
 const productSchema = new mongoose.Schema(
   {
-    id: { type: Number, required: true, unique: true },
+    adminId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+      index: true,
+    },
+    id: { type: Number, required: true },
     name: { type: String, required: true, trim: true },
     brand: { type: String, required: true, trim: true },
     category: { type: String, required: true, trim: true },
@@ -21,5 +27,7 @@ const productSchema = new mongoose.Schema(
   },
   { timestamps: true },
 )
+
+productSchema.index({ adminId: 1, id: 1 }, { unique: true })
 
 export const Product = mongoose.model('Product', productSchema)

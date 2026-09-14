@@ -2,6 +2,12 @@ import mongoose from 'mongoose'
 
 const countSchema = new mongoose.Schema(
   {
+    adminId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+      index: true,
+    },
     shiftId: { type: mongoose.Schema.Types.ObjectId, ref: 'CashShift', index: true },
     expectedAmount: { type: Number, required: true },
     countedAmount: { type: Number, required: true },

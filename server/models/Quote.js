@@ -12,6 +12,12 @@ const quoteItemSchema = new mongoose.Schema(
 
 const quoteSchema = new mongoose.Schema(
   {
+    adminId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+      index: true,
+    },
     number: { type: Number, required: true },
     status: { type: String, default: 'draft', index: true },
     customer: {
@@ -27,5 +33,7 @@ const quoteSchema = new mongoose.Schema(
   },
   { timestamps: true },
 )
+
+quoteSchema.index({ adminId: 1, number: 1 }, { unique: true })
 
 export const Quote = mongoose.model('Quote', quoteSchema)

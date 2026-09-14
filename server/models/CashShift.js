@@ -2,6 +2,12 @@ import mongoose from 'mongoose'
 
 const shiftSchema = new mongoose.Schema(
   {
+    adminId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+      index: true,
+    },
     number: { type: Number, required: true },
     status: { type: String, enum: ['open', 'closed'], default: 'open', index: true },
     openingBalance: { type: Number, required: true, min: 0 },
@@ -17,6 +23,6 @@ const shiftSchema = new mongoose.Schema(
   { timestamps: true },
 )
 
-shiftSchema.index({ status: 1, openedAt: -1 })
+shiftSchema.index({ adminId: 1, status: 1, openedAt: -1 })
 
 export const CashShift = mongoose.model('CashShift', shiftSchema)

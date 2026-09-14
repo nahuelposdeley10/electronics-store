@@ -12,6 +12,12 @@ const itemSchema = new mongoose.Schema(
 
 const orderSchema = new mongoose.Schema(
   {
+    adminId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+      index: true,
+    },
     status: { type: String, default: 'pending', index: true },
     items: [itemSchema],
     coupon: { type: String, default: null },
@@ -33,5 +39,7 @@ const orderSchema = new mongoose.Schema(
   },
   { timestamps: true },
 )
+
+orderSchema.index({ adminId: 1, status: 1, createdAt: -1 })
 
 export const Order = mongoose.model('Order', orderSchema)

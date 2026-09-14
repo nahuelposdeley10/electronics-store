@@ -10,8 +10,9 @@ export async function changeStock({
   reason = '',
   ref = null,
   createdBy = null,
+  adminId = null,
 }) {
-  const product = await Product.findOne({ id: Number(productId) })
+  const product = await Product.findOne({ id: Number(productId), adminId })
   if (!product || !TYPES.has(type)) return null
 
   const qty = Math.round(Number(delta))
@@ -27,6 +28,7 @@ export async function changeStock({
   await product.save()
 
   const movement = await StockMovement.create({
+    adminId,
     productId: product.id,
     productName: product.name,
     delta: applied,

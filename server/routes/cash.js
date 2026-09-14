@@ -6,20 +6,33 @@ import { CashShift } from '../models/CashShift.js'
 import { CashMovement } from '../models/CashMovement.js'
 import { CashCount } from '../models/CashCount.js'
 import { Order } from '../models/Order.js'
+import { requireTenantIdOf } from '../lib/tenant.js'
 
 const router = express.Router()
 
 router.use(requireAuth)
 
+function requireTenant(req, res, next) {
+  try {
+    requireTenantIdOf(req)
+    next()
+  } catch (error) {
+    return res.status(error.status || 400).json({ error: error.message })
+  }
+}
+
+router.use(requireTenant)
+
 router.get('/status', async (req, res) => {
   try {
-    const active = await currentShift()
-    const lastShift = await CashShift.findOne({ status: 'closed' }).sort({ closedAt: -1 }).lean()
+    const tenant = requireTenantIdOf(req)
+    const active = await currentShift(tenant)
+    const lastShift = await CashShift.findOne({ status: 'closed', adminId: tenant }).sort({ closedAt: -1 }).lean()
 
     const todayStart = new Date()
     todayStart.setHours(0, 0, 0, 0)
     const today = await Order.aggregate([
-      { $match: { status: 'approved', createdAt: { $gte: todayStart } } },
+      { $match: { status: 'approved', adminId: tenant, createdAt: { $gte: todayStart } } },
       {
         $group: {
           _id: null,
@@ -65,11 +78,18 @@ router.get('/status', async (req, res) => {
 
 router.post('/shifts', requirePermission('cash.manage'), async (req, res) => {
   const { openingBalance = 0, note = '' } = req.body || {}
+  let tenant
+  try {
+    tenant = requireTenantIdOf(req)
+  } catch (error) {
+    return res.status(error.status || 400).json({ error: error.message })
+  }
   try {
     const shift = await openShift({
       openingBalance,
       note,
       openedBy: req.user?.email || null,
+      tenant,
     })
     return res.status(201).json({ shift })
   } catch (error) {
@@ -79,11 +99,18 @@ router.post('/shifts', requirePermission('cash.manage'), async (req, res) => {
 
 router.post('/shifts/close', requirePermission('cash.manage'), async (req, res) => {
   const { countedBalance, note = '' } = req.body || {}
+  let tenant
+  try {
+    tenant = requireTenantIdOf(req)
+  } catch (error) {
+    return res.status(error.status || 400).json({ error: error.message })
+  }
   try {
     const shift = await closeShift({
       countedBalance,
       note,
       closedBy: req.user?.email || null,
+      tenant,
     })
     const balance = await cashNet(shift._id)
     return res.json({
@@ -99,8 +126,9 @@ router.post('/shifts/close', requirePermission('cash.manage'), async (req, res) 
 
 router.get('/shifts', async (req, res) => {
   try {
+    const tenant = requireTenantIdOf(req)
     const { page, limit } = parsePagination(req.query)
-    const filter = {}
+    const filter = { adminId: tenant }
     if (req.query.status === 'open' || req.query.status === 'closed') {
       filter.status = req.query.status
     }
@@ -134,14 +162,15 @@ router.get('/shifts', async (req, res) => {
 
 router.get('/movements', async (req, res) => {
   try {
+    const tenant = requireTenantIdOf(req)
     const { page, limit } = parsePagination(req.query)
     let shiftId = req.query.shiftId
     let active = null
     if (!shiftId) {
-      active = await currentShift()
+      active = await currentShift(tenant)
     }
 
-    const filter = {}
+    const filter = { adminId: tenant }
     if (req.query.kind === 'venta' || req.query.kind === 'ingreso' || req.query.kind === 'egreso' || req.query.kind === 'devolucion') {
       filter.kind = req.query.kind
     }
@@ -180,8 +209,14 @@ router.get('/movements', async (req, res) => {
 
 router.post('/movements', requirePermission('cash.manage'), async (req, res) => {
   const { flow, amount, description = '' } = req.body || {}
+  let tenant
   try {
-    const active = await currentShift()
+    tenant = requireTenantIdOf(req)
+  } catch (error) {
+    return res.status(error.status || 400).json({ error: error.message })
+  }
+  try {
+    const active = await currentShift(tenant)
     if (!active) {
       return res.status(400).json({ error: 'No hay una caja abierta para registrar el movimiento' })
     }
@@ -207,10 +242,11 @@ router.post('/movements', requirePermission('cash.manage'), async (req, res) => 
 
 router.get('/counts', async (req, res) => {
   try {
+    const tenant = requireTenantIdOf(req)
     let shiftId = req.query.shiftId
     let active = null
     if (!shiftId) {
-      active = await currentShift()
+      active = await currentShift(tenant)
     }
     if (!shiftId && !active) {
       return res.json({ shift: null, items: [] })
@@ -232,11 +268,18 @@ router.get('/counts', async (req, res) => {
 
 router.post('/counts', requirePermission('cash.manage'), async (req, res) => {
   const { countedAmount, note = '' } = req.body || {}
+  let tenant
+  try {
+    tenant = requireTenantIdOf(req)
+  } catch (error) {
+    return res.status(error.status || 400).json({ error: error.message })
+  }
   try {
     const count = await createArqueo({
       countedAmount,
       note,
       by: req.user?.email || null,
+      tenant,
     })
     return res.status(201).json({ count })
   } catch (error) {

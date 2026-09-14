@@ -14,10 +14,13 @@ import ProductDetail from './views/ProductDetail'
 import OrderStatus from './views/OrderStatus'
 import InfoPage from './views/InfoPage'
 import Dashboard from './views/Dashboard'
+import { storePathPrefix } from './lib/tenant'
 import { initMotion } from './lib/motion'
 import './App.css'
 
 initMotion()
+
+const STORE_PATH = storePathPrefix()
 
 function pathToView() {
   if (window.location.pathname === '/admin') {
@@ -61,7 +64,7 @@ function AppContent() {
     if (name === 'dashboard') {
       window.history.pushState({}, '', '/admin')
     } else if (window.location.pathname.startsWith('/admin')) {
-      window.history.pushState({}, '', '/')
+      window.history.pushState({}, '', STORE_PATH || '/')
     }
   }
 

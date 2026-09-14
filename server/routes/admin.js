@@ -10,6 +10,7 @@ import { getValidCategoryKeys } from '../lib/catalog-meta.js'
 import { changeStock } from '../lib/stock.js'
 import { currentShift } from '../lib/cash.js'
 import { CashMovement } from '../models/CashMovement.js'
+import { requireTenantIdOf } from '../lib/tenant.js'
 
 const router = express.Router()
 
@@ -26,11 +27,22 @@ const upload = multer({
 const PENDING_STATUSES = new Set(['pending', 'in_process'])
 const REJECTED_STATUSES = new Set(['rejected', 'cancelled', 'charged_back'])
 
+function requireTenantScope(req, res) {
+  try {
+    return { adminId: requireTenantIdOf(req) }
+  } catch (error) {
+    res.status(error.status || 400).json({ error: error.message })
+    return null
+  }
+}
+
 router.get('/overview', async (req, res) => {
   try {
+    const scope = requireTenantScope(req, res)
+    if (!scope) return
     const [orders, dbProducts] = await Promise.all([
-      Order.find().sort({ createdAt: -1 }).lean(),
-      Product.find().lean(),
+      Order.find(scope).sort({ createdAt: -1 }).lean(),
+      Product.find(scope).lean(),
     ])
 
     const approved = orders.filter((o) => o.status === 'approved')
@@ -115,6 +127,8 @@ const VALID_ORDER_STATUSES = new Set([
 router.get('/orders', async (req, res) => {
   try {
     const { page, limit } = parsePagination(req.query)
+    const scope = requireTenantScope(req, res)
+    if (!scope) return
 
     const statusFilter = {}
     if (req.query.status && VALID_ORDER_STATUSES.has(req.query.status)) {
@@ -155,14 +169,15 @@ router.get('/orders', async (req, res) => {
       }
       contextFilter.$or = or
     }
+    const base = { ...scope, ...contextFilter }
 
     const [total, approved, pending, rejected, refunded, orders] = await Promise.all([
-      Order.countDocuments(contextFilter),
-      Order.countDocuments({ ...contextFilter, status: 'approved' }),
-      Order.countDocuments({ ...contextFilter, status: { $in: [...PENDING_STATUSES] } }),
-      Order.countDocuments({ ...contextFilter, status: { $in: [...REJECTED_STATUSES] } }),
-      Order.countDocuments({ ...contextFilter, status: 'refunded' }),
-      Order.find({ ...contextFilter, ...statusFilter })
+      Order.countDocuments(base),
+      Order.countDocuments({ ...base, status: 'approved' }),
+      Order.countDocuments({ ...base, status: { $in: [...PENDING_STATUSES] } }),
+      Order.countDocuments({ ...base, status: { $in: [...REJECTED_STATUSES] } }),
+      Order.countDocuments({ ...base, status: 'refunded' }),
+      Order.find({ ...base, ...statusFilter })
         .sort({ createdAt: -1 })
         .skip((page - 1) * limit)
         .limit(limit)
@@ -208,7 +223,9 @@ router.get('/orders', async (req, res) => {
 router.get('/products', async (req, res) => {
   try {
     const { page, limit } = parsePagination(req.query)
-    const filter = buildProductSearchFilter(req.query.q)
+    const scope = requireTenantScope(req, res)
+    if (!scope) return
+    const filter = { ...buildProductSearchFilter(req.query.q), ...scope }
 
     const categories = parseMulti(req.query.category)
     if (categories) filter.category = { $in: categories }
@@ -217,7 +234,7 @@ router.get('/products', async (req, res) => {
     if (brands) filter.brand = { $in: brands }
 
     const [approved, total, dbProducts] = await Promise.all([
-      Order.find({ status: 'approved' }).lean(),
+      Order.find({ status: 'approved', ...scope }).lean(),
       Product.countDocuments(filter),
       Product.find(filter)
         .sort({ id: 1 })
@@ -269,17 +286,26 @@ router.post('/products', requirePermission('catalog.manage'), upload.single('ima
   if (!name || !brand || !category || price === undefined || price === '') {
     return res.status(400).json({ error: 'Nombre, marca, categoría y precio son requeridos' })
   }
-  if (!(await getValidCategoryKeys()).has(category)) {
-    return res.status(400).json({ error: 'Categoría inválida' })
-  }
   if (!req.file) {
     return res.status(400).json({ error: 'La imagen es requerida (PNG, JPG o WEBP)' })
   }
 
+  let tenant
+  try {
+    tenant = requireTenantIdOf(req)
+  } catch (error) {
+    return res.status(error.status || 400).json({ error: error.message })
+  }
+
+  if (!(await getValidCategoryKeys({ tenant })).has(category)) {
+    return res.status(400).json({ error: 'Categoría inválida' })
+  }
+
   try {
     const image = await uploadToCloudinary(req.file)
-    const last = await Product.findOne().sort({ id: -1 }).lean()
+    const last = await Product.findOne({ adminId: tenant }).sort({ id: -1 }).lean()
     const product = await Product.create({
+      adminId: tenant,
       id: (last?.id || 0) + 1,
       name: String(name).trim(),
       brand: String(brand).trim(),
@@ -334,7 +360,14 @@ router.put('/products/:id', requirePermission('catalog.manage'), upload.single('
     specs,
   } = req.body || {}
 
-  const product = await Product.findOne({ id: Number(req.params.id) })
+  let tenant
+  try {
+    tenant = requireTenantIdOf(req)
+  } catch (error) {
+    return res.status(error.status || 400).json({ error: error.message })
+  }
+
+  const product = await Product.findOne({ id: Number(req.params.id), adminId: tenant })
   if (!product) {
     return res.status(404).json({ error: 'Producto no encontrado' })
   }
@@ -365,7 +398,7 @@ router.put('/products/:id', requirePermission('catalog.manage'), upload.single('
   if (!patch.name || !patch.brand || !patch.price) {
     return res.status(400).json({ error: 'Nombre, marca, categoría y precio son requeridos' })
   }
-  if (!(await getValidCategoryKeys()).has(patch.category)) {
+  if (!(await getValidCategoryKeys({ tenant })).has(patch.category)) {
     return res.status(400).json({ error: 'Categoría inválida' })
   }
 
@@ -398,7 +431,14 @@ router.put('/products/:id', requirePermission('catalog.manage'), upload.single('
 })
 
 router.delete('/products/:id', requirePermission('catalog.manage'), async (req, res) => {
-  const product = await Product.findOne({ id: Number(req.params.id) })
+  let tenant
+  try {
+    tenant = requireTenantIdOf(req)
+  } catch (error) {
+    return res.status(error.status || 400).json({ error: error.message })
+  }
+
+  const product = await Product.findOne({ id: Number(req.params.id), adminId: tenant })
   if (!product) {
     return res.status(404).json({ error: 'Producto no encontrado' })
   }
@@ -414,7 +454,7 @@ router.delete('/products/:id', requirePermission('catalog.manage'), async (req, 
 
 const POS_PAYMENTS = new Set(['efectivo', 'tarjeta', 'transferencia'])
 
-router.post('/pos', async (req, res) => {
+router.post('/pos', requirePermission('pos.manage'), async (req, res) => {
   const { items, discount = 0, customer, payment } = req.body || {}
 
   const rows = (items || [])
@@ -428,9 +468,16 @@ router.post('/pos', async (req, res) => {
     return res.status(400).json({ error: 'Agregá al menos un producto a la venta' })
   }
 
+  let tenant
+  try {
+    tenant = requireTenantIdOf(req)
+  } catch (error) {
+    return res.status(error.status || 400).json({ error: error.message })
+  }
+
   try {
     const ids = [...new Set(rows.map((row) => row.id))]
-    const dbProducts = await Product.find({ id: { $in: ids } }).lean()
+    const dbProducts = await Product.find({ id: { $in: ids }, adminId: tenant }).lean()
     const byId = new Map(dbProducts.map((p) => [p.id, p]))
 
     const lines = []
@@ -450,6 +497,7 @@ router.post('/pos', async (req, res) => {
     const total = subtotal - parsedDiscount
 
     const order = await Order.create({
+      adminId: tenant,
       items: lines.map((line) => ({
         productId: line.product.id,
         name: line.product.name,
@@ -474,14 +522,16 @@ router.post('/pos', async (req, res) => {
         reason: 'Venta en mostrador (POS)',
         ref: String(order._id),
         createdBy: req.user?.email || null,
+        adminId: tenant,
       })
     }
 
     if (order.payment === 'efectivo') {
       try {
-        const open = await currentShift()
+        const open = await currentShift(tenant)
         if (open) {
           await CashMovement.create({
+            adminId: tenant,
             shiftId: open._id,
             kind: 'venta',
             flow: 'in',
@@ -511,9 +561,16 @@ router.post('/pos', async (req, res) => {
 })
 
 router.post('/orders/:id/return', requirePermission('sales.return'), async (req, res) => {
+  let tenant
+  try {
+    tenant = requireTenantIdOf(req)
+  } catch (error) {
+    return res.status(error.status || 400).json({ error: error.message })
+  }
+
   try {
     const order = await Order.findById(req.params.id)
-    if (!order) {
+    if (!order || String(order.adminId || '') !== String(tenant)) {
       return res.status(404).json({ error: 'Venta no encontrada' })
     }
     if (order.status !== 'approved') {
@@ -533,15 +590,17 @@ router.post('/orders/:id/return', requirePermission('sales.return'), async (req,
           reason: 'Devolución de venta',
           ref: String(order._id),
           createdBy: req.user?.email || null,
+          adminId: tenant,
         })
       }
     }
 
     if (order.payment === 'efectivo') {
       try {
-        const open = await currentShift()
+        const open = await currentShift(tenant)
         if (open) {
           await CashMovement.create({
+            adminId: tenant,
             shiftId: open._id,
             kind: 'devolucion',
             flow: 'out',
@@ -567,8 +626,10 @@ const QUOTE_STATUSES = new Set(['draft', 'confirmed', 'cancelled'])
 
 router.get('/quotes', async (req, res) => {
   try {
+    const scope = requireTenantScope(req, res)
+    if (!scope) return
     const { page, limit } = parsePagination(req.query)
-    const filter = {}
+    const filter = { ...scope }
     if (req.query.status && QUOTE_STATUSES.has(req.query.status)) {
       filter.status = req.query.status
     }
@@ -612,9 +673,16 @@ router.post('/quotes', async (req, res) => {
     return res.status(400).json({ error: 'Agregá al menos un producto al presupuesto' })
   }
 
+  let tenant
+  try {
+    tenant = requireTenantIdOf(req)
+  } catch (error) {
+    return res.status(error.status || 400).json({ error: error.message })
+  }
+
   try {
     const ids = [...new Set(rows.map((row) => row.id))]
-    const dbProducts = await Product.find({ id: { $in: ids } }).lean()
+    const dbProducts = await Product.find({ id: { $in: ids }, adminId: tenant }).lean()
     const byId = new Map(dbProducts.map((p) => [p.id, p]))
 
     const lineItems = rows
@@ -629,10 +697,11 @@ router.post('/quotes', async (req, res) => {
     const parsedDiscount = Math.max(0, Math.min(Number(discount) || 0, subtotal))
     const total = subtotal - parsedDiscount
 
-    const last = await Quote.findOne().sort({ number: -1 }).select('number').lean()
+    const last = await Quote.findOne({ adminId: tenant }).sort({ number: -1 }).select('number').lean()
     const number = (last?.number || 1000) + 1
 
     const quote = await Quote.create({
+      adminId: tenant,
       number,
       status: 'draft',
       customer: {
@@ -661,8 +730,15 @@ router.post('/quotes', async (req, res) => {
 
 router.put('/quotes/:id', async (req, res) => {
   const { status, customer, discount, note } = req.body || {}
+  let tenant
   try {
-    const quote = await Quote.findById(req.params.id)
+    tenant = requireTenantIdOf(req)
+  } catch (error) {
+    return res.status(error.status || 400).json({ error: error.message })
+  }
+
+  try {
+    const quote = await Quote.findOne({ _id: req.params.id, adminId: tenant })
     if (!quote) {
       return res.status(404).json({ error: 'Presupuesto no encontrado' })
     }
@@ -695,7 +771,9 @@ router.put('/quotes/:id', async (req, res) => {
 
 router.delete('/quotes/:id', requirePermission('quotes.delete'), async (req, res) => {
   try {
-    const quote = await Quote.findByIdAndDelete(req.params.id)
+    const scope = requireTenantScope(req, res)
+    if (!scope) return
+    const quote = await Quote.findOneAndDelete({ _id: req.params.id, ...scope })
     if (!quote) {
       return res.status(404).json({ error: 'Presupuesto no encontrado' })
     }

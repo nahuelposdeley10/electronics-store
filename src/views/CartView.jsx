@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useCart } from '../context/useCart'
 import { formatARS } from '../data/format'
+import { getTenantHeaders } from '../lib/tenant'
 import {
   IconCart,
   IconClose,
@@ -58,7 +59,7 @@ export default function CartView({ onNavigate }) {
     try {
       const res = await fetch('/api/checkout', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...getTenantHeaders() },
         body: JSON.stringify({
           items: items.map((item) => ({ id: item.id, quantity: item.quantity })),
           coupon: appliedCoupon,

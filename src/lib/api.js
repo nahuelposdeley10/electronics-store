@@ -1,9 +1,25 @@
+import { tenantUrl } from './tenant.js'
+
 export class ApiError extends Error {
   constructor(message, code) {
     super(message)
     this.name = 'ApiError'
     this.code = code
   }
+}
+
+const REQUEST_TIMEOUT = 20000
+const SLOW_SERVER = 'El servidor tardó demasiado; reintentalo'
+
+function requestSignal() {
+  return AbortSignal.timeout(REQUEST_TIMEOUT)
+}
+
+function netError(error, fallback) {
+  if (error?.name === 'TimeoutError') {
+    return new ApiError(SLOW_SERVER, 'NETWORK')
+  }
+  return new ApiError(fallback, 'NETWORK')
 }
 
 const TOKEN_STORAGE = 'ts-token'
@@ -37,9 +53,10 @@ export async function login(email, password) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
+      signal: requestSignal(),
     })
   } catch {
-    throw new ApiError('No se pudo conectar con el servidor', 'NETWORK')
+    throw netError('No se pudo conectar con el servidor')
   }
 
   const data = await res.json().catch(() => ({}))
@@ -57,14 +74,14 @@ export async function login(email, password) {
 
 export async function apiGet(path) {
   const headers = {}
-  const { token } = getSession()
+  const { token, user } = getSession()
   if (token) headers.Authorization = `Bearer ${token}`
 
   let res
   try {
-    res = await fetch(path, { headers })
+    res = await fetch(tenantUrl(path, user), { headers, signal: requestSignal() })
   } catch {
-    throw new ApiError('No se pudo conectar con el servidor', 'NETWORK')
+    throw netError('No se pudo conectar con el servidor')
   }
 
   if (res.status === 401) {
@@ -82,9 +99,12 @@ export async function apiGet(path) {
 export async function apiConfirmOrder(orderId) {
   let res
   try {
-    res = await fetch(`/api/orders/${orderId}/refresh`, { method: 'POST' })
+    res = await fetch(`/api/orders/${orderId}/refresh`, {
+      method: 'POST',
+      signal: requestSignal(),
+    })
   } catch {
-    throw new ApiError('No se pudo corroborar el pago', 'NETWORK')
+    throw netError('No se pudo corroborar el pago')
   }
 
   const data = await res.json().catch(() => ({}))
@@ -105,14 +125,19 @@ export async function apiUpdate(path, formData) {
 
 async function apiFile(path, method, formData) {
   const headers = {}
-  const { token } = getSession()
+  const { token, user } = getSession()
   if (token) headers.Authorization = `Bearer ${token}`
 
   let res
   try {
-    res = await fetch(path, { method, headers, body: formData })
+    res = await fetch(tenantUrl(path, user), {
+      method,
+      headers,
+      body: formData,
+      signal: requestSignal(),
+    })
   } catch {
-    throw new ApiError('No se pudo conectar con el servidor', 'NETWORK')
+    throw netError('No se pudo conectar con el servidor')
   }
 
   const data = await res.json().catch(() => ({}))
@@ -131,14 +156,18 @@ async function apiFile(path, method, formData) {
 
 export async function apiDelete(path) {
   const headers = {}
-  const { token } = getSession()
+  const { token, user } = getSession()
   if (token) headers.Authorization = `Bearer ${token}`
 
   let res
   try {
-    res = await fetch(path, { method: 'DELETE', headers })
+    res = await fetch(tenantUrl(path, user), {
+      method: 'DELETE',
+      headers,
+      signal: requestSignal(),
+    })
   } catch {
-    throw new ApiError('No se pudo conectar con el servidor', 'NETWORK')
+    throw netError('No se pudo conectar con el servidor')
   }
 
   const data = await res.json().catch(() => ({}))
@@ -165,14 +194,19 @@ export async function apiPut(path, body) {
 
 async function apiJson(path, method, body) {
   const headers = { 'Content-Type': 'application/json' }
-  const { token } = getSession()
+  const { token, user } = getSession()
   if (token) headers.Authorization = `Bearer ${token}`
 
   let res
   try {
-    res = await fetch(path, { method, headers, body: JSON.stringify(body) })
+    res = await fetch(tenantUrl(path, user), {
+      method,
+      headers,
+      body: JSON.stringify(body),
+      signal: requestSignal(),
+    })
   } catch {
-    throw new ApiError('No se pudo conectar con el servidor', 'NETWORK')
+    throw netError('No se pudo conectar con el servidor')
   }
 
   const data = await res.json().catch(() => ({}))

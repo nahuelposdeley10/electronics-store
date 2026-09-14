@@ -10,10 +10,22 @@ import {
   parseMulti,
 } from '../lib/catalog-query.js'
 import { changeStock } from '../lib/stock.js'
+import { requireTenantIdOf } from '../lib/tenant.js'
 
 const router = express.Router()
 
 router.use(requireAuth)
+
+function requireTenant(req, res, next) {
+  try {
+    requireTenantIdOf(req)
+    next()
+  } catch (error) {
+    return res.status(error.status || 400).json({ error: error.message })
+  }
+}
+
+router.use(requireTenant)
 
 const MOVEMENT_TYPES = new Set(['venta', 'compra', 'ajuste', 'devolucion', 'inventario'])
 
@@ -29,8 +41,9 @@ function stockStatus(product) {
 
 router.get('/stock', async (req, res) => {
   try {
+    const tenant = requireTenantIdOf(req)
     const { page, limit } = parsePagination(req.query)
-    const filter = buildProductSearchFilter(req.query.q)
+    const filter = { ...buildProductSearchFilter(req.query.q), adminId: tenant }
 
     const categories = parseMulti(req.query.category)
     if (categories) filter.category = { $in: categories }
@@ -79,8 +92,9 @@ router.get('/stock', async (req, res) => {
 
 router.get('/movements', async (req, res) => {
   try {
+    const tenant = requireTenantIdOf(req)
     const { page, limit } = parsePagination(req.query)
-    const filter = {}
+    const filter = { adminId: tenant }
 
     if (MOVEMENT_TYPES.has(req.query.type)) {
       filter.type = req.query.type
@@ -129,6 +143,7 @@ router.get('/movements', async (req, res) => {
 
 router.post('/adjustments', requirePermission('inventory.write'), async (req, res) => {
   try {
+    const tenant = requireTenantIdOf(req)
     const { productId, delta, reason } = req.body || {}
 
     const id = Number(productId)
@@ -151,13 +166,14 @@ router.post('/adjustments', requirePermission('inventory.write'), async (req, re
       type: 'ajuste',
       reason: cleanReason,
       createdBy: req.user?.email || null,
+      adminId: tenant,
     })
 
     if (!movement) {
       return res.status(404).json({ error: 'Producto no encontrado' })
     }
 
-    const product = await Product.findOne({ id }).lean()
+    const product = await Product.findOne({ id, adminId: tenant }).lean()
     return res.json({
       ok: true,
       movement: {
@@ -183,6 +199,7 @@ router.post('/adjustments', requirePermission('inventory.write'), async (req, re
 
 router.put('/min-stock', requirePermission('inventory.write'), async (req, res) => {
   try {
+    const tenant = requireTenantIdOf(req)
     const { productId, minStock } = req.body || {}
 
     const id = Number(productId)
@@ -196,7 +213,7 @@ router.put('/min-stock', requirePermission('inventory.write'), async (req, res) 
     }
 
     const product = await Product.findOneAndUpdate(
-      { id },
+      { id, adminId: tenant },
       { $set: { minStock: min } },
       { returnDocument: 'after' },
     ).lean()
@@ -216,6 +233,7 @@ router.put('/min-stock', requirePermission('inventory.write'), async (req, res) 
 
 router.post('/physical', requirePermission('inventory.write'), async (req, res) => {
   try {
+    const tenant = requireTenantIdOf(req)
     const counts = (req.body?.counts || [])
       .map((row) => ({
         productId: Number(row?.productId),
@@ -232,7 +250,7 @@ router.post('/physical', requirePermission('inventory.write'), async (req, res) 
     let updated = 0
 
     for (const row of counts) {
-      const product = await Product.findOne({ id: row.productId })
+      const product = await Product.findOne({ id: row.productId, adminId: tenant })
       const units = Number.isFinite(Number(row.units)) ? row.units : -1
       if (!product || units < 0) continue
 
@@ -255,6 +273,7 @@ router.post('/physical', requirePermission('inventory.write'), async (req, res) 
         type: 'inventario',
         reason: note || 'Conteo físico',
         createdBy: req.user?.email || null,
+        adminId: tenant,
       })
 
       updated += movement ? 1 : 0
@@ -279,8 +298,9 @@ router.post('/physical', requirePermission('inventory.write'), async (req, res) 
 
 router.get('/purchases', async (req, res) => {
   try {
+    const tenant = requireTenantIdOf(req)
     const { page, limit } = parsePagination(req.query)
-    const filter = {}
+    const filter = { adminId: tenant }
     const term = String(req.query.q || '').trim()
     if (term) {
       filter.supplier = new RegExp(escapeRegex(term), 'i')
@@ -325,6 +345,7 @@ router.get('/purchases', async (req, res) => {
 
 router.post('/purchases', requirePermission('inventory.write'), async (req, res) => {
   try {
+    const tenant = requireTenantIdOf(req)
     const supplier = String(req.body?.supplier || '').trim()
     const invoice = String(req.body?.invoice || '').trim()
     const items = (req.body?.items || [])
@@ -343,14 +364,14 @@ router.post('/purchases', requirePermission('inventory.write'), async (req, res)
     }
 
     const ids = [...new Set(items.map((row) => row.productId))]
-    const dbProducts = await Product.find({ id: { $in: ids } }).lean()
+    const dbProducts = await Product.find({ id: { $in: ids }, adminId: tenant }).lean()
     const byId = new Map(dbProducts.map((p) => [p.id, p]))
     if (byId.size !== ids.length) {
       return res.status(400).json({ error: 'Algún producto ya no existe' })
     }
 
     const reference = `${supplier}${invoice ? ` · Fact. ${invoice}` : ''}`
-    const last = await Purchase.findOne().sort({ number: -1 }).lean()
+    const last = await Purchase.findOne({ adminId: tenant }).sort({ number: -1 }).lean()
     const number = (last?.number || 0) + 1
 
     const lines = []
@@ -369,6 +390,7 @@ router.post('/purchases', requirePermission('inventory.write'), async (req, res)
     }
 
     const purchase = await Purchase.create({
+      adminId: tenant,
       number,
       supplier,
       invoice,
@@ -381,7 +403,7 @@ router.post('/purchases', requirePermission('inventory.write'), async (req, res)
     for (const row of items) {
       const product = byId.get(row.productId)
       if (Number.isFinite(row.cost) && product.costPrice !== row.cost) {
-        await Product.updateOne({ id: product.id }, { $set: { costPrice: row.cost } })
+        await Product.updateOne({ id: product.id, adminId: tenant }, { $set: { costPrice: row.cost } })
       }
       const movement = await changeStock({
         productId: product.id,
@@ -390,6 +412,7 @@ router.post('/purchases', requirePermission('inventory.write'), async (req, res)
         reason: reference,
         ref: String(number),
         createdBy: req.user?.email || null,
+        adminId: tenant,
       })
       logged.push({
         productId: product.id,

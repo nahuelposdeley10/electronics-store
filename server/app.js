@@ -41,12 +41,12 @@ export function createApp() {
   app.use('/api/auth', authRouter)
   app.use('/api', settingsRouter)
   app.use('/api/admin', adminRouter)
+  app.use('/api/admin/users', usersRouter)
   app.use('/api/admin', catalogAdminRouter)
   app.use('/api/admin', promosRouter)
   app.use('/api/admin/inventory', inventoryRouter)
   app.use('/api/admin/cash', cashRouter)
   app.use('/api/admin/reports', reportsRouter)
-  app.use('/api/admin/users', usersRouter)
 
   if (fs.existsSync(DIST_DIR)) {
     app.use(express.static(DIST_DIR))

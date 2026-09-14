@@ -3,6 +3,7 @@ import multer from 'multer'
 import { requireAuth, requirePermission } from '../middleware/auth.js'
 import { getSettings, saveSettings } from '../lib/settings.js'
 import { uploadToCloudinary } from '../services/cloudinary.js'
+import { publicTenantId, requireTenantIdOf } from '../lib/tenant.js'
 
 const router = express.Router()
 
@@ -13,9 +14,19 @@ const upload = multer({
 
 const PUBLIC_SECTIONS = ['store', 'shipping', 'general', 'payments']
 
+function requireTenant(req, res, next) {
+  try {
+    requireTenantIdOf(req)
+    next()
+  } catch (error) {
+    return res.status(error.status || 400).json({ error: error.message })
+  }
+}
+
 router.get('/settings/public', async (req, res) => {
   try {
-    const settings = await getSettings()
+    const tenant = await publicTenantId(req)
+    const settings = await getSettings({ tenant })
     const body = {}
     for (const section of PUBLIC_SECTIONS) {
       body[section] = settings[section] || {}
@@ -27,9 +38,9 @@ router.get('/settings/public', async (req, res) => {
   }
 })
 
-router.get('/admin/settings', requireAuth, requirePermission('settings.manage'), async (req, res) => {
+router.get('/admin/settings', requireAuth, requirePermission('settings.manage'), requireTenant, async (req, res) => {
   try {
-    const settings = await getSettings()
+    const settings = await getSettings({ tenant: requireTenantIdOf(req) })
     return res.json(settings)
   } catch (error) {
     console.error('Settings read error:', error)
@@ -37,13 +48,17 @@ router.get('/admin/settings', requireAuth, requirePermission('settings.manage'),
   }
 })
 
-router.put('/admin/settings', requireAuth, requirePermission('settings.manage'), async (req, res) => {
-  const { section, value } = req.body || {}
-  if (!section || value === undefined) {
+router.put('/admin/settings', requireAuth, requirePermission('settings.manage'), requireTenant, async (req, res) => {
+  const { section, value: requestedValue } = req.body || {}
+  if (!section || requestedValue === undefined) {
     return res.status(400).json({ error: 'Sección y valor requeridos' })
   }
   try {
-    const saved = await saveSettings({ section, value })
+    const value = requestedValue
+    if (section === 'roles' && req.user.role !== 'superadmin') {
+      return res.status(403).json({ error: 'Los permisos ahora se editan por usuario' })
+    }
+    const saved = await saveSettings({ section, value, tenant: requireTenantIdOf(req) })
     return res.json(saved[section] || {})
   } catch (error) {
     console.error('Settings save error:', error)
@@ -58,6 +73,7 @@ router.post(
   '/admin/settings/media',
   requireAuth,
   requirePermission('settings.manage'),
+  requireTenant,
   upload.single('file'),
   async (req, res) => {
     const field = String(req.body.field || '').trim()
@@ -68,11 +84,13 @@ router.post(
       return res.status(400).json({ error: 'Imagen requerida' })
     }
     try {
+      const tenant = requireTenantIdOf(req)
       const url = await uploadToCloudinary(req.file)
-      const current = await getSettings()
+      const current = await getSettings({ tenant })
       const saved = await saveSettings({
         section: 'store',
         value: { ...(current.store || {}), [`${field}Url`]: url },
+        tenant,
       })
       return res.json({ [field]: url, store: saved.store })
     } catch (error) {

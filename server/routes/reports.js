@@ -3,10 +3,22 @@ import { Order } from '../models/Order.js'
 import { Product } from '../models/Product.js'
 import { Purchase } from '../models/Purchase.js'
 import { requireAuth } from '../middleware/auth.js'
+import { tenantScopeOf, requireTenantIdOf } from '../lib/tenant.js'
 
 const router = express.Router()
 
 router.use(requireAuth)
+
+function requireTenant(req, res, next) {
+  try {
+    requireTenantIdOf(req)
+    next()
+  } catch (error) {
+    return res.status(error.status || 400).json({ error: error.message })
+  }
+}
+
+router.use(requireTenant)
 
 function parseDays(query) {
   const days = parseInt(query.days, 10)
@@ -54,8 +66,8 @@ function sumOrders(orders) {
   return { count: orders.length, total, subtotal, discount, units }
 }
 
-async function loadCatalog() {
-  const products = await Product.find().lean()
+async function loadCatalog(scope) {
+  const products = await Product.find(scope).lean()
   const byId = new Map()
   for (const p of products) byId.set(p.id, p)
   return byId
@@ -65,10 +77,11 @@ async function loadCatalog() {
 
 router.get('/sales', async (req, res) => {
   try {
+    const scope = tenantScopeOf(req)
     const { start } = parseDays(req.query)
     const days = parseInt(req.query.days, 10)
-    const filter = { status: 'approved', demo: { $ne: true }, ...(start ? { createdAt: { $gte: start } } : {}) }
-    const refundFilter = { status: 'refunded', demo: { $ne: true }, ...(start ? { createdAt: { $gte: start } } : {}) }
+    const filter = { status: 'approved', demo: { $ne: true }, ...scope, ...(start ? { createdAt: { $gte: start } } : {}) }
+    const refundFilter = { status: 'refunded', demo: { $ne: true }, ...scope, ...(start ? { createdAt: { $gte: start } } : {}) }
 
     const [approved, refunded] = await Promise.all([
       Order.find(filter).lean(),
@@ -139,9 +152,10 @@ router.get('/sales', async (req, res) => {
 
 router.get('/products', async (req, res) => {
   try {
+    const scope = tenantScopeOf(req)
     const { start } = parseDays(req.query)
-    const filter = { status: 'approved', demo: { $ne: true }, ...(start ? { createdAt: { $gte: start } } : {}) }
-    const [orders, catalog] = await Promise.all([Order.find(filter).lean(), loadCatalog()])
+    const filter = { status: 'approved', demo: { $ne: true }, ...scope, ...(start ? { createdAt: { $gte: start } } : {}) }
+    const [orders, catalog] = await Promise.all([Order.find(filter).lean(), loadCatalog(scope)])
 
     const map = new Map()
     for (const order of orders) {
@@ -183,13 +197,14 @@ router.get('/products', async (req, res) => {
 
 router.get('/profit', async (req, res) => {
   try {
+    const scope = tenantScopeOf(req)
     const { start } = parseDays(req.query)
-    const orderFilter = { status: 'approved', demo: { $ne: true }, ...(start ? { createdAt: { $gte: start } } : {}) }
-    const purchaseFilter = { ...(start ? { createdAt: { $gte: start } } : {}) }
+    const orderFilter = { status: 'approved', demo: { $ne: true }, ...scope, ...(start ? { createdAt: { $gte: start } } : {}) }
+    const purchaseFilter = { ...scope, ...(start ? { createdAt: { $gte: start } } : {}) }
 
     const [orders, catalog, purchaseDocs] = await Promise.all([
       Order.find(orderFilter).lean(),
-      loadCatalog(),
+      loadCatalog(scope),
       Purchase.find(purchaseFilter).lean(),
     ])
 
@@ -265,7 +280,9 @@ router.get('/profit', async (req, res) => {
 
 router.get('/stock', async (req, res) => {
   try {
-    const products = await Product.find().lean()
+    const scope = tenantScopeOf(req)
+    const products = await Product.find(scope).lean()
+
     let units = 0
     let value = 0
     let costValue = 0
@@ -321,8 +338,9 @@ router.get('/stock', async (req, res) => {
 
 router.get('/customers', async (req, res) => {
   try {
+    const scope = tenantScopeOf(req)
     const { start } = parseDays(req.query)
-    const filter = { status: 'approved', demo: { $ne: true }, ...(start ? { createdAt: { $gte: start } } : {}) }
+    const filter = { status: 'approved', demo: { $ne: true }, ...scope, ...(start ? { createdAt: { $gte: start } } : {}) }
     const orders = await Order.find(filter).sort({ createdAt: 1 }).lean()
 
     const map = new Map()

@@ -4,6 +4,7 @@ import ProductCard from '../components/ProductCard'
 import SearchSelect from '../components/SearchSelect'
 import { formatARS } from '../data/format'
 import { useSiteSettings, mergeSettings } from '../lib/siteSettings'
+import { getTenantHeaders } from '../lib/tenant'
 import { IconArrow, IconCheck, IconBolt } from '../components/Icons'
 
 function Section({ title, items, onView, offer = false }) {
@@ -42,7 +43,7 @@ function GallerySection({ onView, brands }) {
 
   useEffect(() => {
     let alive = true
-    fetch('/api/categories')
+    fetch('/api/categories', { headers: getTenantHeaders() })
       .then((res) => res.json())
       .then((result) => {
         if (alive) setCategories(result.categories || [])
@@ -73,7 +74,7 @@ function GallerySection({ onView, brands }) {
     if (category !== 'all') qs.set('category', category)
     if (brand !== 'all') qs.set('brand', brand)
     if (sort !== 'relevance') qs.set('sort', sort)
-    fetch(`/api/products?${qs.toString()}`)
+    fetch(`/api/products?${qs.toString()}`, { headers: getTenantHeaders() })
       .then((res) => res.json())
       .then((result) => {
         if (alive) setData(result)

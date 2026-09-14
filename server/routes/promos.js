@@ -1,10 +1,22 @@
 import express from 'express'
 import { Coupon } from '../models/Coupon.js'
 import { requireAuth, requirePermission } from '../middleware/auth.js'
+import { requireTenantIdOf } from '../lib/tenant.js'
 
 const router = express.Router()
 
 router.use(requireAuth)
+
+function requireTenant(req, res, next) {
+  try {
+    requireTenantIdOf(req)
+    next()
+  } catch (error) {
+    return res.status(error.status || 400).json({ error: error.message })
+  }
+}
+
+router.use(requireTenant)
 
 function parsePercent(value) {
   const n = Math.round(Number(value))
@@ -28,7 +40,8 @@ function toCouponDoc(c) {
 
 router.get('/coupons', requirePermission('coupons.manage'), async (req, res) => {
   try {
-    const items = await Coupon.find().sort({ createdAt: -1 }).lean()
+    const tenant = requireTenantIdOf(req)
+    const items = await Coupon.find({ adminId: tenant }).sort({ createdAt: -1 }).lean()
     return res.json({ items: items.map(toCouponDoc), total: items.length })
   } catch (error) {
     console.error('Coupons error:', error)
@@ -51,12 +64,20 @@ router.post('/coupons', requirePermission('coupons.manage'), async (req, res) =>
     return res.status(400).json({ error: 'El porcentaje debe estar entre 1 y 100' })
   }
 
+  let tenant
   try {
-    const exists = await Coupon.findOne({ code: codeClean })
+    tenant = requireTenantIdOf(req)
+  } catch (error) {
+    return res.status(error.status || 400).json({ error: error.message })
+  }
+
+  try {
+    const exists = await Coupon.findOne({ code: codeClean, adminId: tenant })
     if (exists) {
       return res.status(409).json({ error: 'Ese código de cupón ya existe' })
     }
     const coupon = await Coupon.create({
+      adminId: tenant,
       code: codeClean,
       percent: percentNum,
       active: parseActive(active),
@@ -70,8 +91,15 @@ router.post('/coupons', requirePermission('coupons.manage'), async (req, res) =>
 })
 
 router.put('/coupons/:id', requirePermission('coupons.manage'), async (req, res) => {
+  let tenant
   try {
-    const coupon = await Coupon.findById(req.params.id)
+    tenant = requireTenantIdOf(req)
+  } catch (error) {
+    return res.status(error.status || 400).json({ error: error.message })
+  }
+
+  try {
+    const coupon = await Coupon.findOne({ _id: req.params.id, adminId: tenant })
     if (!coupon) {
       return res.status(404).json({ error: 'Cupón no encontrado' })
     }
@@ -83,7 +111,7 @@ router.put('/coupons/:id', requirePermission('coupons.manage'), async (req, res)
       if (!/^[A-Z0-9_-]+$/.test(codeClean)) {
         return res.status(400).json({ error: 'El código usa solo letras, números, guiones y _' })
       }
-      const exists = await Coupon.findOne({ code: codeClean, _id: { $ne: coupon._id } })
+      const exists = await Coupon.findOne({ code: codeClean, adminId: tenant, _id: { $ne: coupon._id } })
       if (exists) {
         return res.status(409).json({ error: 'Ese código de cupón ya existe' })
       }
@@ -108,8 +136,14 @@ router.put('/coupons/:id', requirePermission('coupons.manage'), async (req, res)
 })
 
 router.delete('/coupons/:id', requirePermission('coupons.manage'), async (req, res) => {
+  let tenant
   try {
-    const coupon = await Coupon.findByIdAndDelete(req.params.id)
+    tenant = requireTenantIdOf(req)
+  } catch (error) {
+    return res.status(error.status || 400).json({ error: error.message })
+  }
+  try {
+    const coupon = await Coupon.findOneAndDelete({ _id: req.params.id, adminId: tenant })
     if (!coupon) {
       return res.status(404).json({ error: 'Cupón no encontrado' })
     }
