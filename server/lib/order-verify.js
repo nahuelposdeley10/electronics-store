@@ -1,9 +1,11 @@
-import { paymentService } from '../services/mercadopago.js'
+import { getMpServices } from '../services/mercadopago.js'
 import { orderStatusForPayment } from './order-status.js'
 import { applyPayerFromPayment } from './payer.js'
 import { deductApprovedStock } from './order-stock.js'
 
 export async function verifyOrderPayment(order) {
+  const { paymentService } = await getMpServices(order.adminId)
+  if (!paymentService) return order
   const search = await paymentService.search({
     options: {
       limit: 10,

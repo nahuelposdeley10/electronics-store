@@ -1,7 +1,7 @@
 import express from 'express'
 import { Order } from '../models/Order.js'
 import { buildCart } from '../services/pricing.js'
-import { preferenceService } from '../services/mercadopago.js'
+import { getMpServices } from '../services/mercadopago.js'
 import { verifyOrderPayment } from '../lib/order-verify.js'
 import { trackOrder } from '../lib/order-tracker.js'
 import { getSettings } from '../lib/settings.js'
@@ -140,15 +140,23 @@ router.post('/checkout', async (req, res) => {
       statement_descriptor: (await getSettings({ tenant })).checkout?.statementDescriptor || 'TechStore',
     }
 
+    const mp = await getMpServices(tenant)
+    if (!mp.configured) {
+      return res.status(400).json({
+        error: 'Esta tienda aún no configuró Mercado Pago para recibir pagos online',
+      })
+    }
+
     if (env.clientUrl.startsWith('https://')) {
       body.auto_return = 'approved'
     }
 
     if (env.serverUrl.startsWith('https://')) {
-      body.notification_url = `${env.serverUrl}/api/webhooks/mercadopago`
+      const qs = new URLSearchParams({ tenant: String(order.adminId) })
+      body.notification_url = `${env.serverUrl}/api/webhooks/mercadopago?${qs.toString()}`
     }
 
-    const preference = await preferenceService.create({ body })
+    const preference = await mp.preferenceService.create({ body })
 
     return res.json({
       init_point: preference.init_point,

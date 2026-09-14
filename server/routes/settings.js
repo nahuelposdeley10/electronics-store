@@ -33,6 +33,10 @@ router.get('/settings/public', async (req, res) => {
     for (const section of PUBLIC_SECTIONS) {
       body[section] = settings[section] || {}
     }
+    // Las credenciales de MP son privadas del admin; jamás se exponen al público.
+    if (body.payments) {
+      delete body.payments.mercadopago
+    }
     return res.json(body)
   } catch (error) {
     console.error('Public settings error:', error)

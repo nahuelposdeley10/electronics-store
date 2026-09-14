@@ -1,19 +1,34 @@
 ﻿import { useState } from 'react'
-import { apiPut, apiUpload } from '@/lib/api'
+import { apiPut, apiUpload, getSession } from '@/lib/api'
 import { IconCross, IconEdit, IconPlus } from '@/components/Icons'
 import { SetImageField, SettingsFetcher, SettingsNote, ToggleRow } from '../common'
 
 import './styles.css'
 
+function PasswordInput({ label, value, onChange, ...rest }) {
+  const [show, setShow] = useState(false)
+  return (
+    <label className="inv-field">
+      <span>{label}</span>
+      <div style={{ display: 'flex', gap: 4 }}>
+        <input type={show ? 'text' : 'password'} value={value} onChange={onChange} {...rest} />
+        <button type="button" className="nav-link" onClick={() => setShow(!show)} title={show ? 'Ocultar' : 'Mostrar'}>
+          {show ? 'Ocultar' : 'Mostrar'}
+        </button>
+      </div>
+    </label>
+  )
+}
+
 function PaymentsScreen() {
   const [saving, setSaving] = useState(false)
   const [note, setNote] = useState('')
 
-  const saveAll = async (payments, checkout) => {
+  const saveAll = async (methods, mercadopago, checkout) => {
     setSaving(true)
     setNote('')
     try {
-      await apiPut('/api/admin/settings', { section: 'payments', value: payments })
+      await apiPut('/api/admin/settings', { section: 'payments', value: { ...methods, mercadopago } })
       await apiPut('/api/admin/settings', { section: 'checkout', value: checkout })
       setNote('Medios de pago guardados.')
     } catch (err) {
@@ -26,36 +41,60 @@ function PaymentsScreen() {
   return (
     <SettingsFetcher
       render={(settings) => (
-        <PaymentsScreenBody
-          settings={settings}
-          saving={saving}
-          note={note}
-          onSave={saveAll}
-        />
+        <PaymentsScreenBody settings={settings} saving={saving} note={note} setNote={setNote} onSave={saveAll} />
       )}
     />
   )
 }
 
 
-function PaymentsScreenBody({ settings, saving, note, onSave }) {
+function PaymentsScreenBody({ settings, saving, note, setNote, onSave }) {
   const methods = settings.payments?.methods || { efectivo: true, tarjeta: true, transferencia: true }
+  const mp = settings.payments?.mercadopago || {}
+  const mpConfigured = Boolean(mp.accessToken && mp.webhookSecret)
+  const checkout = settings.checkout || {}
+  const session = typeof getSession === 'function' ? getSession() : { user: {} }
+  const adminId = session?.user?.adminId
+  const webhookUrl = adminId
+    ? `${window.location.origin}/api/webhooks/mercadopago?tenant=${adminId}`
+    : ''
   const [form, setForm] = useState({
     efectivo: methods.efectivo !== false,
     tarjeta: methods.tarjeta !== false,
     transferencia: methods.transferencia !== false,
-    statementDescriptor: settings.checkout?.statementDescriptor || 'TechStore',
+    statementDescriptor: checkout.statementDescriptor || 'TechStore',
+    accessToken: mp.accessToken || '',
+    publicKey: mp.publicKey || '',
+    webhookSecret: mp.webhookSecret || '',
   })
 
-  const toggle = (key) => (on) => setForm((f) => ({ ...f, [key]: on }))
+  const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }))
+
+  const copyWebhook = () => {
+    if (!webhookUrl) return
+    navigator.clipboard?.writeText(webhookUrl).then(() => {
+      setNote('URL del webhook copiada. Pegala en el panel de webhooks de MP con el evento "mercado_pago/payment".')
+    })
+  }
 
   const submit = (e) => {
     e.preventDefault()
     onSave(
-      { methods: { efectivo: form.efectivo, tarjeta: form.tarjeta, transferencia: form.transferencia } },
+      {
+        efectivo: form.efectivo,
+        tarjeta: form.tarjeta,
+        transferencia: form.transferencia,
+      },
+      {
+        accessToken: form.accessToken.trim() || null,
+        publicKey: form.publicKey.trim() || null,
+        webhookSecret: form.webhookSecret.trim() || null,
+      },
       { statementDescriptor: form.statementDescriptor.trim() || 'TechStore' },
     )
   }
+
+  const toggle = (key) => (on) => setForm((f) => ({ ...f, [key]: on }))
 
   return (
     <div className="dash-screen">
@@ -68,13 +107,42 @@ function PaymentsScreenBody({ settings, saving, note, onSave }) {
 
       <div className="dash-toolbar">
         <p className="list-note">
-          QuÃ© medios podÃ©s cobrar desde la caja del panel. La web siempre cobra con Mercado Pago.
+          Cada tienda usa su propia cuenta de Mercado Pago. La web cobra con MP y la webhook URL es Ãºnica por negocio.
         </p>
       </div>
 
       <SettingsNote text={note} />
 
-      <form className="set-card" onSubmit={submit}>
+      <div className="set-card">
+        <strong>Estado de Mercado Pago</strong>
+        {mpConfigured ? (
+          <p className="settings-ok">Configurado y activo</p>
+        ) : (
+          <p className="settings-warn">Pendiente de configurar — sin credenciales esta tienda no puede cobrar online.</p>
+        )}
+      </div>
+
+      <form className="set-card set-form" onSubmit={submit}>
+        <h3>Webhook de Mercado Pago</h3>
+        <p className="set-hint">
+          En el panel de Mercado Pago, configurÃ¡ la URL de notificaciÃ³n que copias abajo y elegÃ¡ el evento{" "}
+          <code>mercado_pago/payment</code>.
+        </p>
+        <div className="set-row">
+          <label className="inv-field set-grow">
+            <span>URL de webhook (solo leer)</span>
+            <input value={webhookUrl} readOnly />
+          </label>
+          <button type="button" className="primary-btn" onClick={copyWebhook} disabled={!webhookUrl}>
+            Copiar URL
+          </button>
+        </div>
+        {mpConfigured && (
+          <p className="set-hint">
+            VerificÃ¡ que la firma sea vÃ¡lida en <code>/api/webhooks/mercadopago</code> con tu <code>webhook secret</code>.
+          </p>
+        )}
+
         <h3>En la caja (panel)</h3>
         <div className="set-toggles">
           <ToggleRow label="Efectivo" hint="Pago en el local" checked={form.efectivo} onChange={toggle('efectivo')} />
@@ -82,27 +150,32 @@ function PaymentsScreenBody({ settings, saving, note, onSave }) {
           <ToggleRow label="Transferencia" hint="Transferencia bancaria" checked={form.transferencia} onChange={toggle('transferencia')} />
         </div>
 
-        <h3>Mercado Pago</h3>
+        <h3>Credenciales de tu cuenta de Mercado Pago</h3>
+        <div className="set-row">
+          <PasswordInput
+            label="Access Token (APP_USR-...)"
+            value={form.accessToken}
+            onChange={set('accessToken')}
+            maxLength={300}
+          />
+          <PasswordInput
+            label="Webhook Secret"
+            value={form.webhookSecret}
+            onChange={set('webhookSecret')}
+            maxLength={300}
+          />
+        </div>
         <label className="inv-field">
-          <span>Descriptor en el resumen (statement descriptor)</span>
-          <input value={form.statementDescriptor} onChange={(e) => setForm((f) => ({ ...f, statementDescriptor: e.target.value }))} maxLength={32} />
+          <span>Public Key (opcional)</span>
+          <input value={form.publicKey} onChange={set('publicKey')} maxLength={300} />
         </label>
         <p className="set-hint">
-          El texto que ven tus clientes en el resumen de la tarjeta al pagar por la web.
+          ObtenÃ© las claves en <a href="https://www.mercadopago.com.ar/developers" target="_blank" rel="noreferrer">MercadoPago Developers</a>. Las claves se guardan en la base de datos de esta tienda solamente.
         </p>
-
-        <div className="set-card set-info">
-          <strong>Credenciales de Mercado Pago</strong>
-          <p>
-            La access token y la public key se leen del archivo <code>.env</code> del servidor
-            (variables <code>MP_ACCESS_TOKEN</code> y <code>MP_PUBLIC_KEY</code>). No se guardan en
-            la base de datos por seguridad.
-          </p>
-        </div>
 
         <div className="set-actions">
           <button type="submit" className="primary-btn" disabled={saving}>
-            {saving ? 'Guardandoâ€¦' : 'Guardar cambios'}
+            {saving ? 'Guardando...' : 'Guardar cambios'}
           </button>
         </div>
       </form>

@@ -42,6 +42,11 @@ const FALLBACK = {
       tarjeta: true,
       transferencia: true,
     },
+    mercadopago: {
+      accessToken: null,
+      publicKey: null,
+      webhookSecret: null,
+    },
   },
 }
 
