@@ -96,11 +96,26 @@ export async function apiGet(path) {
   return res.json()
 }
 
+const ORDER_TOKEN_PREFIX = 'ts-order-token:'
+
+function getOrderToken(orderId) {
+  try {
+    return sessionStorage.getItem(`${ORDER_TOKEN_PREFIX}${orderId}`)
+  } catch {
+    return null
+  }
+}
+
 export async function apiConfirmOrder(orderId) {
+  const headers = {}
+  const refreshToken = getOrderToken(orderId)
+  if (refreshToken) headers['x-refresh-token'] = refreshToken
+
   let res
   try {
     res = await fetch(`/api/orders/${orderId}/refresh`, {
       method: 'POST',
+      headers,
       signal: requestSignal(),
     })
   } catch {
@@ -109,6 +124,9 @@ export async function apiConfirmOrder(orderId) {
 
   const data = await res.json().catch(() => ({}))
 
+  if (res.status === 403) {
+    throw new ApiError('No tenés permiso para esto', 'FORBIDDEN')
+  }
   if (!res.ok) {
     throw new ApiError(data.error || 'No se pudo corroborar el pago', 'ERROR')
   }

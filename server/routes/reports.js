@@ -4,6 +4,7 @@ import { Product } from '../models/Product.js'
 import { Purchase } from '../models/Purchase.js'
 import { requireAuth } from '../middleware/auth.js'
 import { tenantScopeOf, requireTenantIdOf } from '../lib/tenant.js'
+import { roundMoney, roundLine } from '../lib/money.js'
 
 const router = express.Router()
 
@@ -56,9 +57,9 @@ function sumOrders(orders) {
   let discount = 0
   let units = 0
   for (const order of orders) {
-    total += order.total
-    subtotal += order.subtotal
-    discount += order.discount
+    total += roundMoney(order.total)
+    subtotal += roundMoney(order.subtotal)
+    discount += roundMoney(order.discount)
     for (const item of order.items) {
       units += item.quantity
     }
@@ -135,7 +136,7 @@ router.get('/sales', async (req, res) => {
         subtotal: totals.subtotal,
         discount: totals.discount,
         units: totals.units,
-        avgTicket: totals.count ? totals.total / totals.count : 0,
+        avgTicket: totals.count ? roundMoney(totals.total / totals.count) : 0,
       },
       series: filledSeries,
       byPayment: [...byPayment.values()].sort((a, b) => b.total - a.total),
@@ -172,8 +173,8 @@ router.get('/products', async (req, res) => {
           avgPrice: 0,
         }
         row.units += item.quantity
-        row.revenue += item.unitPrice * item.quantity
-        row.avgPrice = row.revenue / row.units
+        row.revenue += roundLine(item.unitPrice, item.quantity)
+        row.avgPrice = roundMoney(row.revenue / row.units)
         map.set(row.productId, row)
       }
     }
@@ -229,8 +230,8 @@ router.get('/profit', async (req, res) => {
           cogs: 0,
           profit: 0,
         }
-        const lineRevenue = item.unitPrice * item.quantity
-        const lineCogs = costPrice * item.quantity
+        const lineRevenue = roundLine(item.unitPrice, item.quantity)
+        const lineCogs = roundLine(costPrice, item.quantity)
         row.units += item.quantity
         row.revenue += lineRevenue
         row.cogs += lineCogs
@@ -248,13 +249,13 @@ router.get('/profit', async (req, res) => {
 
     const items = [...byProduct.values()].map((row) => ({
       ...row,
-      profit: row.revenue - row.cogs,
+      profit: roundMoney(row.revenue - row.cogs),
       marginPct: row.revenue ? ((row.revenue - row.cogs) / row.revenue) * 100 : 0,
     }))
     items.sort((a, b) => b.revenue - a.revenue)
 
-    const spentOnPurchases = purchaseDocs.reduce((s, p) => s + p.total, 0)
-    const profit = revenue - cogs
+const spentOnPurchases = roundMoney(purchaseDocs.reduce((s, p) => s + p.total, 0))
+  const profit = roundMoney(revenue - cogs)
     const marginPct = revenue ? (profit / revenue) * 100 : 0
 
     return res.json({
@@ -291,8 +292,8 @@ router.get('/stock', async (req, res) => {
     for (const p of products) {
       const stock = p.stock || 0
       units += stock
-      value += stock * p.price
-      costValue += stock * (p.costPrice || 0)
+      value += roundLine(p.price, stock)
+      costValue += roundLine(p.costPrice || 0, stock)
       const min = p.minStock || 0
       if (stock <= 0) statusCounts.sin += 1
       else if (min > 0 && stock <= min) statusCounts.bajo += 1
@@ -320,10 +321,10 @@ router.get('/stock', async (req, res) => {
     const topValue = [...products]
       .sort((a, b) => (b.stock || 0) * b.price - (a.stock || 0) * a.price)
       .slice(0, 10)
-      .map((p) => ({ id: p.id, name: p.name, brand: p.brand, stock: p.stock, value: (p.stock || 0) * p.price }))
+      .map((p) => ({ id: p.id, name: p.name, brand: p.brand, stock: p.stock, value: roundLine(p.price, p.stock || 0) }))
 
     return res.json({
-      totals: { products: products.length, units, value, costValue, potentialProfit: value - costValue },
+      totals: { products: products.length, units, value, costValue, potentialProfit: roundMoney(value - costValue) },
       statusCounts,
       low,
       topValue,
@@ -358,7 +359,7 @@ router.get('/customers', async (req, res) => {
         first: null,
       }
       row.count += 1
-      row.total += order.total
+      row.total += roundMoney(order.total)
       const created = new Date(order.createdAt)
       if (!row.first || created < new Date(row.first)) row.first = order.createdAt
       if (!row.last || created > new Date(row.last)) row.last = order.createdAt
@@ -366,7 +367,7 @@ router.get('/customers', async (req, res) => {
     }
 
     const items = [...map.values()]
-      .map((row) => ({ ...row, avg: row.total / row.count }))
+      .map((row) => ({ ...row, avg: roundMoney(row.total / row.count) }))
       .sort((a, b) => b.total - a.total)
 
     return res.json({

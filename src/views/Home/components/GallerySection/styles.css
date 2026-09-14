@@ -1,0 +1,111 @@
+/*---- Galería con paginación ----*/
+.gallery-tools {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  border: 1px solid var(--gal-line);
+  border-radius: 5px;
+  background: var(--gal-panel);
+  padding: 14px;
+}
+.gallery-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.gallery-chip {
+  border: 1px solid var(--gal-line-strong);
+  background: var(--gal-white);
+  border-radius: 99px;
+  padding: 7px 13px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--gal-ink-soft);
+}
+.gallery-chip:hover {
+  border-color: var(--gal-facade);
+  color: var(--gal-ink);
+}
+.gallery-chip.active {
+  background: var(--gal-black);
+  border-color: var(--gal-black);
+  color: #fff;
+}
+.gallery-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.gallery-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.gallery-select span {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--gal-ink-faint);
+}
+.gallery-select select {
+  border: 1px solid var(--gal-line-strong);
+  border-radius: 3px;
+  background: var(--gal-white);
+  color: var(--gal-ink);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 7px 10px;
+  cursor: pointer;
+}
+.gallery-select select:focus {
+  border-color: var(--gal-facade);
+  outline: none;
+}
+.gallery-sort {
+  display: inline-flex;
+  border: 1px solid var(--gal-line-strong);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.gallery-sort .sort-btn {
+  padding: 7px 12px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--gal-ink-soft);
+  background: var(--gal-white);
+  border: 0;
+  border-left: 1px solid var(--gal-line);
+  cursor: pointer;
+}
+.gallery-sort .sort-btn:first-child {
+  border-left: 0;
+}
+.gallery-sort .sort-btn:hover {
+  color: var(--gal-facade);
+}
+.gallery-sort .sort-btn.active {
+  background: var(--gal-facade);
+  color: #fff;
+}
+.gallery-clear {
+  margin-left: auto;
+  border: 0;
+  background: transparent;
+  color: var(--gal-facade);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 6px;
+}
+.gallery-clear:hover {
+  text-decoration: underline;
+}
+.gallery-note {
+  color: var(--gal-ink-soft);
+  padding: 8px 2px;
+}
+.gallery-pager {
+  margin-top: 24px;
+}

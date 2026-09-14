@@ -18,6 +18,11 @@ const FALLBACK = {
     freeThreshold: 300000,
     label: 'Envío a domicilio',
   },
+  hero: {
+    title: 'Tecnología de galería.',
+    titleAccent: 'Precio de mostrador.',
+    lead: 'Notebooks, móviles, audio y gaming de marca oficial con envío a todo el país o retiro en el local, hasta {cuotas} cuotas sin interés y servicio técnico propio.',
+  },
   general: {
     marquee: [
       'Envíos a todo el país',
@@ -70,7 +75,7 @@ export function useSiteSettings() {
       .then((data) => {
         if (alive) setSettings(data)
       })
-      .catch(() => {})
+      .catch((err) => console.warn('No se pudieron cargar los ajustes del sitio', err))
     return () => {
       alive = false
     }
@@ -83,6 +88,7 @@ export function mergeSettings(override) {
   return {
     store: { ...FALLBACK.store, ...(override?.store || {}) },
     shipping: { ...FALLBACK.shipping, ...(override?.shipping || {}) },
+    hero: { ...FALLBACK.hero, ...(override?.hero || {}) },
     general: { ...FALLBACK.general, ...(override?.general || {}) },
     payments: { ...FALLBACK.payments, ...(override?.payments || {}) },
   }

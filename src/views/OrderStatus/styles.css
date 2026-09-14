@@ -1,0 +1,9 @@
+.order-check-error {
+  margin-top: 12px;
+  font-size: 13px;
+  color: var(--gal-facade-deep);
+}
+.empty-stamp {
+  background: var(--gal-tag);
+  color: var(--gal-tag-ink);
+}

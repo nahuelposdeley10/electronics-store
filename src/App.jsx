@@ -1,40 +1,36 @@
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import CatalogProvider from './context/CatalogProvider'
 import CartProvider from './context/CartProvider'
 import { useCatalog } from './context/useCatalog'
-import Header from './components/Header'
-import Footer from './components/Footer'
-import Toast from './components/Toast'
-import WhatsAppButton from './components/WhatsAppButton'
-import ProductCard from './components/ProductCard'
-import { IconSearchOff } from './components/Icons'
-import Home from './views/Home'
-import CartView from './views/CartView'
-import ProductDetail from './views/ProductDetail'
-import OrderStatus from './views/OrderStatus'
-import InfoPage from './views/InfoPage'
-import Dashboard from './views/Dashboard'
-import { storePathPrefix } from './lib/tenant'
-import { initMotion } from './lib/motion'
-import './App.css'
+import Header from '@/components/Header'
+import Footer from '@/components/Footer'
+import Toast from '@/components/Toast'
+import WhatsAppButton from '@/components/WhatsAppButton'
+import ProductCard from '@/components/ProductCard'
+import { IconSearchOff } from '@/components/Icons'
+import Home from '@/views/Home'
+import CartView from '@/views/CartView'
+import ProductDetail from '@/views/ProductDetail'
+import OrderStatus from '@/views/OrderStatus'
+import InfoPage from '@/views/InfoPage'
+import { getTenantHeaders } from '@/lib/tenant'
+import { parseLocation, urlForView } from '@/lib/router'
+import { applySEO, seoMeta } from '@/lib/seo'
+import { useSiteSettings, mergeSettings } from '@/lib/siteSettings'
+import { initMotion } from '@/lib/motion'
+import './styles/ui.css'
 
 initMotion()
 
-const STORE_PATH = storePathPrefix()
+const Dashboard = lazy(() => import('./views/Dashboard'))
 
-function pathToView() {
-  if (window.location.pathname === '/admin') {
-    return { name: 'dashboard' }
-  }
-  const params = new URLSearchParams(window.location.search)
-  const status = params.get('status') || params.get('collection_status')
-  if (status) {
-    return {
-      name: 'order-status',
-      payload: { status, orderId: params.get('external_reference') },
-    }
-  }
-  return null
+function DashboardLoading() {
+  return (
+    <main className="catalog-loading" role="status">
+      <span className="empty-draw">📦</span>
+      <h1>Cargando panel…</h1>
+    </main>
+  )
 }
 
 function CatalogLoading() {
@@ -47,43 +43,95 @@ function CatalogLoading() {
   )
 }
 
+function productFromView(view, products) {
+  if (view.name !== 'product') return null
+  const payload = view.payload || {}
+  if (payload.name) return payload
+  return products.find((x) => x.id === Number(payload.id)) || null
+}
+
 function AppContent() {
-  const { products, loading } = useCatalog()
-  const [view, setView] = useState(() => pathToView() || { name: 'home' })
+  const { products, loading, search } = useCatalog()
+  const settings = mergeSettings(useSiteSettings())
+  const [view, setView] = useState(() => parseLocation())
+  const [product, setProduct] = useState(() => productFromView(parseLocation(), []))
+  const [productError, setProductError] = useState('')
 
   useEffect(() => {
     const onPop = () => {
-      setView(pathToView() || { name: 'home' })
+      const next = parseLocation()
+      setView(next)
+      setProduct(productFromView(next, products))
+      setProductError('')
     }
     window.addEventListener('popstate', onPop)
     return () => window.removeEventListener('popstate', onPop)
-  }, [])
+  }, [products])
+
+  useEffect(() => {
+    if (view.name !== 'product') return undefined
+    const payload = view.payload || {}
+    if (payload.name) return undefined
+    const id = Number(payload.id)
+    if (!Number.isFinite(id) || product) return undefined
+    let alive = true
+    fetch(`/api/products/${id}`, { headers: getTenantHeaders() })
+      .then((res) => res.json())
+      .then((data) => {
+        if (!alive) return
+        if (data.error) {
+          setProductError(data.error)
+        } else {
+          setProduct(data)
+        }
+      })
+      .catch(() => {
+        if (alive) setProductError('No se pudo cargar el producto')
+      })
+    return () => {
+      alive = false
+    }
+  }, [view, product])
+
+  useEffect(() => {
+    applySEO(seoMeta({ view, product: view.name === 'product' ? product : null, settings }))
+  }, [view, product, settings])
 
   const navigate = (name, payload) => {
+    const url = urlForView(name, payload)
     setView({ name, payload })
-    if (name === 'dashboard') {
-      window.history.pushState({}, '', '/admin')
-    } else if (window.location.pathname.startsWith('/admin')) {
-      window.history.pushState({}, '', STORE_PATH || '/')
+    if (name === 'product') {
+      setProduct(productFromView({ name, payload }, products))
+    } else {
+      setProductError('')
     }
+    if (window.location.pathname + window.location.search !== url) {
+      window.history.pushState({}, '', url)
+    }
+    window.scrollTo(0, 0)
   }
 
-  const handleSearch = (query) => {
-    const q = query.trim().toLowerCase()
+  const handleSearch = async (query) => {
+    const q = query.trim()
     if (!q) {
       navigate('home')
       return
     }
-    const results = products.filter((p) =>
-      (p.name + ' ' + p.brand + ' ' + p.category).toLowerCase().includes(q),
-    )
-    navigate('results', results)
+    try {
+      const items = await search(q)
+      navigate('results', { items, error: '' })
+    } catch {
+      navigate('results', {
+        items: [],
+        error: 'No se pudo completar la búsqueda. Probá de nuevo.',
+      })
+    }
   }
 
   const openProduct = (product) => navigate('product', product)
   const openProductById = (id) => {
     const p = products.find((x) => x.id === Number(id))
-    if (p) navigate('product', p)
+    navigate('product', p || { id: Number(id) })
   }
 
   const tapeRef = useRef(null)
@@ -175,12 +223,30 @@ function AppContent() {
   if (view.name === 'home') {
     content = <Home onView={openProduct} />
   } else if (view.name === 'product') {
-    content = (
+    const payload = view.payload || {}
+    const invalidId = !payload.name && !Number.isFinite(Number(payload.id))
+    content = invalidId || productError ? (
+      <main className="results results-empty">
+        <span className="empty-draw">
+          <IconSearchOff />
+        </span>
+        <h1>Producto no encontrado</h1>
+        <p>{productError || 'Este producto no está disponible.'}</p>
+        <button type="button" className="primary-btn" onClick={() => navigate('home')}>
+          Volver al inicio
+        </button>
+      </main>
+    ) : product ? (
       <ProductDetail
-        product={view.payload}
+        product={product}
         onBack={() => navigate('home')}
         onHome={openProductById}
       />
+    ) : (
+      <main className="catalog-loading" role="status">
+        <span className="empty-draw">📦</span>
+        <h1>Cargando producto…</h1>
+      </main>
     )
   } else if (view.name === 'cart') {
     content = <CartView onNavigate={(n) => navigate(n)} />
@@ -193,13 +259,18 @@ function AppContent() {
       />
     )
   } else if (view.name === 'results') {
-    content = view.payload.length === 0 ? (
+    const { items, error } = view.payload
+    content = items.length === 0 ? (
       <main className="results results-empty">
         <span className="empty-draw">
           <IconSearchOff />
         </span>
-        <h1>No encontramos nada</h1>
-        <p>Probalo con otra marca, categoría o una palabra más corta.</p>
+        <h1>{error || 'No encontramos nada'}</h1>
+        <p>
+          {error
+            ? 'Revisá tu conexión y probá de nuevo.'
+            : 'Probalo con otra marca, categoría o una palabra más corta.'}
+        </p>
         <button type="button" className="primary-btn" onClick={() => navigate('home')}>
           Volver al inicio
         </button>
@@ -207,11 +278,11 @@ function AppContent() {
     ) : (
       <main className="results">
         <div className="section-head">
-          <h1>Resultados de búsqueda ({view.payload.length})</h1>
+          <h1>Resultados de búsqueda ({items.length})</h1>
           <span className="count-tag">en la galería</span>
         </div>
         <div className="product-grid">
-          {view.payload.map((product) => (
+          {items.map((product) => (
             <ProductCard key={product.id} product={product} onView={openProduct} />
           ))}
         </div>
@@ -224,7 +295,9 @@ function AppContent() {
   return (
     <CartProvider>
       {view.name === 'dashboard' ? (
-        <Dashboard onExit={() => navigate('home')} />
+        <Suspense fallback={<DashboardLoading />}>
+          <Dashboard onExit={() => navigate('home')} />
+        </Suspense>
       ) : (
         <>
           <div className="scroll-tape" ref={tapeRef} aria-hidden="true" />

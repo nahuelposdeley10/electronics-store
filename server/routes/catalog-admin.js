@@ -16,6 +16,8 @@ import {
   slugify,
 } from '../lib/catalog-meta.js'
 import { requireTenantIdOf } from '../lib/tenant.js'
+import { roundMoney } from '../lib/money.js'
+import { nextSequence, sequenceKey } from '../lib/counter.js'
 
 const router = express.Router()
 
@@ -346,7 +348,7 @@ router.post('/variants', requirePermission('catalog.manage'), async (req, res) =
       product: productId,
       name: variantName,
       sku: sku !== undefined && sku !== '' ? String(sku).trim() : '',
-      price: price !== undefined && price !== '' ? Number(price) : 0,
+      price: price !== undefined && price !== '' ? roundMoney(price) : 0,
       stock: stock !== undefined && stock !== '' ? Number(stock) : 0,
     })
     return res.status(201).json({
@@ -389,7 +391,7 @@ router.put('/variants/:id', requirePermission('catalog.manage'), async (req, res
     }
     variant.name = variantName
     if (sku !== undefined) variant.sku = String(sku).trim()
-    if (price !== undefined && price !== '') variant.price = Number(price)
+    if (price !== undefined && price !== '') variant.price = roundMoney(price)
     if (stock !== undefined && stock !== '') variant.stock = Number(stock)
     await variant.save()
 
@@ -477,9 +479,9 @@ router.post('/prices', requirePermission('catalog.manage'), async (req, res) => 
   }
 
   try {
-    product.price = Math.round(cleanPrice)
+    product.price = roundMoney(cleanPrice)
     product.oldPrice =
-      oldPrice === '' || oldPrice === undefined || oldPrice === null ? null : Number(oldPrice) || null
+      oldPrice === '' || oldPrice === undefined || oldPrice === null ? null : roundMoney(oldPrice) || null
     await product.save()
     return res.json({ id: product.id, price: product.price, oldPrice: product.oldPrice })
   } catch (error) {
@@ -586,14 +588,14 @@ router.post('/offers', requirePermission('offers.manage'), async (req, res) => {
     return res.status(404).json({ error: 'Producto no encontrado' })
   }
 
-  const newPrice = price !== undefined && price !== '' ? Number(price) : null
+  const newPrice = price !== undefined && price !== '' ? roundMoney(price) : null
   if (newPrice !== null && (!Number.isFinite(newPrice) || newPrice < 1)) {
     return res.status(400).json({ error: 'El precio nuevo debe ser un número mayor a cero' })
   }
   const finalPrice = newPrice !== null ? newPrice : product.price
 
   if (oldPrice !== undefined && oldPrice !== '') {
-    const old = Number(oldPrice)
+    const old = roundMoney(oldPrice)
     if (!Number.isFinite(old) || old <= finalPrice) {
       return res.status(400).json({ error: 'El precio anterior debe ser mayor al precio actual' })
     }
@@ -605,7 +607,7 @@ router.post('/offers', requirePermission('offers.manage'), async (req, res) => {
       product.price = newPrice
     }
     if (oldPrice !== undefined && oldPrice !== '') {
-      product.oldPrice = Number(oldPrice)
+      product.oldPrice = roundMoney(oldPrice)
     }
     await product.save()
     return res.json({
@@ -701,8 +703,8 @@ router.post('/import/products', requirePermission('catalog.manage'), async (req,
         name,
         brand,
         category,
-        price,
-        oldPrice: raw.oldPrice ? Number(raw.oldPrice) : null,
+        price: roundMoney(price),
+        oldPrice: raw.oldPrice ? roundMoney(raw.oldPrice) : null,
         stock: raw.stock !== undefined && raw.stock !== '' ? Number(raw.stock) : 0,
         rating: raw.rating !== undefined && raw.rating !== '' ? Number(raw.rating) : 0,
         freeShipping: raw.freeShipping === true || raw.freeShipping === 'true',
@@ -718,9 +720,11 @@ router.post('/import/products', requirePermission('catalog.manage'), async (req,
     }
 
     let created = 0
+    let lastId = (await Product.findOne({ adminId: tenant }).sort({ id: -1 }).lean())?.id || 0
     for (const data of valid) {
-      const last = await Product.findOne({ adminId: tenant }).sort({ id: -1 }).lean()
-      await Product.create({ adminId: tenant, id: (last?.id || 0) + 1, ...data })
+      const id = await nextSequence(sequenceKey(tenant, 'product'), lastId)
+      lastId = id
+      await Product.create({ adminId: tenant, id, ...data })
       created++
     }
 

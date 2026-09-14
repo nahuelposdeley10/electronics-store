@@ -19,6 +19,8 @@ const orderSchema = new mongoose.Schema(
       index: true,
     },
     status: { type: String, default: 'pending', index: true },
+    refreshToken: { type: String, default: null, index: true },
+    stockDeducted: { type: Boolean, default: false },
     items: [itemSchema],
     coupon: { type: String, default: null },
     subtotal: { type: Number, required: true },
@@ -41,5 +43,6 @@ const orderSchema = new mongoose.Schema(
 )
 
 orderSchema.index({ adminId: 1, status: 1, createdAt: -1 })
+orderSchema.index({ paymentId: 1 })
 
 export const Order = mongoose.model('Order', orderSchema)

@@ -1,5 +1,6 @@
 import 'dotenv/config'
 import mongoose from 'mongoose'
+import { Counter } from '../models/Counter.js'
 import { CashShift } from '../models/CashShift.js'
 import { CashMovement } from '../models/CashMovement.js'
 import { CashCount } from '../models/CashCount.js'
@@ -24,7 +25,7 @@ async function main() {
   base.pathname = '/electronics-store-test-cash'
   await mongoose.connect(base.toString())
 
-  await Promise.all([CashShift.deleteMany({}), CashMovement.deleteMany({}), CashCount.deleteMany({})])
+  await Promise.all([CashShift.deleteMany({}), CashMovement.deleteMany({}), CashCount.deleteMany({}), Counter.deleteMany({})])
 
   const open1 = await openShift({ openingBalance: 1000, note: 'test', openedBy: 'caja@test.com' })
   check(open1.status === 'open' && open1.openingBalance === 1000, 'apertura con fondo 1000')

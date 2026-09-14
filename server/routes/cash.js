@@ -2,6 +2,7 @@ import express from 'express'
 import { requireAuth, requirePermission } from '../middleware/auth.js'
 import { parsePagination } from '../lib/catalog-query.js'
 import { cashNet, currentShift, openShift, closeShift, addMovement, createArqueo } from '../lib/cash.js'
+import { roundMoney } from '../lib/money.js'
 import { CashShift } from '../models/CashShift.js'
 import { CashMovement } from '../models/CashMovement.js'
 import { CashCount } from '../models/CashCount.js'
@@ -22,6 +23,13 @@ function requireTenant(req, res, next) {
 }
 
 router.use(requireTenant)
+
+async function tenantOwnedShift(tenant, shiftId) {
+  if (!shiftId) return null
+  return CashShift.findOne({ _id: shiftId, adminId: tenant })
+    .select('_id number openedAt status')
+    .lean()
+}
 
 router.get('/status', async (req, res) => {
   try {
@@ -65,7 +73,7 @@ router.get('/status', async (req, res) => {
         openingBalance: active.openingBalance,
         note: active.note,
         ...balance,
-        expected: Math.round((active.openingBalance + balance.net) * 100) / 100,
+        expected: roundMoney(active.openingBalance + balance.net),
       },
       lastShift,
       today: today[0] || { revenue: 0, orders: 0, cash: 0 },
@@ -143,7 +151,7 @@ router.get('/shifts', async (req, res) => {
       enriched.push({
         ...item,
         ...balance,
-        expected: item.expectedClose ?? Math.round((item.openingBalance + balance.net) * 100) / 100,
+        expected: item.expectedClose ?? roundMoney(item.openingBalance + balance.net),
       })
     }
 
@@ -166,7 +174,13 @@ router.get('/movements', async (req, res) => {
     const { page, limit } = parsePagination(req.query)
     let shiftId = req.query.shiftId
     let active = null
-    if (!shiftId) {
+    let ownedShift = null
+    if (shiftId) {
+      ownedShift = await tenantOwnedShift(tenant, shiftId)
+      if (!ownedShift) {
+        return res.status(404).json({ error: 'Turno no encontrado' })
+      }
+    } else {
       active = await currentShift(tenant)
     }
 
@@ -174,8 +188,8 @@ router.get('/movements', async (req, res) => {
     if (req.query.kind === 'venta' || req.query.kind === 'ingreso' || req.query.kind === 'egreso' || req.query.kind === 'devolucion') {
       filter.kind = req.query.kind
     }
-    if (shiftId) {
-      filter.shiftId = shiftId
+    if (ownedShift) {
+      filter.shiftId = ownedShift._id
     } else if (active) {
       filter.shiftId = active._id
     } else {
@@ -189,7 +203,7 @@ router.get('/movements', async (req, res) => {
 
     const shift = active
       ? { _id: active._id, number: active.number, openedAt: active.openedAt, status: active.status }
-      : await CashShift.findById(filter.shiftId).select('number openedAt status').lean()
+      : ownedShift
     const balance = await cashNet(filter.shiftId)
 
     return res.json({
@@ -245,7 +259,13 @@ router.get('/counts', async (req, res) => {
     const tenant = requireTenantIdOf(req)
     let shiftId = req.query.shiftId
     let active = null
-    if (!shiftId) {
+    let ownedShift = null
+    if (shiftId) {
+      ownedShift = await tenantOwnedShift(tenant, shiftId)
+      if (!ownedShift) {
+        return res.status(404).json({ error: 'Turno no encontrado' })
+      }
+    } else {
       active = await currentShift(tenant)
     }
     if (!shiftId && !active) {
@@ -254,10 +274,8 @@ router.get('/counts', async (req, res) => {
     const id = shiftId || active._id
     const status = active ? active.status : 'closed'
     const [items, shift] = await Promise.all([
-      CashCount.find({ shiftId: id }).sort({ createdAt: -1 }).limit(100).lean(),
-      shiftId
-        ? CashShift.findById(id).select('number openedAt status').lean()
-        : active,
+      CashCount.find({ shiftId: id, adminId: tenant }).sort({ createdAt: -1 }).limit(100).lean(),
+      shiftId ? ownedShift : active,
     ])
     return res.json({ shift: { ...shift, status }, items })
   } catch (error) {

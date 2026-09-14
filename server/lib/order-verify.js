@@ -1,6 +1,7 @@
 import { paymentService } from '../services/mercadopago.js'
 import { orderStatusForPayment } from './order-status.js'
 import { applyPayerFromPayment } from './payer.js'
+import { deductApprovedStock } from './order-stock.js'
 
 export async function verifyOrderPayment(order) {
   const search = await paymentService.search({
@@ -33,5 +34,10 @@ export async function verifyOrderPayment(order) {
     order.status = orderStatusForPayment(payment.status)
   }
   await order.save()
+  if (order.status === 'approved') {
+    await deductApprovedStock(order).catch((error) =>
+      console.error(`Stock decrement error (order ${String(order._id)}):`, error),
+    )
+  }
   return order
 }

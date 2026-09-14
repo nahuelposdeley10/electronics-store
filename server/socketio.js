@@ -2,6 +2,7 @@ import { Server } from 'socket.io'
 import jwt from 'jsonwebtoken'
 import { Order } from './models/Order.js'
 import { trackOrder } from './lib/order-tracker.js'
+import { verifyRefreshToken } from './lib/order-token.js'
 import { env } from './config/env.js'
 
 const PENDING = new Set(['pending', 'in_process'])
@@ -14,6 +15,13 @@ function orderPayload(order) {
     total: order.total,
     createdAt: order.createdAt,
   }
+}
+
+function userMatchesTenant(user, order) {
+  if (!user) return false
+  if (user.role === 'superadmin') return true
+  const tenant = user.adminId || user.sub
+  return Boolean(tenant && order.adminId) && String(tenant) === String(order.adminId)
 }
 
 function authenticate(socket, next) {
@@ -43,7 +51,7 @@ export function createSocketServer(httpServer) {
   if (io) return io
 
   io = new Server(httpServer, {
-    cors: { origin: true },
+    cors: { origin: env.corsOrigins },
   })
 
   io.use(authenticate)
@@ -83,10 +91,15 @@ export function createSocketServer(httpServer) {
       socket.join('tenant:all')
     }
 
-    socket.on('order:watch', async (id) => {
+    socket.on('order:watch', async (id, providedRefresh) => {
       if (!id) return
       const order = await Order.findById(id).catch(() => null)
       if (!order) return
+      const refreshOk = verifyRefreshToken(
+        order.refreshToken,
+        providedRefresh || socket.handshake?.auth?.refreshToken,
+      )
+      if (!userMatchesTenant(socket.data.user, order) && !refreshOk) return
       if (PENDING.has(order.status)) trackOrder(order._id)
       socket.emit('order:update', orderPayload(order))
     })

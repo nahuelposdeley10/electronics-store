@@ -4,15 +4,17 @@ import { requireAuth, requirePermission } from '../middleware/auth.js'
 import { getSettings, saveSettings } from '../lib/settings.js'
 import { uploadToCloudinary } from '../services/cloudinary.js'
 import { publicTenantId, requireTenantIdOf } from '../lib/tenant.js'
+import { allowedImageFilter } from '../lib/image-guard.js'
 
 const router = express.Router()
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 8 * 1024 * 1024 },
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: allowedImageFilter,
 })
 
-const PUBLIC_SECTIONS = ['store', 'shipping', 'general', 'payments']
+const PUBLIC_SECTIONS = ['store', 'shipping', 'general', 'payments', 'hero']
 
 function requireTenant(req, res, next) {
   try {
@@ -95,7 +97,7 @@ router.post(
       return res.json({ [field]: url, store: saved.store })
     } catch (error) {
       console.error('Settings media error:', error)
-      return res.status(500).json({ error: 'No se pudo subir la imagen' })
+      return res.status(error.status || 500).json({ error: error.status ? error.message : 'No se pudo subir la imagen' })
     }
   },
 )

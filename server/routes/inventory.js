@@ -11,6 +11,8 @@ import {
 } from '../lib/catalog-query.js'
 import { changeStock } from '../lib/stock.js'
 import { requireTenantIdOf } from '../lib/tenant.js'
+import { roundMoney, roundLine } from '../lib/money.js'
+import { nextSequence, sequenceKey } from '../lib/counter.js'
 
 const router = express.Router()
 
@@ -352,7 +354,7 @@ router.post('/purchases', requirePermission('inventory.write'), async (req, res)
       .map((row) => ({
         productId: Number(row?.productId),
         quantity: Math.floor(Number(row?.quantity)),
-        cost: Number(row?.cost),
+        cost: roundMoney(row?.cost),
       }))
       .filter((row) => Number.isFinite(row.productId) && row.quantity > 0 && Number.isFinite(row.cost) && row.cost >= 0)
 
@@ -371,14 +373,14 @@ router.post('/purchases', requirePermission('inventory.write'), async (req, res)
     }
 
     const reference = `${supplier}${invoice ? ` · Fact. ${invoice}` : ''}`
-    const last = await Purchase.findOne({ adminId: tenant }).sort({ number: -1 }).lean()
-    const number = (last?.number || 0) + 1
+    const lastNumber = (await Purchase.findOne({ adminId: tenant }).sort({ number: -1 }).lean())?.number || 0
+    const number = await nextSequence(sequenceKey(tenant, 'purchase'), lastNumber)
 
     const lines = []
     let total = 0
     for (const row of items) {
       const product = byId.get(row.productId)
-      const lineTotal = row.quantity * row.cost
+      const lineTotal = roundLine(row.cost, row.quantity)
       total += lineTotal
       lines.push({
         productId: product.id,
@@ -388,6 +390,7 @@ router.post('/purchases', requirePermission('inventory.write'), async (req, res)
         total: lineTotal,
       })
     }
+    total = roundMoney(total)
 
     const purchase = await Purchase.create({
       adminId: tenant,

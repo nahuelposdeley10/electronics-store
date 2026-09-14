@@ -1,5 +1,6 @@
 import mongoose from 'mongoose'
 import { Setting } from '../models/Setting.js'
+import { roundMoney } from './money.js'
 
 export const ALL_PERMISSIONS = [
   'settings.manage',
@@ -58,6 +59,11 @@ export function defaults() {
     },
     checkout: {
       statementDescriptor: 'TechStore',
+    },
+    hero: {
+      title: 'Tecnología de galería.',
+      titleAccent: 'Precio de mostrador.',
+      lead: 'Notebooks, móviles, audio y gaming de marca oficial con envío a todo el país o retiro en el local, hasta {cuotas} cuotas sin interés y servicio técnico propio.',
     },
     general: {
       marquee: [
@@ -120,6 +126,90 @@ function hydrate(raw) {
   return out
 }
 
+const STRING_CAP = 300
+const LIST_CAP = 25
+
+function capString(value) {
+  return String(value ?? '').slice(0, STRING_CAP)
+}
+
+function nullableString(value) {
+  if (value == null || String(value).trim() === '') return null
+  return String(value).slice(0, STRING_CAP)
+}
+
+function toBool(value) {
+  return value === true || value === 'true' || value === 1 || value === '1'
+}
+
+function toNum(value, fallback = 0) {
+  const n = Number(value)
+  return Number.isFinite(n) ? n : fallback
+}
+
+function sanitizeRoles(roles) {
+  if (!roles || typeof roles !== 'object' || Array.isArray(roles)) {
+    return { admin: [...ALL_PERMISSIONS], operator: [...OPERATOR_DEFAULT_PERMISSIONS] }
+  }
+  const out = {}
+  for (const role of ['admin', 'operator']) {
+    const list = Array.isArray(roles[role])
+      ? roles[role]
+      : role === 'operator'
+        ? OPERATOR_DEFAULT_PERMISSIONS
+        : ALL_PERMISSIONS
+    out[role] = [...new Set(list.filter((p) => ALL_PERMISSIONS.includes(p)))]
+  }
+  return out
+}
+
+function sanitizeValue(fallback, value) {
+  if (typeof fallback === 'string') return capString(value)
+  if (typeof fallback === 'number') return Math.max(0, toNum(value, fallback))
+  if (typeof fallback === 'boolean') return toBool(value)
+  if (fallback === null) return nullableString(value)
+  if (Array.isArray(fallback)) {
+    if (!Array.isArray(value)) return []
+    return value
+      .map((item) => sanitizeValue(fallback[0], item))
+      .filter((v) => v !== null && v !== undefined)
+      .slice(0, LIST_CAP)
+  }
+  if (fallback && typeof fallback === 'object') {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return null
+    const out = {}
+    for (const [key, entryFallback] of Object.entries(fallback)) {
+      if (key in value) out[key] = sanitizeValue(entryFallback, value[key])
+    }
+    return out
+  }
+  return value ?? null
+}
+
+// `value` es Mixed en el modelo: acá se valida la forma conocida, se
+// descartan claves desconocidas y se acotan tipos y tamaños, para que
+// objetos gigantes/arbitrarios nunca lleguen al público ni queden en DB.
+function sanitizeSection(section, input) {
+  const fallback = defaults()[section]
+  if (section === 'roles') return sanitizeRoles(input)
+  if (!fallback || typeof fallback !== 'object' || Array.isArray(fallback)) return {}
+  const src = input && typeof input === 'object' && !Array.isArray(input) ? input : {}
+  const out = {}
+  for (const [key, entryFallback] of Object.entries(fallback)) {
+    if (key in src) out[key] = sanitizeValue(entryFallback, src[key])
+  }
+  return out
+}
+
+export function sanitizeSettings(raw) {
+  const source = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {}
+  const out = {}
+  for (const section of Object.keys(defaults())) {
+    out[section] = sanitizeSection(section, source[section])
+  }
+  return out
+}
+
 function cacheKey(tenant) {
   const id = tenant && mongoose.Types.ObjectId.isValid(tenant)
     ? tenant.toString()
@@ -134,7 +224,7 @@ export async function getSettings({ fresh, tenant } = {}) {
     return cache.get(key)
   }
   const raw = await seed(tenant)
-  const hydrated = hydrate(raw)
+  const hydrated = sanitizeSettings(hydrate(raw))
   cache.set(key, hydrated)
   cacheAt.set(key, now)
   return hydrated
@@ -146,6 +236,15 @@ export async function saveSettings({ section, value, tenant } = {}) {
   }
   const current = await getSettings({ fresh: true, tenant })
   const merged = section ? { ...current, [section]: value } : { ...current, ...value }
+
+  if (merged.shipping) {
+    if (merged.shipping.cost !== undefined) {
+      merged.shipping.cost = roundMoney(Number(merged.shipping.cost))
+    }
+    if (merged.shipping.freeThreshold !== undefined) {
+      merged.shipping.freeThreshold = roundMoney(Number(merged.shipping.freeThreshold))
+    }
+  }
   const filter = tenantFilter(tenant)
 
   if (merged.roles && Array.isArray(merged.roles.superadmin)) {
@@ -164,15 +263,17 @@ export async function saveSettings({ section, value, tenant } = {}) {
     )
   }
 
+  const normalized = sanitizeSettings(merged)
+
   await Setting.updateOne(
     { key: 'base', ...filter },
-    { key: 'base', ...filter, value: merged },
+    { key: 'base', ...filter, value: normalized },
     { upsert: true },
   )
   const key = cacheKey(tenant)
-  cache.set(key, merged)
+  cache.set(key, normalized)
   cacheAt.set(key, Date.now())
-  return merged
+  return normalized
 }
 
 export async function permissionsForRole(role, tenant) {

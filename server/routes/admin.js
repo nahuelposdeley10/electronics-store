@@ -9,8 +9,11 @@ import { parsePagination, buildProductSearchFilter, escapeRegex, parseMulti } fr
 import { getValidCategoryKeys } from '../lib/catalog-meta.js'
 import { changeStock } from '../lib/stock.js'
 import { currentShift } from '../lib/cash.js'
+import { roundMoney, roundLine } from '../lib/money.js'
 import { CashMovement } from '../models/CashMovement.js'
 import { requireTenantIdOf } from '../lib/tenant.js'
+import { allowedImageFilter } from '../lib/image-guard.js'
+import { nextSequence, sequenceKey } from '../lib/counter.js'
 
 const router = express.Router()
 
@@ -19,9 +22,7 @@ router.use(requireAuth)
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    cb(null, file.mimetype.startsWith('image/'))
-  },
+  fileFilter: allowedImageFilter,
 })
 
 const PENDING_STATUSES = new Set(['pending', 'in_process'])
@@ -303,16 +304,16 @@ router.post('/products', requirePermission('catalog.manage'), upload.single('ima
 
   try {
     const image = await uploadToCloudinary(req.file)
-    const last = await Product.findOne({ adminId: tenant }).sort({ id: -1 }).lean()
+    const lastId = (await Product.findOne({ adminId: tenant }).sort({ id: -1 }).lean())?.id || 0
     const product = await Product.create({
       adminId: tenant,
-      id: (last?.id || 0) + 1,
+      id: await nextSequence(sequenceKey(tenant, 'product'), lastId),
       name: String(name).trim(),
       brand: String(brand).trim(),
       category,
-      price: Number(price),
-      oldPrice: oldPrice ? Number(oldPrice) : null,
-      costPrice: costPrice !== '' ? Number(costPrice) : 0,
+      price: roundMoney(price),
+      oldPrice: oldPrice ? roundMoney(oldPrice) : null,
+      costPrice: costPrice !== '' ? roundMoney(costPrice) : 0,
       stock: stock !== '' ? Number(stock) : 0,
       minStock: minStock !== '' ? Number(minStock) : 0,
       rating: rating !== '' ? Number(rating) : 0,
@@ -339,7 +340,7 @@ router.post('/products', requirePermission('catalog.manage'), upload.single('ima
     })
   } catch (error) {
     console.error('Products create error:', error)
-    return res.status(500).json({ error: 'No se pudo crear el producto' })
+    return res.status(error.status || 500).json({ error: error.status ? error.message : 'No se pudo crear el producto' })
   }
 })
 
@@ -376,9 +377,9 @@ router.put('/products/:id', requirePermission('catalog.manage'), upload.single('
     name: name !== undefined ? String(name).trim() : product.name,
     brand: brand !== undefined ? String(brand).trim() : product.brand,
     category: category !== undefined ? category : product.category,
-    price: price !== undefined && price !== '' ? Number(price) : product.price,
-    oldPrice: oldPrice !== undefined && oldPrice !== '' ? Number(oldPrice) : product.oldPrice,
-    costPrice: costPrice !== undefined && costPrice !== '' ? Math.max(0, Number(costPrice)) : product.costPrice,
+    price: price !== undefined && price !== '' ? roundMoney(price) : product.price,
+    oldPrice: oldPrice !== undefined && oldPrice !== '' ? roundMoney(oldPrice) : product.oldPrice,
+    costPrice: costPrice !== undefined && costPrice !== '' ? Math.max(0, roundMoney(costPrice)) : product.costPrice,
     stock: stock !== undefined && stock !== '' ? Number(stock) : product.stock,
     minStock: minStock !== undefined && minStock !== '' ? Math.max(0, Number(minStock)) : product.minStock,
     rating: rating !== undefined && rating !== '' ? Number(rating) : product.rating,
@@ -426,7 +427,7 @@ router.put('/products/:id', requirePermission('catalog.manage'), upload.single('
     })
   } catch (error) {
     console.error('Products update error:', error)
-    return res.status(500).json({ error: 'No se pudo actualizar el producto' })
+    return res.status(error.status || 500).json({ error: error.status ? error.message : 'No se pudo actualizar el producto' })
   }
 })
 
@@ -492,16 +493,16 @@ router.post('/pos', requirePermission('pos.manage'), async (req, res) => {
       lines.push({ product, quantity: row.quantity })
     }
 
-    const subtotal = lines.reduce((sum, line) => sum + line.product.price * line.quantity, 0)
+    const subtotal = lines.reduce((sum, line) => sum + roundLine(line.product.price, line.quantity), 0)
     const parsedDiscount = Math.max(0, Math.min(Number(discount) || 0, subtotal))
-    const total = subtotal - parsedDiscount
+    const total = roundMoney(subtotal - roundMoney(parsedDiscount))
 
     const order = await Order.create({
       adminId: tenant,
       items: lines.map((line) => ({
         productId: line.product.id,
         name: line.product.name,
-        unitPrice: line.product.price,
+        unitPrice: roundMoney(line.product.price),
         quantity: line.quantity,
       })),
       status: 'approved',
@@ -581,7 +582,7 @@ router.post('/orders/:id/return', requirePermission('sales.return'), async (req,
     order.returnedAt = new Date()
     await order.save()
 
-    if (order.source === 'pos') {
+    if (order.source === 'pos' || order.stockDeducted) {
       for (const item of order.items) {
         await changeStock({
           productId: item.productId,
@@ -693,12 +694,12 @@ router.post('/quotes', async (req, res) => {
       return res.status(400).json({ error: 'Algún producto ya no existe' })
     }
 
-    const subtotal = lineItems.reduce((sum, line) => sum + line.product.price * line.quantity, 0)
+    const subtotal = lineItems.reduce((sum, line) => sum + roundLine(line.product.price, line.quantity), 0)
     const parsedDiscount = Math.max(0, Math.min(Number(discount) || 0, subtotal))
-    const total = subtotal - parsedDiscount
+    const total = roundMoney(subtotal - roundMoney(parsedDiscount))
 
-    const last = await Quote.findOne({ adminId: tenant }).sort({ number: -1 }).select('number').lean()
-    const number = (last?.number || 1000) + 1
+    const lastNumber = (await Quote.findOne({ adminId: tenant }).sort({ number: -1 }).select('number').lean())?.number || 1000
+    const number = await nextSequence(sequenceKey(tenant, 'quote'), lastNumber)
 
     const quote = await Quote.create({
       adminId: tenant,
@@ -712,7 +713,7 @@ router.post('/quotes', async (req, res) => {
       items: lineItems.map((line) => ({
         productId: line.product.id,
         name: line.product.name,
-        unitPrice: line.product.price,
+        unitPrice: roundMoney(line.product.price),
         quantity: line.quantity,
       })),
       subtotal,
@@ -756,9 +757,9 @@ router.put('/quotes/:id', async (req, res) => {
     }
     if (note !== undefined) quote.note = String(note).trim()
     if (discount !== undefined) {
-      const parsed = Math.max(0, Math.min(Number(discount) || 0, quote.subtotal))
+      const parsed = roundMoney(Math.max(0, Math.min(Number(discount) || 0, quote.subtotal)))
       quote.discount = parsed
-      quote.total = quote.subtotal - parsed
+      quote.total = roundMoney(quote.subtotal - parsed)
     }
 
     await quote.save()

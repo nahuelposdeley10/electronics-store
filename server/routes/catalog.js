@@ -69,6 +69,24 @@ router.get('/products', async (req, res) => {
   }
 })
 
+router.get('/products/:id', async (req, res) => {
+  try {
+    const id = Number(req.params.id)
+    if (!Number.isFinite(id)) {
+      return res.status(400).json({ error: 'Identificador inválido' })
+    }
+    const tenant = await publicTenantId(req)
+    const product = await Product.findOne({ id, adminId: tenant }).lean()
+    if (!product) {
+      return res.status(404).json({ error: 'Producto no encontrado' })
+    }
+    return res.json(toPublicProduct(product))
+  } catch (error) {
+    console.error('Product detail error:', error)
+    return res.status(500).json({ error: 'No se pudo leer el producto' })
+  }
+})
+
 router.get('/coupons', async (req, res) => {
   try {
     const tenant = await publicTenantId(req)

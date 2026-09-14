@@ -12,20 +12,24 @@ export async function changeStock({
   createdBy = null,
   adminId = null,
 }) {
-  const product = await Product.findOne({ id: Number(productId), adminId })
-  if (!product || !TYPES.has(type)) return null
+  if (!TYPES.has(type)) return null
 
   const qty = Math.round(Number(delta))
   if (!Number.isFinite(qty) || qty === 0) return null
 
-  const stockBefore = product.stock
-  const stockAfter = Math.max(0, stockBefore + qty)
-  const applied = stockAfter - stockBefore
+  const filter = { id: Number(productId), adminId }
+  if (qty < 0) filter.stock = { $gte: -qty }
 
-  if (applied === 0) return null
+  const product = await Product.findOneAndUpdate(
+    filter,
+    { $inc: { stock: qty } },
+    { returnDocument: 'after' },
+  )
+  if (!product) return null
 
-  product.stock = stockAfter
-  await product.save()
+  const stockAfter = product.stock
+  const stockBefore = stockAfter - qty
+  const applied = qty
 
   const movement = await StockMovement.create({
     adminId,

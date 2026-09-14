@@ -1,0 +1,77 @@
+.filter-combo {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.filter-combo-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--gal-ink-faint);
+  white-space: nowrap;
+}
+.filter-combo-field {
+  position: relative;
+}
+.filter-combo-input {
+  min-width: 150px;
+  border: 1px solid var(--gal-line-strong);
+  border-radius: 3px;
+  background: var(--gal-white);
+  color: var(--gal-ink);
+  padding: 8px 10px;
+  font-size: 13px;
+  font-family: var(--font-mono);
+  caret-color: var(--gal-facade);
+}
+.filter-combo-input:focus {
+  outline: 0;
+  border-color: var(--gal-facade);
+  box-shadow: 0 0 0 3px rgba(215, 38, 29, 0.12);
+}
+.filter-combo:focus-within .filter-combo-input {
+  border-color: var(--gal-facade);
+}
+.filter-combo-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 100%;
+  width: max-content;
+  max-width: 260px;
+  z-index: 40;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--gal-white);
+  border: 1px solid var(--gal-line-strong);
+  border-radius: 3px;
+  max-height: 240px;
+  overflow-y: auto;
+  box-shadow: 0 8px 24px rgba(16, 18, 9, 0.14);
+}
+.filter-combo-option {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px 10px;
+  font-size: 13px;
+  font-family: var(--font-mono);
+  color: var(--gal-ink);
+  background: none;
+  border: 0;
+  border-radius: 2px;
+  cursor: pointer;
+}
+.filter-combo-option.hi,
+.filter-combo-option:hover {
+  background: var(--gal-panel);
+  color: var(--gal-facade-deep);
+}
+.filter-combo-empty {
+  padding: 8px 10px;
+  font-size: 12px;
+  color: var(--gal-ink-faint);
+}

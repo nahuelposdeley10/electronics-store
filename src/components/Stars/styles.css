@@ -1,0 +1,19 @@
+.stars {
+  display: inline-flex;
+  gap: 1px;
+  color: var(--gal-facade);
+}
+.star {
+  width: 13px;
+  height: 13px;
+}
+.rating-num {
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--gal-ink-faint);
+  font-weight: 600;
+}
+.rating-num em {
+  font-style: normal;
+  color: var(--gal-ink-faint);
+}

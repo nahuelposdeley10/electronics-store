@@ -1,0 +1,308 @@
+/*---- KPIs: tickets de caja con punzón ----*/
+.kpi-ticket {
+  position: relative;
+  background: var(--gal-white);
+  border: 1px solid var(--gal-line-strong);
+  border-radius: 4px;
+  padding: 18px 18px 14px;
+}
+.kpi-hole {
+  position: absolute;
+  top: -7px;
+  right: 20px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--gal-panel);
+  border: 1px solid var(--gal-line-strong);
+}
+.kpi-label {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--gal-ink-faint);
+  padding-top: 4px;
+}
+.kpi-value {
+  display: block;
+  font-size: 23px;
+  line-height: 1.05;
+  margin-top: 7px;
+  font-variant-numeric: tabular-nums;
+  word-break: break-word;
+}
+.kpi-note {
+  display: block;
+  font-size: 11px;
+  color: var(--gal-ink-faint);
+  margin-top: 8px;
+  border-top: 1px dashed var(--gal-line-strong);
+  padding-top: 7px;
+}
+.empty-note {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--gal-ink-faint);
+  font-size: 13px;
+  padding: 26px 16px;
+}
+.empty-note svg {
+  width: 18px;
+  height: 18px;
+}
+.dash-loading {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 60svh;
+  gap: 14px;
+  color: var(--gal-ink-faint);
+}
+.skel-head {
+  width: 260px;
+  height: 32px;
+  background: linear-gradient(90deg, var(--gal-panel-2), var(--gal-white), var(--gal-panel-2));
+  background-size: 200% 100%;
+  animation: skel 1.4s linear infinite;
+  border-radius: 4px;
+}
+@keyframes skel {
+  to {
+    background-position: -200% 0;
+  }
+}
+@media (max-width: 560px) {
+
+  .kpi-ticket {
+    padding: 15px 14px 12px;
+  }
+
+  .kpi-value {
+    font-size: 19px;
+  }
+}
+/*---- Inventario ----*/
+.stock-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 99px;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+.stock-badge.ok {
+  color: #1f6b33;
+  background: #e5f2e8;
+  border-color: #c3e2c9;
+}
+.stock-badge.bajo {
+  color: #8a6d1a;
+  background: #fdf3d7;
+  border-color: #ecd9a0;
+}
+.stock-badge.sin {
+  color: var(--gal-facade-deep);
+  background: #fbe9e6;
+  border-color: #f2cabf;
+}
+.chart-tip {
+  background: var(--gal-white);
+  border: 1px solid var(--gal-line-strong);
+  border-radius: 5px;
+  box-shadow: 0 6px 18px rgba(23, 26, 18, 0.14);
+  padding: 8px 10px;
+  max-width: 220px;
+}
+.chart-tip-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--gal-ink-faint);
+  margin-bottom: 6px;
+}
+.chart-tip-body {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.chart-tip-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.chart-tip-row em {
+  font-size: 12px;
+  font-style: normal;
+  color: var(--gal-ink-soft);
+  flex: 1;
+  white-space: nowrap;
+}
+.chart-tip-row strong {
+  font-size: 12.5px;
+  color: var(--gal-ink);
+  white-space: nowrap;
+}
+.chart-tip-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+}
+.chart-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-top: 12px;
+}
+.chart-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--gal-ink-soft);
+}
+.chart-legend-item em {
+  margin-left: auto;
+  font-style: normal;
+  color: var(--gal-ink-faint);
+}
+.sale-note-err {
+  color: #c62828;
+}
+.set-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--gal-line);
+  background: var(--gal-white);
+  border-radius: 3px;
+  cursor: pointer;
+}
+.set-wrap-txt {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.set-wrap-txt strong {
+  font-size: 13px;
+  color: var(--gal-ink);
+}
+.set-wrap-txt em {
+  font-size: 11px;
+  font-style: normal;
+  color: var(--gal-ink-faint);
+  font-family: var(--font-mono);
+}
+.set-wrap input[type='checkbox'] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 36px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--gal-line-strong);
+  border: 1px solid var(--gal-line-strong);
+  position: relative;
+  transition: background 0.15s;
+  cursor: pointer;
+  flex: none;
+  margin: 0;
+}
+.set-wrap input[type='checkbox']::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--gal-white);
+  transition: transform 0.15s;
+}
+.set-wrap input[type='checkbox']:checked {
+  background: var(--gal-facade);
+  border-color: var(--gal-facade);
+}
+.set-wrap input[type='checkbox']:checked::after {
+  transform: translateX(16px);
+}
+.set-wrap input[type='checkbox']:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.set-image-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--gal-line);
+  border-radius: 3px;
+  background: var(--gal-panel);
+}
+.set-image-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--gal-ink-faint);
+}
+.set-image-preview {
+  display: grid;
+  place-items: center;
+  height: 160px;
+  border: 1px dashed var(--gal-line-strong);
+  border-radius: 3px;
+  background: var(--gal-white);
+  overflow: hidden;
+  text-decoration: none;
+  transition: border-color 0.15s ease;
+}
+a.set-image-preview {
+  cursor: zoom-in;
+}
+a.set-image-preview:hover {
+  border-color: var(--gal-facade);
+}
+.set-image-preview img {
+  width: 100%;
+  height: 100%;
+}
+.set-image-preview img.set-image-fit-contain {
+  object-fit: contain;
+}
+.set-image-box.is-wide .set-image-preview {
+  height: 220px;
+}
+.set-image-preview img.set-image-fit-cover {
+  object-fit: cover;
+}
+.set-image-empty {
+  font-size: 12px;
+  color: var(--gal-ink-faint);
+}
+.set-image-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.set-image-open {
+  text-decoration: none;
+  font-size: 12.5px;
+  padding: 8px 12px;
+}
+.set-image-upload {
+  cursor: pointer;
+  font-size: 12.5px;
+  padding: 8px 12px;
+}

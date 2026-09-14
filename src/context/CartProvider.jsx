@@ -8,6 +8,8 @@ import { getTenantHeaders } from '../lib/tenant'
 const STORAGE_KEY = 'electronics-store-cart'
 const COUPON_STORAGE_KEY = 'electronics-store-coupon'
 
+const round2 = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100
+
 export default function CartProvider({ children }) {
   const { products } = useCatalog()
   const [items, setItems] = useState(() => {
@@ -59,11 +61,51 @@ export default function CartProvider({ children }) {
         setCouponMap(map)
         setAppliedCoupon((prev) => (prev && map[prev] ? prev : null))
       })
-      .catch(() => {})
+      .catch((err) => {
+        setCouponMap({})
+        setAppliedCoupon(null)
+        console.warn('No se pudieron cargar los cupones', err)
+      })
     return () => {
       alive = false
     }
   }, [])
+
+  useEffect(() => {
+    if (!products.length || !items.length) return
+    const remaining = items.filter((item) => {
+      const product = products.find((p) => p.id === item.id)
+      return !product || product.stock > 0
+    })
+    const hydrated = remaining.map((item) => {
+      const product = products.find((p) => p.id === item.id)
+      if (!product) return item
+      const quantity = Math.min(item.quantity, product.stock)
+      const line = {
+        ...item,
+        name: product.name,
+        price: product.price,
+        image: product.image,
+        freeShipping: product.freeShipping,
+        quantity,
+      }
+      return line
+    })
+    const changed =
+      hydrated.length !== items.length ||
+      hydrated.some((line, i) => {
+        const prev = items[i]
+        return (
+          line.name !== prev.name ||
+          Number(line.price) !== Number(prev.price) ||
+          line.image !== prev.image ||
+          Boolean(line.freeShipping) !== Boolean(prev.freeShipping) ||
+          line.quantity !== prev.quantity
+        )
+      })
+    if (!changed) return
+    Promise.resolve().then(() => setItems(hydrated))
+  }, [products, items])
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(items))
@@ -150,20 +192,29 @@ export default function CartProvider({ children }) {
   )
 
   const subtotal = useMemo(
-    () => items.reduce((sum, item) => sum + item.price * item.quantity, 0),
+    () =>
+      items.reduce(
+        (sum, item) => sum + round2(item.price * item.quantity),
+        0,
+      ),
     [items],
   )
 
   const discountRate = appliedCoupon ? couponMap[appliedCoupon] || 0 : 0
-  const discount = (subtotal * discountRate) / 100
+  const discount = round2((subtotal * discountRate) / 100)
 
   const freeShippingThreshold = shippingConfig.freeThreshold
   const hasFreeShipping =
     items.some((item) => item.freeShipping) ||
     subtotal >= freeShippingThreshold
-  const shippingCost = items.length === 0 ? 0 : hasFreeShipping ? 0 : shippingConfig.cost
+  const shippingCost =
+    items.length === 0
+      ? 0
+      : hasFreeShipping
+        ? 0
+        : round2(shippingConfig.cost)
 
-  const total = subtotal - discount + shippingCost
+  const total = round2(subtotal - discount + shippingCost)
 
   const value = {
     items,

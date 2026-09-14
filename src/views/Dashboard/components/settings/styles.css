@@ -1,0 +1,63 @@
+.set-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+.set-grow {
+  grid-column: span 2;
+}
+.set-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.set-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 1px solid var(--gal-line-strong);
+  border-radius: 999px;
+  background: var(--gal-panel);
+  font-size: 13.5px;
+  color: var(--gal-ink-soft);
+}
+.set-empty {
+  font-size: 12px;
+  color: var(--gal-ink-faint);
+  margin: 0 0 10px;
+}
+.set-inline-add {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+.set-inline-add > input {
+  flex: 1;
+  min-width: 160px;
+  border: 1px solid var(--gal-line-strong);
+  border-radius: 3px;
+  background: var(--gal-white);
+  color: var(--gal-ink);
+  padding: 9px 10px;
+  font-size: 13px;
+  font-family: var(--font-mono);
+}
+.set-inline-add > input:focus {
+  outline: 0;
+  border-color: var(--gal-facade);
+}
+.set-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.set-steps .set-inline-add {
+  margin-bottom: 0;
+}
+.set-images {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}

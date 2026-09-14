@@ -1,0 +1,136 @@
+/*---------------- Product box (caja de marca) ----------------*/
+.product-box {
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border: 1px solid var(--gal-line);
+  border-radius: 5px;
+  overflow: hidden;
+  transition: transform 0.18s var(--ease-out), box-shadow 0.18s;
+}
+.product-box:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-float);
+}
+.box-media {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1 / 0.92;
+  background: linear-gradient(160deg, var(--gal-panel), var(--gal-white));
+  cursor: pointer;
+  overflow: hidden;
+}
+.box-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s var(--ease-out);
+}
+.product-box:hover .box-img {
+  transform: scale(1.05);
+}
+.tag-flash {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: var(--gal-tag);
+  color: var(--gal-tag-ink);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 4px 7px;
+  border-radius: 2px;
+}
+.box-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  padding: 16px;
+  gap: 6px;
+  border-top: 1px solid var(--gal-line);
+}
+.box-name {
+  font-size: 16.5px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+}
+.box-name button {
+  text-align: left;
+  color: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+}
+.box-name a {
+  text-decoration: none;
+  color: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+}
+.product-box:hover .box-name button,
+.product-box:hover .box-name a {
+  color: var(--gal-facade);
+}
+.box-footer {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 14px;
+}
+.box-price {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.price-tag-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+@media (max-width: 768px) {
+
+  .box-body {
+    padding: 12px;
+  }
+
+  .box-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+@media (max-width: 480px) {
+
+  .box-body {
+    padding: 10px;
+  }
+
+  .box-label {
+    font-size: 9px;
+    padding: 2px 6px;
+  }
+}
+.box-media::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 60%;
+  z-index: 2;
+  pointer-events: none;
+  background: linear-gradient(105deg, transparent, rgba(255, 255, 255, 0.5), transparent);
+  transform: translateX(-130%) skewX(-12deg);
+  transition: transform 0.7s var(--ease-out);
+}
+.product-box:hover .box-media::after {
+  transform: translateX(260%) skewX(-12deg);
+}
+.product-box:hover {
+  transform: translateY(-3px);
+}

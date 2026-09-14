@@ -1,0 +1,204 @@
+/*============================================================
+   CAJA: actual · movimientos · apertura · arqueos
+   ============================================================*/
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  background: var(--gal-black);
+  color: #fff;
+  border-radius: 4px;
+  padding: 11px 15px;
+  font-size: 13.5px;
+  font-weight: 800;
+  white-space: nowrap;
+  transition: background 0.15s;
+  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.35);
+}
+.btn svg {
+  width: 15px;
+  height: 15px;
+}
+.btn:hover {
+  background: var(--gal-facade);
+}
+.btn.cta {
+  background: var(--gal-facade);
+  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.18);
+}
+.btn.cta:hover {
+  background: var(--gal-facade-deep);
+}
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.cash-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 22px 24px;
+  background: var(--gal-black);
+  color: #fff;
+  flex-wrap: wrap;
+}
+.cash-hero-txt {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.cash-hero-txt em {
+  font-style: normal;
+  font-size: 13px;
+  color: #c8d0b8;
+}
+.cash-hero-amount {
+  font-size: 34px;
+  line-height: 1;
+  color: var(--gal-sun);
+}
+.cash-hero-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.cash-hero .btn {
+  background: #ffffff18;
+  box-shadow: none;
+}
+.cash-hero .btn:hover {
+  background: #ffffff2e;
+}
+.cash-hero .btn.cta {
+  background: var(--gal-facade);
+  box-shadow: inset 0 -3px 0 rgba(0, 0, 0, 0.18);
+}
+.cash-hero .btn.cta:hover {
+  background: var(--gal-facade-deep);
+}
+.cash-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.cash-summary strong {
+  font-size: 22px;
+  color: var(--gal-black);
+}
+.cash-summary em {
+  font-style: normal;
+  font-size: 12px;
+  color: var(--gal-ink-soft);
+}
+.cash-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+}
+.cash-form .btn,
+.cash-form-cols select,
+.cash-form-cols input,
+.cash-form input:not([type='number']),
+.cash-form input[type='number'] {
+  align-self: flex-start;
+}
+.cash-form-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.6fr;
+  gap: 12px;
+}
+.cash-form-foot {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.cash-kind {
+  display: inline-block;
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  padding: 3px 8px;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+.cash-kind.venta {
+  background: #e4f4e3;
+  color: #2e7d32;
+}
+.cash-kind.ingreso {
+  background: #e4f4e3;
+  color: #2e7d32;
+}
+.cash-kind.egreso {
+  background: #fde8e8;
+  color: #c62828;
+}
+.cash-kind.devolucion {
+  background: #fff4d6;
+  color: #9a6700;
+}
+.cash-strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  padding: 14px 16px;
+  background: var(--gal-line);
+}
+.cash-strip span {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  background: #fff;
+  padding: 12px 14px;
+}
+.cash-strip em {
+  font-style: normal;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--gal-ink-soft);
+}
+.cash-strip strong {
+  font-size: 17px;
+  color: var(--gal-black);
+}
+.cash-diff-pos {
+  color: #2e7d32;
+}
+.cash-diff-neg {
+  color: #c62828;
+}
+.set-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--gal-ink-soft);
+}
+.set-field input,
+.set-field select {
+  width: 100%;
+  font-weight: 600;
+}
+@media (max-width: 900px) {
+  .cash-form-cols {
+    grid-template-columns: 1fr;
+  }
+
+  .cash-strip {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 480px) {
+  .cash-hero-amount {
+    font-size: 26px;
+  }
+
+  .cash-strip {
+    grid-template-columns: 1fr;
+  }
+}

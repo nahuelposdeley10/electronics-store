@@ -5,54 +5,49 @@ import { preferenceService } from '../services/mercadopago.js'
 import { verifyOrderPayment } from '../lib/order-verify.js'
 import { trackOrder } from '../lib/order-tracker.js'
 import { getSettings } from '../lib/settings.js'
-import { env } from '../config/env.js'
+import { env, isAllowedOrigin } from '../config/env.js'
 import { publicTenantId } from '../lib/tenant.js'
+import { createRefreshToken, verifyRefreshToken } from '../lib/order-token.js'
 
 const router = express.Router()
+
+const MUTABLE_STATUSES = new Set(['pending', 'in_process'])
+
+function orderPayload(order) {
+  return {
+    id: order._id,
+    status: order.status,
+    paymentId: order.paymentId,
+    total: order.total,
+    payer: {
+      email: order.payerEmail,
+      name: order.payerName,
+      surname: order.payerSurname,
+      fullName: [order.payerName, order.payerSurname].filter(Boolean).join(' ') || null,
+      idType: order.payerIdType,
+      idNumber: order.payerIdNumber,
+    },
+  }
+}
 
 router.post('/orders/:id/refresh', async (req, res) => {
   try {
     const order = await Order.findById(req.params.id)
-    if (!order) {
+    const token = req.headers['x-refresh-token'] || req.body?.refreshToken || null
+
+    if (!order || !verifyRefreshToken(order.refreshToken, token)) {
       return res.status(404).json({ error: 'Orden no encontrada' })
     }
 
-    if (order.status === 'approved') {
-      return res.json({
-        id: order._id,
-        status: order.status,
-        paymentId: order.paymentId,
-        total: order.total,
-        payer: {
-          email: order.payerEmail,
-          name: order.payerName,
-          surname: order.payerSurname,
-          fullName: [order.payerName, order.payerSurname].filter(Boolean).join(' ') || null,
-          idType: order.payerIdType,
-          idNumber: order.payerIdNumber,
-        },
-      })
+    if (MUTABLE_STATUSES.has(order.status)) {
+      const updated = await verifyOrderPayment(order)
+      if (MUTABLE_STATUSES.has(updated.status)) {
+        trackOrder(updated._id)
+      }
+      return res.json(orderPayload(updated))
     }
 
-    const updated = await verifyOrderPayment(order)
-    if (updated.status === 'pending' || updated.status === 'in_process') {
-      trackOrder(updated._id)
-    }
-
-    return res.json({
-      id: updated._id,
-      status: updated.status,
-      paymentId: updated.paymentId,
-      total: updated.total,
-      payer: {
-        email: updated.payerEmail,
-        name: updated.payerName,
-        surname: updated.payerSurname,
-        fullName: [updated.payerName, updated.payerSurname].filter(Boolean).join(' ') || null,
-        idType: updated.payerIdType,
-        idNumber: updated.payerIdNumber,
-      },
-    })
+    return res.json(orderPayload(order))
   } catch (error) {
     console.error('Order refresh error:', error)
     return res.status(500).json({ error: 'No se pudo corroborar el pago' })
@@ -67,16 +62,25 @@ router.post('/checkout', async (req, res) => {
       return res.status(400).json({ error: 'El carrito está vacío' })
     }
 
+    for (const line of cart.lineItems) {
+      if (line.product.stock < line.quantity) {
+        return res.status(400).json({
+          error: `Stock insuficiente de "${line.product.name}" (queda ${line.product.stock})`,
+        })
+      }
+    }
+
     const buyer = req.body.payer || {}
     const fullName = String(buyer.name || '').trim()
     const lastNameIdx = fullName.lastIndexOf(' ') + 1
 
     const order = await Order.create({
       adminId: tenant,
+      refreshToken: createRefreshToken(),
       items: cart.lineItems.map((line) => ({
         productId: line.product.id,
         name: line.product.name,
-        unitPrice: line.product.price,
+        unitPrice: line.unitPrice,
         quantity: line.quantity,
       })),
       coupon: cart.coupon,
@@ -96,7 +100,7 @@ router.post('/checkout', async (req, res) => {
       title: line.product.name,
       picture_url: line.product.image,
       quantity: line.quantity,
-      unit_price: line.product.price,
+      unit_price: line.unitPrice,
       currency_id: 'ARS',
     }))
 
@@ -120,13 +124,14 @@ router.post('/checkout', async (req, res) => {
       })
     }
 
-    const origin = req.headers.origin || env.clientUrl
+    const origin = isAllowedOrigin(req.headers.origin) ? req.headers.origin : env.clientUrl
     const slug = String(req.headers['x-tenant-slug'] || '').trim().toLowerCase()
     const storePath = slug ? `/u/${slug}` : ''
 
     const body = {
       items,
       external_reference: String(order._id),
+      metadata: { tenant: String(order.adminId) },
       back_urls: {
         success: `${origin}${storePath}`,
         failure: `${origin}${storePath}`,
@@ -148,6 +153,7 @@ router.post('/checkout', async (req, res) => {
     return res.json({
       init_point: preference.init_point,
       order_id: String(order._id),
+      refresh_token: order.refreshToken,
       total: cart.total,
     })
   } catch (error) {

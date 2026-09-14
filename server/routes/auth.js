@@ -1,6 +1,7 @@
 import express from 'express'
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
+import rateLimit from 'express-rate-limit'
 import { requireAuth } from '../middleware/auth.js'
 import { User } from '../models/User.js'
 import { env } from '../config/env.js'
@@ -8,7 +9,15 @@ import { permissionsForUser } from '../lib/settings.js'
 
 const router = express.Router()
 
-router.post('/login', async (req, res) => {
+const loginLimiter = rateLimit({
+  windowMs: env.loginRateLimit.windowMs,
+  limit: env.loginRateLimit.max,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Demasiados intentos de login. Probá de nuevo en unos minutos.' },
+})
+
+router.post('/login', loginLimiter, async (req, res) => {
   const { email, password } = req.body || {}
   if (!email || !password) {
     return res.status(400).json({ error: 'Email y contraseña requeridos' })

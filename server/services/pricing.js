@@ -1,6 +1,7 @@
 import { Product } from '../models/Product.js'
 import { Coupon } from '../models/Coupon.js'
 import { getSettings } from '../lib/settings.js'
+import { roundMoney, roundLine } from '../lib/money.js'
 
 export async function buildCart(items, coupon, tenant = null) {
   const { shipping } = await getSettings({ tenant })
@@ -26,15 +27,18 @@ export async function buildCart(items, coupon, tenant = null) {
     .map((row) => {
       const product = byId.get(row.id)
       if (!product) return null
+      const unitPrice = roundMoney(product.price)
       return {
         product,
         quantity: row.quantity,
+        unitPrice,
+        lineTotal: roundLine(unitPrice, row.quantity),
       }
     })
     .filter(Boolean)
 
   const subtotal = lineItems.reduce(
-    (sum, line) => sum + line.product.price * line.quantity,
+    (sum, line) => sum + line.lineTotal,
     0,
   )
 
@@ -50,15 +54,16 @@ export async function buildCart(items, coupon, tenant = null) {
       couponCode = doc.code
     }
   }
-  const discount = Math.round((subtotal * discountRate) / 100)
+  const discount = roundMoney((subtotal * discountRate) / 100)
 
   const hasFreeShipping =
     lineItems.some((line) => line.product.freeShipping) ||
     subtotal >= FREE_SHIPPING_THRESHOLD
-  const shippingCost =
-    lineItems.length === 0 ? 0 : hasFreeShipping ? 0 : SHIPPING_COST
+  const shippingCost = roundMoney(
+    lineItems.length === 0 ? 0 : hasFreeShipping ? 0 : SHIPPING_COST,
+  )
 
-  const total = subtotal - discount + shippingCost
+  const total = roundMoney(subtotal - discount + shippingCost)
 
   return {
     lineItems,

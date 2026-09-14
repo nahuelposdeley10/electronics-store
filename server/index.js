@@ -3,6 +3,7 @@ import mongoose from 'mongoose'
 import { createApp, connectDb } from './app.js'
 import { createSocketServer, closeSocketServer } from './socketio.js'
 import { initTracker } from './lib/order-tracker.js'
+import { validateEnv } from './config/env.js'
 
 const port = Number(process.env.PORT || 4000)
 
@@ -21,6 +22,7 @@ process.on('uncaughtException', (error) => {
 let server = null
 
 async function start() {
+  validateEnv()
   await connectDb()
   initTracker()
   server = http.createServer(createApp())

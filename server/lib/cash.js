@@ -1,6 +1,8 @@
 import { CashMovement } from '../models/CashMovement.js'
 import { CashShift } from '../models/CashShift.js'
 import { CashCount } from '../models/CashCount.js'
+import { nextSequence, sequenceKey } from './counter.js'
+import { roundMoney } from './money.js'
 
 export async function cashNet(shiftId) {
   const rows = await CashMovement.aggregate([
@@ -45,12 +47,12 @@ export async function openShift({ openingBalance = 0, note = '', openedBy = null
     throw error
   }
   const filter = tenant ? { adminId: tenant } : { adminId: null }
-  const number = (await CashShift.countDocuments(filter)) + 1
+  const number = await nextSequence(sequenceKey(tenant, 'shift'), await CashShift.countDocuments(filter))
   const shift = await CashShift.create({
     adminId: tenant,
     number,
     status: 'open',
-    openingBalance: Math.max(0, Number(openingBalance) || 0),
+    openingBalance: roundMoney(Math.max(0, Number(openingBalance) || 0)),
     note: note || '',
     openedBy,
   })
@@ -66,11 +68,11 @@ export async function closeShift({ countedBalance, note = '', closedBy = null, t
     throw error
   }
   const balance = await cashNet(shift._id)
-  const expectedClose = Math.round((shift.openingBalance + balance.net) * 100) / 100
-  const counted = Math.max(0, Number(countedBalance) || 0)
+  const expectedClose = roundMoney(shift.openingBalance + balance.net)
+  const counted = roundMoney(Math.max(0, Number(countedBalance) || 0))
   shift.expectedClose = expectedClose
   shift.closedBalance = counted
-  shift.difference = Math.round((counted - expectedClose) * 100) / 100
+  shift.difference = roundMoney(counted - expectedClose)
   shift.closedBy = closedBy
   shift.note = note ?? shift.note
   shift.status = 'closed'
@@ -91,7 +93,7 @@ export async function addMovement({ shiftId, kind = 'ingreso', flow = 'in', amou
     shiftId,
     kind,
     flow,
-    amount: Math.max(0, Number(amount) || 0),
+    amount: roundMoney(Math.max(0, Number(amount) || 0)),
     description: description || '',
     ref,
     by,
@@ -106,9 +108,9 @@ export async function createArqueo({ countedAmount, note = '', by = null, tenant
     throw error
   }
   const balance = await cashNet(shift._id)
-  const expected = Math.round((shift.openingBalance + balance.net) * 100) / 100
-  const counted = Math.max(0, Number(countedAmount) || 0)
-  const diff = Math.round((counted - expected) * 100) / 100
+  const expected = roundMoney(shift.openingBalance + balance.net)
+  const counted = roundMoney(Math.max(0, Number(countedAmount) || 0))
+  const diff = roundMoney(counted - expected)
   const count = await CashCount.create({
     adminId: shift.adminId || null,
     shiftId: shift._id,

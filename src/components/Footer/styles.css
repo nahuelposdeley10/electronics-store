@@ -1,0 +1,139 @@
+.footer-brand img.footer-logo {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+  border-radius: 6px;
+}
+.site-footer {
+  background: var(--gal-black);
+  color: #c9cdc2;
+  margin-top: 40px;
+}
+.footer-band {
+  background: var(--gal-facade);
+  color: #fff;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 11px 16px;
+}
+.footer-grid {
+  width: min(1240px, 100%);
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1.4fr;
+  gap: 36px;
+  padding: 48px 24px;
+}
+.footer-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-sign);
+  font-size: 24px;
+  color: #fff;
+  letter-spacing: 0.01em;
+}
+.footer-brand svg {
+  width: 26px;
+  height: 26px;
+  fill: var(--gal-tag);
+  color: var(--gal-tag);
+}
+.footer-accent {
+  color: var(--gal-facade);
+}
+.footer-col p {
+  margin-top: 14px;
+  font-size: 14px;
+  color: #a4aa9c;
+  line-height: 1.6;
+  max-width: 30ch;
+}
+.footer-col h3 {
+  color: #fff;
+  font-family: var(--font-sign);
+  font-size: 16px;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  margin-bottom: 18px;
+}
+.footer-col ul {
+  display: flex;
+  flex-direction: column;
+  gap: 11px;
+  font-size: 14px;
+}
+.footer-col li {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+}
+.footer-col li svg {
+  width: 16px;
+  height: 16px;
+  color: var(--gal-tag);
+  margin-top: 1px;
+  flex-shrink: 0;
+}
+.footer-col button {
+  color: #a4aa9c;
+  font-size: 14px;
+  text-align: left;
+  padding: 0;
+}
+.footer-col button:hover {
+  color: #fff;
+}
+.footer-map {
+  margin-top: 18px;
+  border-radius: 5px;
+  overflow: hidden;
+  border: 1px solid #262b1d;
+  line-height: 0;
+}
+.footer-map iframe {
+  width: 100%;
+  height: 170px;
+  border: 0;
+  filter: grayscale(1) invert(0.92);
+}
+.footer-bottom {
+  border-top: 1px solid #262b1d;
+  text-align: center;
+  padding: 20px;
+  font-size: 13px;
+  color: #6d7365;
+}
+@media (max-width: 900px) {
+
+  .footer-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+@media (max-width: 480px) {
+
+  .footer-grid {
+    grid-template-columns: 1fr;
+  }
+}
+/*---- Pie de tienda ----*/
+.footer-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+.footer-panel-link {
+  color: #8a917f;
+  font-size: 12.5px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.footer-panel-link:hover {
+  color: #fff;
+}

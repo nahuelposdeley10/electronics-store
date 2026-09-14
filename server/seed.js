@@ -3,6 +3,7 @@ import mongoose from 'mongoose'
 import { Order } from './models/Order.js'
 import { Product } from './models/Product.js'
 import { coupons } from '../src/data/format.js'
+import { roundMoney, roundLine } from './lib/money.js'
 
 const FREE_SHIPPING_THRESHOLD = 300000
 const SHIPPING_COST = 5999
@@ -43,11 +44,11 @@ function randomItems(catalog) {
 }
 
 function buildTotals(items, coupon) {
-  const subtotal = items.reduce((sum, it) => sum + it.unitPrice * it.quantity, 0)
+  const subtotal = items.reduce((sum, it) => sum + roundLine(it.unitPrice, it.quantity), 0)
   const discountRate = coupon ? coupons[coupon] || 0 : 0
-  const discount = Math.round((subtotal * discountRate) / 100)
+  const discount = roundMoney((subtotal * discountRate) / 100)
   const shippingCost = subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_COST
-  return { subtotal, discount, shippingCost, total: subtotal - discount + shippingCost }
+  return { subtotal, discount, shippingCost, total: roundMoney(subtotal - discount + shippingCost) }
 }
 
 function demoOrders(catalog) {
