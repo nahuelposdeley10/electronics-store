@@ -1,7 +1,7 @@
 import 'dotenv/config'
 import mongoose from 'mongoose'
 import { Setting } from '../models/Setting.js'
-import { getSettings } from '../lib/settings.js'
+import { getSettings, saveSettings } from '../lib/settings.js'
 
 let exitCode = 0
 
@@ -10,9 +10,8 @@ function check(cond, label) {
   if (!cond) exitCode = 1
 }
 
-const SECRET_RE = /^[0-9a-f]{48}$/
-
 async function main() {
+  mongoose.set('autoIndex', false)
   const base = new URL(process.env.MONGODB_URI)
   base.pathname = '/electronics-store-test-settings'
   await mongoose.connect(base.toString())
@@ -22,42 +21,54 @@ async function main() {
 
   const tenantA = new mongoose.Types.ObjectId()
   const tenantB = new mongoose.Types.ObjectId()
-  const tenantC = new mongoose.Types.ObjectId()
 
   const sA = await getSettings({ fresh: true, tenant: tenantA })
-  const sB = await getSettings({ fresh: true, tenant: tenantB })
-  const sG = await getSettings({ fresh: true })
-
-  const secretA = sA?.payments?.mercadopago?.webhookSecret
-  const secretB = sB?.payments?.mercadopago?.webhookSecret
-  const secretG = sG?.payments?.mercadopago?.webhookSecret
-
-  check(secretA && SECRET_RE.test(secretA), 'tenant A recibe un webhookSecret por defecto')
-  check(secretB && SECRET_RE.test(secretB), 'tenant B recibe un webhookSecret por defecto')
-  check(secretG && SECRET_RE.test(secretG), 'el scope global recibe un webhookSecret por defecto')
   check(
-    new Set([secretA, secretB, secretG]).size === 3,
-    'el webhookSecret es distinto por tienda',
+    sA?.payments?.mercadopago?.webhookSecret == null,
+    'sin secreto cargado, el webhookSecret queda vacío (no se genera)',
   )
-  check(secretA !== secretB, `secrets distintos entre tenants (A=${secretA.slice(0, 8)}… B=${secretB.slice(0, 8)}…)`)
+
+  await saveSettings({
+    tenant: tenantA,
+    section: 'payments',
+    value: {
+      methods: { efectivo: true, tarjeta: true, transferencia: true },
+      mercadopago: {
+        accessToken: 'APP_USR_test',
+        publicKey: null,
+        webhookSecret: 'secret-copiado-de-mp',
+      },
+    },
+  })
 
   const sA2 = await getSettings({ fresh: true, tenant: tenantA })
   check(
-    sA2?.payments?.mercadopago?.webhookSecret === secretA,
-    'el secreto se mantiene en lecturas siguientes (no se regenera)',
+    sA2?.payments?.mercadopago?.webhookSecret === 'secret-copiado-de-mp',
+    'el webhookSecret pegado desde MP persiste en lecturas siguientes',
   )
 
-  await Setting.create({
-    key: 'base',
-    adminId: tenantC,
-    value: { payments: { methods: { efectivo: true, tarjeta: true, transferencia: true } } },
-  })
-  const sC = await getSettings({ fresh: true, tenant: tenantC })
-  const docC = await Setting.findOne({ key: 'base', adminId: tenantC }).lean()
+  const docA = await Setting.findOne({ key: 'base', adminId: tenantA }).lean()
   check(
-    sC?.payments?.mercadopago?.webhookSecret &&
-      docC?.value?.payments?.mercadopago?.webhookSecret === sC.payments.mercadopago.webhookSecret,
-    'tiendas existentes sin secreto lo reciben y queda persistido',
+    docA?.value?.payments?.mercadopago?.webhookSecret === 'secret-copiado-de-mp',
+    'el webhookSecret queda guardado en la base de datos',
+  )
+
+  const sA3 = await getSettings({ fresh: true, tenant: tenantA })
+  check(
+    sA3?.payments?.mercadopago?.webhookSecret === 'secret-copiado-de-mp',
+    'el seed no pisa un webhookSecret ya cargado',
+  )
+
+  const sB = await getSettings({ fresh: true, tenant: tenantB })
+  check(
+    sB?.payments?.mercadopago?.webhookSecret == null,
+    'otra tienda sigue sin webhookSecret hasta pegarlo',
+  )
+
+  const sG = await getSettings({ fresh: true })
+  check(
+    sG?.payments?.mercadopago?.webhookSecret == null,
+    'el scope global queda vacío hasta pegar el de MP',
   )
 
   await mongoose.disconnect()

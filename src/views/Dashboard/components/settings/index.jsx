@@ -21,15 +21,6 @@ function PasswordInput({ label, value, onChange, ...rest }) {
   )
 }
 
-function generateWebhookSecret() {
-  const bytes = new Uint8Array(24)
-  const cryptoObj = globalThis.crypto
-  if (typeof cryptoObj?.getRandomValues === 'function') {
-    cryptoObj.getRandomValues(bytes)
-  }
-  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')
-}
-
 function PaymentsScreen() {
   const [saving, setSaving] = useState(false)
   const [note, setNote] = useState('')
@@ -77,14 +68,10 @@ function PaymentsScreenBody({ settings, saving, note, setNote, onSave }) {
     statementDescriptor: checkout.statementDescriptor || 'TechStore',
     accessToken: mp.accessToken || '',
     publicKey: mp.publicKey || '',
-    webhookSecret: mp.webhookSecret || generateWebhookSecret(),
+    webhookSecret: mp.webhookSecret || '',
   })
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }))
-
-  const regenerateSecret = () => {
-    setForm((f) => ({ ...f, webhookSecret: generateWebhookSecret() }))
-  }
 
   const copyWebhook = () => {
     if (!webhookUrl) return
@@ -175,23 +162,23 @@ function PaymentsScreenBody({ settings, saving, note, setNote, onSave }) {
             maxLength={300}
           />
           <PasswordInput
-            label="Webhook Secret"
+            label="Webhook Secret (desde el panel de MP)"
             value={form.webhookSecret}
             onChange={set('webhookSecret')}
             maxLength={300}
+            placeholder="Pegá acá el secreto que te muestra Mercado Pago"
           />
-        </div>
-        <div className="set-row">
-          <button type="button" className="ghost-btn" onClick={regenerateSecret}>
-            Regenerar Webhook Secret
-          </button>
         </div>
         <label className="inv-field">
           <span>Public Key (opcional)</span>
           <input value={form.publicKey} onChange={set('publicKey')} maxLength={300} />
         </label>
         <p className="set-hint">
-          Obtené las claves en <a href="https://www.mercadopago.com.ar/developers" target="_blank" rel="noreferrer">MercadoPago Developers</a>. Las claves se guardan en la base de datos de esta tienda solamente. Cada tienda tiene su propio webhook secret por defecto; si lo regenerás, actualizá el nuevo valor en el panel de webhooks de Mercado Pago de esta tienda.
+          El Webhook Secret lo genera Mercado Pago, no esta app: entrá al panel de MP →{' '}
+          <em>Configuraciones para tus cobros → Webhooks</em>, abrí tu webhook, copiá el{' '}
+          <em>Secret</em> que te muestra y pegalo acá. Si la firma no verifica, es porque el
+          secreto no coincide con el del webhook de esa tienda. Se guarda solo en la base de
+          datos de esta tienda.
         </p>
 
         <div className="set-actions">

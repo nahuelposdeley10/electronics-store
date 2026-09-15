@@ -1,4 +1,3 @@
-import crypto from 'node:crypto'
 import mongoose from 'mongoose'
 import { Setting } from '../models/Setting.js'
 import { roundMoney } from './money.js'
@@ -109,45 +108,14 @@ const cache = new Map()
 const cacheAt = new Map()
 const CACHE_MS = 30 * 1000
 
-function generateWebhookSecret() {
-  return crypto.randomBytes(24).toString('hex')
-}
-
-function ensureMpWebhookSecret(value) {
-  const payments = value.payments && typeof value.payments === 'object' ? value.payments : {}
-  const mp =
-    payments.mercadopago && typeof payments.mercadopago === 'object'
-      ? payments.mercadopago
-      : {}
-  if (!mp.webhookSecret) {
-    mp.webhookSecret = generateWebhookSecret()
-  }
-  payments.mercadopago = mp
-  value.payments = payments
-  return value
-}
-
 async function seed(tenant) {
   const filter = tenantFilter(tenant)
   const doc = await Setting.findOne({ key: 'base', ...filter }).lean()
   if (!doc) {
-    const value = ensureMpWebhookSecret(defaults())
-    await Setting.create({ key: 'base', ...filter, value })
-    return value
+    await Setting.create({ key: 'base', ...filter, value: defaults() })
+    return defaults()
   }
-  const hadSecret = Boolean(doc.value?.payments?.mercadopago?.webhookSecret)
-  const value = ensureMpWebhookSecret(doc.value)
-  if (!hadSecret) {
-    await Setting.updateOne(
-      { _id: doc._id },
-      {
-        $set: {
-          'value.payments.mercadopago.webhookSecret': value.payments.mercadopago.webhookSecret,
-        },
-      },
-    )
-  }
-  return value
+  return doc.value
 }
 
 function hydrate(raw) {
