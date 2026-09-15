@@ -42,6 +42,7 @@ export default function Home({ onView }) {
     ).map((s) => Number(s.months) || 1)),
   )
   const freeThreshold = settings.shipping.freeThreshold
+  const shippingEnabled = settings.shipping.enabled !== false
   const heroTitle = settings.hero.title || 'Tecnología de galería.'
   const heroAccent = settings.hero.titleAccent || 'Precio de mostrador.'
   const heroLead = String(settings.hero.lead || '')
@@ -161,10 +162,17 @@ export default function Home({ onView }) {
             <strong>Hasta {maxMonths} cuotas</strong>
             <span>sin interés</span>
           </div>
-          <div className="bay-stat">
-            <strong>Envío gratis</strong>
-            <span>en compras +{formatARS(freeThreshold)}</span>
-          </div>
+          {shippingEnabled ? (
+            <div className="bay-stat">
+              <strong>Envío gratis</strong>
+              <span>en compras +{formatARS(freeThreshold)}</span>
+            </div>
+          ) : (
+            <div className="bay-stat">
+              <strong>Retiro en el local</strong>
+              <span>siempre gratis</span>
+            </div>
+          )}
           <div className="bay-stat">
             <strong>Garantía oficial</strong>
             <span>y servicio técnico propio</span>
@@ -176,12 +184,19 @@ export default function Home({ onView }) {
 
       <Section title="Ofertas de la semana" items={topDeals} onView={onView} offer />
 
-      <div className="band-shipping" data-reveal="up">
-        <span className="stamp">ENVÍO GRATIS</span>
-        <p>
-          En compras superiores a {formatARS(freeThreshold)} · {settings.shipping.label}
-        </p>
-      </div>
+      {shippingEnabled ? (
+        <div className="band-shipping" data-reveal="up">
+          <span className="stamp">ENVÍO GRATIS</span>
+          <p>
+            En compras superiores a {formatARS(freeThreshold)} · {settings.shipping.label}
+          </p>
+        </div>
+      ) : (
+        <div className="band-shipping" data-reveal="up">
+          <span className="stamp">RETIRO GRATIS</span>
+          <p>Retirá en el local · {settings.store.addressShort}</p>
+        </div>
+      )}
 
       <Section title="Recién llegados" items={newest} onView={onView} />
 

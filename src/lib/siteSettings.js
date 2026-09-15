@@ -14,6 +14,7 @@ const FALLBACK = {
     band: 'Comprá online y retirá gratis en el local. Mismo día si pagás antes de las 15hs.',
   },
   shipping: {
+    enabled: true,
     cost: 5999,
     freeThreshold: 300000,
     label: 'Envío a domicilio',

@@ -30,6 +30,7 @@ export default function CartProvider({ children }) {
   const [couponMap, setCouponMap] = useState({})
   const [toast, setToast] = useState(null)
   const [shippingConfig, setShippingConfig] = useState({
+    enabled: true,
     cost: 5999,
     freeThreshold: 300000,
   })
@@ -38,6 +39,7 @@ export default function CartProvider({ children }) {
     fetchSiteSettings().then((data) => {
       if (data.shipping) {
         setShippingConfig({
+          enabled: data.shipping.enabled !== false,
           cost: Number(data.shipping.cost) > 0 ? Number(data.shipping.cost) : 5999,
           freeThreshold:
             Number(data.shipping.freeThreshold) > 0
@@ -203,12 +205,14 @@ export default function CartProvider({ children }) {
   const discountRate = appliedCoupon ? couponMap[appliedCoupon] || 0 : 0
   const discount = round2((subtotal * discountRate) / 100)
 
+  const shippingEnabled = shippingConfig.enabled !== false
   const freeShippingThreshold = shippingConfig.freeThreshold
   const hasFreeShipping =
-    items.some((item) => item.freeShipping) ||
-    subtotal >= freeShippingThreshold
+    shippingEnabled &&
+    (items.some((item) => item.freeShipping) ||
+      subtotal >= freeShippingThreshold)
   const shippingCost =
-    items.length === 0
+    items.length === 0 || !shippingEnabled
       ? 0
       : hasFreeShipping
         ? 0
@@ -229,6 +233,7 @@ export default function CartProvider({ children }) {
     applyCoupon,
     removeCoupon,
     shippingCost,
+    shippingEnabled,
     hasFreeShipping,
     freeShippingThreshold,
     total,

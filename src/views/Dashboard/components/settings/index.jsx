@@ -437,6 +437,7 @@ function GeneralScreenBody({ settings, saving, note, onSave }) {
   const shipping = settings.shipping || {}
   const general = settings.general || {}
   const [form, setForm] = useState({
+    enabled: shipping.enabled !== false,
     cost: String(shipping.cost || 5999),
     freeThreshold: String(shipping.freeThreshold || 300000),
     label: shipping.label || 'Envío a domicilio',
@@ -486,6 +487,7 @@ function GeneralScreenBody({ settings, saving, note, onSave }) {
     e.preventDefault()
     onSave(
       {
+        enabled: form.enabled !== false,
         cost: Math.max(0, Number(form.cost) || 0),
         freeThreshold: Math.max(0, Number(form.freeThreshold) || 0),
         label: form.label.trim() || 'Envío a domicilio',
@@ -515,21 +517,33 @@ function GeneralScreenBody({ settings, saving, note, onSave }) {
 
       <form className="set-card set-form" onSubmit={submit}>
         <h3>Envíos</h3>
+        <div className="set-toggles">
+          <ToggleRow
+            label="Trabajo con envío a domicilio"
+            hint={
+              form.enabled
+                ? 'Se cobra envío según el costo y el mínimo para envío gratis.'
+                : 'Sin envío: el carrito y el checkout no suman envío.'
+            }
+            checked={form.enabled}
+            onChange={(on) => setForm((f) => ({ ...f, enabled: on }))}
+          />
+        </div>
         <div className="set-row">
           <label className="inv-field">
             <span>Costo de envío (ARS)</span>
-            <input type="number" min="0" value={form.cost} onChange={set('cost')} className="mono" />
+            <input type="number" min="0" value={form.cost} onChange={set('cost')} className="mono" disabled={!form.enabled} />
           </label>
           <label className="inv-field">
             <span>Envío gratis desde (ARS)</span>
-            <input type="number" min="0" value={form.freeThreshold} onChange={set('freeThreshold')} className="mono" />
+            <input type="number" min="0" value={form.freeThreshold} onChange={set('freeThreshold')} className="mono" disabled={!form.enabled} />
           </label>
           <label className="inv-field">
             <span>Nombre del envío</span>
-            <input value={form.label} onChange={set('label')} />
+            <input value={form.label} onChange={set('label')} disabled={!form.enabled} />
           </label>
         </div>
-        <p className="set-hint">Si el costo es 0, el envío es siempre gratis.</p>
+        {form.enabled && <p className="set-hint">Si el costo es 0, el envío es siempre gratis.</p>}
 
         <h3>Cinta superior (marquee)</h3>
         <div className="set-list">

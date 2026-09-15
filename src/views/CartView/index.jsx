@@ -27,6 +27,7 @@ export default function CartView({ onNavigate }) {
     applyCoupon,
     removeCoupon,
     shippingCost,
+    shippingEnabled,
     hasFreeShipping,
     freeShippingThreshold,
     total,
@@ -184,22 +185,26 @@ export default function CartView({ onNavigate }) {
                 <span className="mono">−{formatARS(discount)}</span>
               </div>
             )}
-            <div className="summary-row">
-              <span>Envío</span>
-              <span className="mono">
-                {hasFreeShipping ? (
-                  <span className="free-tag">GRATIS</span>
-                ) : (
-                  formatARS(shippingCost)
+            {shippingEnabled && (
+              <>
+                <div className="summary-row">
+                  <span>Envío</span>
+                  <span className="mono">
+                    {hasFreeShipping ? (
+                      <span className="free-tag">GRATIS</span>
+                    ) : (
+                      formatARS(shippingCost)
+                    )}
+                  </span>
+                </div>
+                {!hasFreeShipping && (
+                  <div className="free-shipping-hint">
+                    <IconTruck />
+                    Te faltan <strong>{formatARS(freeShippingThreshold - subtotal)}</strong> para el
+                    envío gratis
+                  </div>
                 )}
-              </span>
-            </div>
-            {!hasFreeShipping && (
-              <div className="free-shipping-hint">
-                <IconTruck />
-                Te faltan <strong>{formatARS(freeShippingThreshold - subtotal)}</strong> para el
-                envío gratis
-              </div>
+              </>
             )}
           </div>
 

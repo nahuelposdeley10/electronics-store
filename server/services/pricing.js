@@ -5,10 +5,11 @@ import { roundMoney, roundLine } from '../lib/money.js'
 
 export async function buildCart(items, coupon, tenant = null) {
   const { shipping } = await getSettings({ tenant })
+  const shippingEnabled = shipping?.enabled !== false
   const shippingCostSetting = Number(shipping?.cost)
   const shippingFreeThreshold = Number(shipping?.freeThreshold)
   const shippingLabel = String(shipping?.label || 'Envío a domicilio')
-  const SHIPPING_COST = shippingCostSetting > 0 ? shippingCostSetting : 0
+  const SHIPPING_COST = shippingEnabled && shippingCostSetting > 0 ? shippingCostSetting : 0
   const FREE_SHIPPING_THRESHOLD =
     shippingFreeThreshold > 0 ? shippingFreeThreshold : Infinity
   const rows = (items || [])
@@ -57,8 +58,9 @@ export async function buildCart(items, coupon, tenant = null) {
   const discount = roundMoney((subtotal * discountRate) / 100)
 
   const hasFreeShipping =
-    lineItems.some((line) => line.product.freeShipping) ||
-    subtotal >= FREE_SHIPPING_THRESHOLD
+    shippingEnabled &&
+    (lineItems.some((line) => line.product.freeShipping) ||
+      subtotal >= FREE_SHIPPING_THRESHOLD)
   const shippingCost = roundMoney(
     lineItems.length === 0 ? 0 : hasFreeShipping ? 0 : SHIPPING_COST,
   )
@@ -72,6 +74,7 @@ export async function buildCart(items, coupon, tenant = null) {
     discountRate,
     coupon: couponCode,
     hasFreeShipping,
+    shippingEnabled,
     shippingCost,
     shippingLabel,
     total,

@@ -1061,6 +1061,15 @@
   outline: 0;
   border-color: var(--gal-facade);
 }
+.inv-field input:disabled,
+.inv-field select:disabled,
+.inv-field textarea:disabled {
+  background: var(--gal-panel);
+  color: var(--gal-ink-faint);
+  border-color: var(--gal-line);
+  opacity: 0.75;
+  cursor: not-allowed;
+}
 .set-card {
   background: var(--gal-white);
   border: 1px solid var(--gal-line-strong);

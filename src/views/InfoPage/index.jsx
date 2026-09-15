@@ -78,8 +78,9 @@ export default function InfoPage({ slug, onNavigate }) {
   const page = PAGES[slug] || { title: slug || 'Información', eyebrow: 'Tienda', cards: ['contact'] }
   const methods = methodsList(settings)
   const wa = whatsappLink(settings.store.whatsapp)
+  const shippingEnabled = settings.shipping.enabled !== false
   const freeShip =
-    settings.shipping.freeThreshold && Number(settings.shipping.freeThreshold) > 0
+    shippingEnabled && settings.shipping.freeThreshold && Number(settings.shipping.freeThreshold) > 0
       ? ` gratis desde ${formatARS(settings.shipping.freeThreshold)}`
       : ''
 
@@ -136,11 +137,17 @@ export default function InfoPage({ slug, onNavigate }) {
         <section key={name} className="info-card">
           <h2>Envíos y retiro</h2>
           <ul className="info-list">
-            <li>
-              <IconCheck />
-              {settings.shipping.label} por {formatARS(settings.shipping.cost)}
-              {freeShip}.
-            </li>
+            {shippingEnabled ? (
+              <li>
+                <IconCheck />
+                {settings.shipping.label} por {formatARS(settings.shipping.cost)}
+                {freeShip}.
+              </li>
+            ) : (
+              <li>
+                <IconCheck />No se realiza envío a domicilio.
+              </li>
+            )}
             <li>
               <IconCheck />
               Retiro gratis en el local ({settings.store.addressShort}).
