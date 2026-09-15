@@ -28,11 +28,13 @@ async function main() {
     nextSequence(sequenceKey(tenantB, 'product'), 4),
   ])
 
-  check([a1, a2, a3].every((n) => Number.isInteger(n)), 'secuencia devuelve enteros')
-  check(new Set([a1, a2, a3]).size === 3, `concurrentes sin colisiones A (${a1},${a2},${a3})`)
-  check(new Set([b1, b2]).size === 2, `concurrentes sin colisiones B (${b1},${b2})`)
-  check(a1 > 4 && a3 === a1 + 2, `continúa desde el último id existente (seed 4 → ${a1})`)
-  check(b1 !== a1 && b2 !== a3, 'secuencias independientes entre tenants')
+  const a = [a1, a2, a3].slice().sort((x, y) => x - y)
+  const b = [b1, b2].slice().sort((x, y) => x - y)
+
+  check([...a, ...b].every((n) => Number.isInteger(n)), 'secuencia devuelve enteros')
+  check(a.length === 3 && a.every((n, i) => n === 5 + i), `continúa desde seed 4, sin colisiones A (got ${a.join(',')})`)
+  check(b.length === 2 && b.every((n, i) => n === 5 + i), `sin colisiones B (got ${b.join(',')})`)
+  check(b[0] === 5 && b[1] === 6 && a[2] === 7, 'secuencias independientes entre tenants')
 
   const global1 = await nextSequence(sequenceKey(null, 'shift'), 0)
   const global2 = await nextSequence(sequenceKey(null, 'shift'), 0)

@@ -41,7 +41,7 @@ const HELMET_CSP = {
     scriptSrc: ["'self'"],
     styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
     fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
-    imgSrc: ["'self'", 'data:', 'https://res.cloudinary.com'],
+    imgSrc: ["'self'", 'data:', 'https:'],
     connectSrc: ["'self'", 'ws:', 'wss:', 'https://fonts.googleapis.com', 'https://fonts.gstatic.com'],
     frameSrc: ["'self'", 'https://www.google.com'],
     objectSrc: ["'none'"],
