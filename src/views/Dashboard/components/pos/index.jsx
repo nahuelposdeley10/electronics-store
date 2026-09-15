@@ -5,6 +5,7 @@ import { apiGet, apiPost } from '@/lib/api'
 import { IconCheck, IconMinus, IconPlus, IconSearch, IconTrash } from '@/components/Icons'
 import { shortId } from '../../consts.js'
 import { EmptyNote } from '../common'
+import { loadCatalogOptions } from '../common/catalogOptions.js'
 
 import './styles.css'
 
@@ -29,16 +30,13 @@ function PosScreen({ canManage }) {
 
   useEffect(() => {
     let alive = true
-    apiGet('/api/categories')
-      .then((res) => {
-        if (alive) setCatOptions(res.categories || [])
+    loadCatalogOptions()
+      .then(({ categories, brands }) => {
+        if (!alive) return
+        setCatOptions(categories)
+        setBrandOptions(brands)
       })
-      .catch((err) => console.warn('No se pudieron cargar las categorías', err))
-    apiGet('/api/brands')
-      .then((res) => {
-        if (alive) setBrandOptions(res.brands || [])
-      })
-      .catch((err) => console.warn('No se pudieron cargar las marcas', err))
+      .catch((err) => console.warn('No se pudieron cargar categorías o marcas', err))
     return () => {
       alive = false
     }

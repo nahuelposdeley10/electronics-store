@@ -5,6 +5,7 @@ import { apiGet, apiPost, apiPut } from '@/lib/api'
 import { IconCheck, IconCross, IconPlus, IconSearch } from '@/components/Icons'
 import { CATEGORY_LABELS, MOVEMENT_CHIPS, MOVEMENT_TYPE_LABELS, shortDate, fullDate, itemsSummary } from '../../consts.js'
 import { EmptyNote, ScreenBlocked, ScreenLoading, StockBadge } from '../common'
+import { loadCatalogOptions } from '../common/catalogOptions.js'
 
 import './styles.css'
 
@@ -18,16 +19,13 @@ function StockScreen() {
 
   useEffect(() => {
     let alive = true
-    apiGet('/api/categories')
-      .then((res) => {
-        if (alive) setCats(res.categories || [])
+    loadCatalogOptions()
+      .then(({ categories, brands }) => {
+        if (!alive) return
+        setCats(categories)
+        setBrands(brands)
       })
-      .catch((err) => console.warn('No se pudieron cargar las categorías', err))
-    apiGet('/api/brands')
-      .then((res) => {
-        if (alive) setBrands(res.brands || [])
-      })
-      .catch((err) => console.warn('No se pudieron cargar las marcas', err))
+      .catch((err) => console.warn('No se pudieron cargar categorías o marcas', err))
     return () => {
       alive = false
     }
@@ -535,16 +533,13 @@ function MinStockScreen({ canManage }) {
 
   useEffect(() => {
     let alive = true
-    apiGet('/api/categories')
-      .then((res) => {
-        if (alive) setCats(res.categories || [])
+    loadCatalogOptions()
+      .then(({ categories, brands }) => {
+        if (!alive) return
+        setCats(categories)
+        setBrands(brands)
       })
-      .catch((err) => console.warn('No se pudieron cargar las categorías', err))
-    apiGet('/api/brands')
-      .then((res) => {
-        if (alive) setBrands(res.brands || [])
-      })
-      .catch((err) => console.warn('No se pudieron cargar las marcas', err))
+      .catch((err) => console.warn('No se pudieron cargar categorías o marcas', err))
     return () => {
       alive = false
     }
@@ -1048,16 +1043,13 @@ function PhysicalInventoryScreen({ canManage }) {
 
   useEffect(() => {
     let alive = true
-    apiGet('/api/categories')
-      .then((res) => {
-        if (alive) setCats(res.categories || [])
+    loadCatalogOptions()
+      .then(({ categories, brands }) => {
+        if (!alive) return
+        setCats(categories)
+        setBrands(brands)
       })
-      .catch((err) => console.warn('No se pudieron cargar las categorías', err))
-    apiGet('/api/brands')
-      .then((res) => {
-        if (alive) setBrands(res.brands || [])
-      })
-      .catch((err) => console.warn('No se pudieron cargar las marcas', err))
+      .catch((err) => console.warn('No se pudieron cargar categorías o marcas', err))
     return () => {
       alive = false
     }

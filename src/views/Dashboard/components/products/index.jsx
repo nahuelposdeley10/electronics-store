@@ -5,6 +5,7 @@ import { apiDelete, apiGet, apiPost, apiPut, apiUpdate, apiUpload } from '@/lib/
 import { IconCheck, IconClock, IconCross, IconEdit, IconPlus, IconSearch, IconTrash } from '@/components/Icons'
 import { CATEGORY_LABELS, IMPORT_EXAMPLE } from '../../consts.js'
 import { EmptyNote, ScreenBlocked, ScreenLoading } from '../common'
+import { loadCatalogOptions } from '../common/catalogOptions.js'
 
 import './styles.css'
 
@@ -23,16 +24,13 @@ function ProductsScreen({ canManage }) {
 
   useEffect(() => {
     let alive = true
-    apiGet('/api/categories')
-      .then((res) => {
-        if (alive) setCats(res.categories || [])
+    loadCatalogOptions()
+      .then(({ categories, brands }) => {
+        if (!alive) return
+        setCats(categories)
+        setBrands(brands)
       })
-      .catch((err) => console.warn('No se pudieron cargar las categorías', err))
-    apiGet('/api/brands')
-      .then((res) => {
-        if (alive) setBrands(res.brands || [])
-      })
-      .catch((err) => console.warn('No se pudieron cargar las marcas', err))
+      .catch((err) => console.warn('No se pudieron cargar categorías o marcas', err))
     return () => {
       alive = false
     }
@@ -874,16 +872,13 @@ function OffersScreen({ canManage }) {
 
   useEffect(() => {
     let alive = true
-    apiGet('/api/categories')
-      .then((res) => {
-        if (alive) setCats(res.categories || [])
+    loadCatalogOptions()
+      .then(({ categories, brands }) => {
+        if (!alive) return
+        setCats(categories)
+        setBrands(brands)
       })
-      .catch((err) => console.warn('No se pudieron cargar las categorías', err))
-    apiGet('/api/brands')
-      .then((res) => {
-        if (alive) setBrands(res.brands || [])
-      })
-      .catch((err) => console.warn('No se pudieron cargar las marcas', err))
+      .catch((err) => console.warn('No se pudieron cargar categorías o marcas', err))
     return () => {
       alive = false
     }
