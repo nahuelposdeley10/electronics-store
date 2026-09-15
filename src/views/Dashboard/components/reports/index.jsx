@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { formatARS } from '@/data/format'
 import { apiGet } from '@/lib/api'
@@ -25,7 +25,7 @@ function OverviewScreen({ data, onView }) {
         <div className="dash-head-today">
           <strong className="mono">{formatARS(data.today.revenue)}</strong>
           <em>
-            hoy Â· {data.today.orders} venta{data.today.orders === 1 ? '' : 's'}
+            hoy · {data.today.orders} venta{data.today.orders === 1 ? '' : 's'}
           </em>
         </div>
       </header>
@@ -39,13 +39,13 @@ function OverviewScreen({ data, onView }) {
       <div className="dash-cols">
         <section className="dash-card">
           <div className="dash-card-head">
-            <h2>MÃ¡s vendido</h2>
+            <h2>Más vendido</h2>
             <button type="button" onClick={() => onView('products')}>
               Ver productos
             </button>
           </div>
           {data.bestSellers.length === 0 ? (
-            <EmptyNote text="TodavÃ­a no hay ventas aprobadas." />
+            <EmptyNote text="Todavía no hay ventas aprobadas." />
           ) : (
             <ol className="best-list">
               {data.bestSellers.map((product, index) => (
@@ -75,7 +75,7 @@ function OverviewScreen({ data, onView }) {
             </button>
           </div>
           {data.recentOrders.length === 0 ? (
-            <EmptyNote text="Sin movimientos todavÃ­a." />
+            <EmptyNote text="Sin movimientos todavía." />
           ) : (
             <ul className="recent-list">
               {data.recentOrders.map((order) => (
@@ -119,7 +119,7 @@ function SalesReportScreen() {
     }
   }, [days])
 
-  if (!data && !error) return <ScreenLoading label="Armando el reporte de ventasâ€¦" />
+  if (!data && !error) return <ScreenLoading label="Armando el reporte de ventas…" />
   if (error) return <ScreenBlocked message={error} />
 
   const chartData = data.series.map((s) => ({ label: chartDayShort(s.date), total: s.total, count: s.count }))
@@ -135,14 +135,14 @@ function SalesReportScreen() {
         </div>
         <div className="dash-head-today">
           <strong className="mono">{formatARS(data.totals.total)}</strong>
-          <em>{data.totals.count} ventas en el perÃ­odo</em>
+          <em>{data.totals.count} ventas en el período</em>
         </div>
       </header>
 
       <ReportPeriodBar days={days} onChange={setDays} />
 
       <div className="kpi-rack">
-        <KpiTicket label="Facturado" value={formatARS(data.totals.total)} note="en el perÃ­odo" />
+        <KpiTicket label="Facturado" value={formatARS(data.totals.total)} note="en el período" />
         <KpiTicket label="Ventas" value={data.totals.count} note={`${data.totals.units} unidades`} />
         <KpiTicket label="Ticket promedio" value={formatARS(data.totals.avgTicket)} note="por venta" />
         <KpiTicket label="Devoluciones" value={data.refunded.count} note={formatARS(data.refunded.total)} />
@@ -151,11 +151,11 @@ function SalesReportScreen() {
       <div className="rep-grid">
         <section className="dash-card">
           <div className="dash-card-head">
-            <h2>Facturado por dÃ­a</h2>
-            <span className="dash-count">lÃ­nea Â· ventas punteado</span>
+            <h2>Facturado por día</h2>
+            <span className="dash-count">línea · ventas punteado</span>
           </div>
           {data.series.length === 0 ? (
-            <EmptyNote text="Sin ventas en el perÃ­odo." />
+            <EmptyNote text="Sin ventas en el período." />
           ) : (
             <div className="rep-chart">
               <ResponsiveContainer width="100%" height={230}>
@@ -188,7 +188,7 @@ function SalesReportScreen() {
             <span className="dash-count">facturado</span>
           </div>
           {data.byPayment.length === 0 ? (
-            <EmptyNote text="Sin datos todavÃ­a." />
+            <EmptyNote text="Sin datos todavía." />
           ) : (
             <>
               <div className="rep-chart">
@@ -217,7 +217,7 @@ function SalesReportScreen() {
                   key: p.key,
                   label: p.label,
                   color: CHART_COLORS[i % CHART_COLORS.length],
-                  value: `${formatARS(p.value)} Â· ${payTotal ? Math.round((p.value / payTotal) * 100) : 0}%`,
+                  value: `${formatARS(p.value)} · ${payTotal ? Math.round((p.value / payTotal) * 100) : 0}%`,
                 }))}
               />
             </>
@@ -225,7 +225,7 @@ function SalesReportScreen() {
           {data.bySource.length > 0 && (
             <div className="rep-breakdown">
               {data.bySource.map((s) => (
-                <span key={s.key} className="payment-tag">{s.key} Â· {s.count}</span>
+                <span key={s.key} className="payment-tag">{s.key} · {s.count}</span>
               ))}
             </div>
           )}
@@ -260,7 +260,7 @@ function ProductsReportScreen() {
     }
   }, [days])
 
-  if (!data && !error) return <ScreenLoading label="Armando el reporte de productosâ€¦" />
+  if (!data && !error) return <ScreenLoading label="Armando el reporte de productos…" />
   if (error) return <ScreenBlocked message={error} />
 
   const top = data.items.slice(0, 8)
@@ -274,7 +274,7 @@ function ProductsReportScreen() {
         </div>
         <div className="dash-head-today">
           <strong className="mono">{data.totals.units}</strong>
-          <em>unidades Â· {data.totals.uniqueProducts} productos</em>
+          <em>unidades · {data.totals.uniqueProducts} productos</em>
         </div>
       </header>
 
@@ -283,7 +283,7 @@ function ProductsReportScreen() {
       <div className="kpi-rack">
         <KpiTicket label="Unidades" value={data.totals.units} note="vendidas" />
         <KpiTicket label="Productos" value={data.totals.uniqueProducts} note="con movimiento" />
-        <KpiTicket label="Facturado" value={formatARS(data.totals.revenue)} note="en el perÃ­odo" />
+        <KpiTicket label="Facturado" value={formatARS(data.totals.revenue)} note="en el período" />
       </div>
 
       <div className="table-wrap">
@@ -319,12 +319,12 @@ function ProductsReportScreen() {
             ))}
           </tbody>
         </table>
-        {data.items.length === 0 && <EmptyNote text="Sin ventas en el perÃ­odo." />}
+        {data.items.length === 0 && <EmptyNote text="Sin ventas en el período." />}
       </div>
 
       <section className="dash-card">
         <div className="dash-card-head">
-          <h2>MÃ¡s vendidos</h2>
+          <h2>Más vendidos</h2>
           <span className="dash-count">por unidades</span>
         </div>
         {data.items.length === 0 ? null : (
@@ -337,7 +337,7 @@ function ProductsReportScreen() {
                   dataKey="name"
                   width={170}
                   tick={{ ...CHART_TICK, fill: '#43473c', fontSize: 11 }}
-                  tickFormatter={(value) => (value.length > 28 ? `${value.slice(0, 26)}â€¦` : value)}
+                  tickFormatter={(value) => (value.length > 28 ? `${value.slice(0, 26)}…` : value)}
                   tickLine={false}
                   axisLine={false}
                 />
@@ -372,7 +372,7 @@ function ProfitReportScreen() {
     }
   }, [days])
 
-  if (!data && !error) return <ScreenLoading label="Calculando gananciasâ€¦" />
+  if (!data && !error) return <ScreenLoading label="Calculando ganancias…" />
   if (error) return <ScreenBlocked message={error} />
 
   const series = data.series.map((s) => ({ label: chartDayShort(s.date), Facturado: s.revenue, Costo: s.cogs }))
@@ -432,14 +432,14 @@ function ProfitReportScreen() {
             ))}
           </tbody>
         </table>
-        {data.items.length === 0 && <EmptyNote text="Sin ventas en el perÃ­odo." />}
+        {data.items.length === 0 && <EmptyNote text="Sin ventas en el período." />}
       </div>
 
       {series.length > 0 && (
         <section className="dash-card">
           <div className="dash-card-head">
             <h2>Facturado vs costo</h2>
-            <span className="dash-count">por dÃ­a</span>
+            <span className="dash-count">por día</span>
           </div>
           <div className="rep-chart">
             <ResponsiveContainer width="100%" height={230}>
@@ -471,7 +471,7 @@ function ProfitReportScreen() {
                   dataKey="name"
                   width={170}
                   tick={{ ...CHART_TICK, fill: '#43473c', fontSize: 11 }}
-                  tickFormatter={(value) => (value.length > 28 ? `${value.slice(0, 26)}â€¦` : value)}
+                  tickFormatter={(value) => (value.length > 28 ? `${value.slice(0, 26)}…` : value)}
                   tickLine={false}
                   axisLine={false}
                 />
@@ -505,12 +505,12 @@ function StockReportScreen() {
     }
   }, [])
 
-  if (!data && !error) return <ScreenLoading label="Leyendo el stockâ€¦" />
+  if (!data && !error) return <ScreenLoading label="Leyendo el stock…" />
   if (error) return <ScreenBlocked message={error} />
 
   const statusData = [
-    { key: 'ok', name: 'Ã“ptimo', value: data.statusCounts.ok, color: '#171a12' },
-    { key: 'bajo', name: 'Bajo mÃ­nimo', value: data.statusCounts.bajo, color: '#ffc61a' },
+    { key: 'ok', name: 'Óptimo', value: data.statusCounts.ok, color: '#171a12' },
+    { key: 'bajo', name: 'Bajo mínimo', value: data.statusCounts.bajo, color: '#ffc61a' },
     { key: 'sin', name: 'Sin stock', value: data.statusCounts.sin, color: '#d7261d' },
   ].filter((s) => s.value > 0)
   const top = data.topValue
@@ -524,15 +524,15 @@ function StockReportScreen() {
         </div>
         <div className="dash-head-today">
           <strong className="mono">{formatARS(data.totals.value)}</strong>
-          <em>valor del inventario Â· {data.totals.units} unidades</em>
+          <em>valor del inventario · {data.totals.units} unidades</em>
         </div>
       </header>
 
       <div className="kpi-rack">
-        <KpiTicket label="Productos" value={data.totals.products} note="en catÃ¡logo" />
-        <KpiTicket label="Unidades" value={data.totals.units} note="en depÃ³sito" />
+        <KpiTicket label="Productos" value={data.totals.products} note="en catálogo" />
+        <KpiTicket label="Unidades" value={data.totals.units} note="en depósito" />
         <KpiTicket label="Valor del stock" value={formatARS(data.totals.value)} note="a precio venta" />
-        <KpiTicket label="Ganancia potencial" value={formatARS(data.totals.potentialProfit)} note="valor âˆ’ costo" />
+        <KpiTicket label="Ganancia potencial" value={formatARS(data.totals.potentialProfit)} note="valor − costo" />
       </div>
 
       <div className="rep-grid">
@@ -542,7 +542,7 @@ function StockReportScreen() {
             <span className="dash-count">{data.totals.products} productos</span>
           </div>
           {statusData.length === 0 ? (
-            <EmptyNote text="CatÃ¡logo vacÃ­o." />
+            <EmptyNote text="Catálogo vacío." />
           ) : (
             <>
               <div className="rep-chart">
@@ -573,7 +573,7 @@ function StockReportScreen() {
                   key: s.key,
                   label: s.name,
                   color: s.color,
-                  value: `${s.value} Â· ${data.totals.products ? Math.round((s.value / data.totals.products) * 100) : 0}%`,
+                  value: `${s.value} · ${data.totals.products ? Math.round((s.value / data.totals.products) * 100) : 0}%`,
                 }))}
               />
             </>
@@ -586,7 +586,7 @@ function StockReportScreen() {
             <span className="dash-count">a precio venta</span>
           </div>
           {data.topValue.length === 0 ? (
-            <EmptyNote text="CatÃ¡logo vacÃ­o." />
+            <EmptyNote text="Catálogo vacío." />
           ) : (
             <div className="rep-chart">
               <ResponsiveContainer width="100%" height={Math.max(220, top.length * 24 + 20)}>
@@ -597,7 +597,7 @@ function StockReportScreen() {
                     dataKey="name"
                     width={170}
                     tick={{ ...CHART_TICK, fill: '#43473c', fontSize: 11 }}
-                    tickFormatter={(value) => (value.length > 28 ? `${value.slice(0, 26)}â€¦` : value)}
+                    tickFormatter={(value) => (value.length > 28 ? `${value.slice(0, 26)}…` : value)}
                     tickLine={false}
                     axisLine={false}
                   />
@@ -616,7 +616,7 @@ function StockReportScreen() {
           <span className="dash-count">{data.low.length} productos</span>
         </div>
         {data.low.length === 0 ? (
-          <EmptyNote text="Nada bajo el mÃ­nimo. Stock en orden." />
+          <EmptyNote text="Nada bajo el mínimo. Stock en orden." />
         ) : (
           <div className="table-wrap">
             <table className="dash-table">
@@ -624,7 +624,7 @@ function StockReportScreen() {
                 <tr>
                   <th>Producto</th>
                   <th>Stock</th>
-                  <th>MÃ­nimo</th>
+                  <th>Mínimo</th>
                   <th>Estado</th>
                 </tr>
               </thead>
@@ -671,7 +671,7 @@ function CustomersReportScreen() {
     }
   }, [days])
 
-  if (!data && !error) return <ScreenLoading label="Agrupando clientesâ€¦" />
+  if (!data && !error) return <ScreenLoading label="Agrupando clientes…" />
   if (error) return <ScreenBlocked message={error} />
 
   const top = data.items.slice(0, 8)
@@ -688,7 +688,7 @@ function CustomersReportScreen() {
         </div>
         <div className="dash-head-today">
           <strong className="mono">{data.totals.customers}</strong>
-          <em>clientes identificados Â· {data.totals.total ? formatARS(data.totals.total) : ''} en compras</em>
+          <em>clientes identificados · {data.totals.total ? formatARS(data.totals.total) : ''} en compras</em>
         </div>
       </header>
 
@@ -696,8 +696,8 @@ function CustomersReportScreen() {
 
       <div className="kpi-rack">
         <KpiTicket label="Clientes" value={data.totals.customers} note="identificados" />
-        <KpiTicket label="Compras totales" value={data.items.reduce((s, c) => s + c.count, 0)} note="en el perÃ­odo" />
-        <KpiTicket label="Facturado" value={formatARS(data.totals.total)} note="en el perÃ­odo" />
+        <KpiTicket label="Compras totales" value={data.items.reduce((s, c) => s + c.count, 0)} note="en el período" />
+        <KpiTicket label="Facturado" value={formatARS(data.totals.total)} note="en el período" />
       </div>
 
       <div className="rep-grid">
@@ -707,7 +707,7 @@ function CustomersReportScreen() {
             <span className="dash-count">por gasto</span>
           </div>
           {data.items.length === 0 ? (
-            <EmptyNote text="Sin compras en el perÃ­odo." />
+            <EmptyNote text="Sin compras en el período." />
           ) : (
             <div className="rep-chart">
               <ResponsiveContainer width="100%" height={Math.max(200, top.length * 34 + 20)}>
@@ -718,7 +718,7 @@ function CustomersReportScreen() {
                     dataKey="name"
                     width={170}
                     tick={{ ...CHART_TICK, fill: '#43473c', fontSize: 11 }}
-                    tickFormatter={(value) => (value.length > 28 ? `${value.slice(0, 26)}â€¦` : value)}
+                    tickFormatter={(value) => (value.length > 28 ? `${value.slice(0, 26)}…` : value)}
                     tickLine={false}
                     axisLine={false}
                   />
@@ -732,11 +732,11 @@ function CustomersReportScreen() {
 
         <section className="dash-card">
           <div className="dash-card-head">
-            <h2>ParticipaciÃ³n</h2>
+            <h2>Participación</h2>
             <span className="dash-count">por cliente</span>
           </div>
           {recentData.length === 0 ? (
-            <EmptyNote text="Sin compras en el perÃ­odo." />
+            <EmptyNote text="Sin compras en el período." />
           ) : (
             <>
               <div className="rep-chart">
@@ -765,7 +765,7 @@ function CustomersReportScreen() {
                   key: r.key,
                   label: r.label,
                   color: CHART_COLORS[i % CHART_COLORS.length],
-                  value: `${formatARS(r.value)} Â· ${recentTotal ? Math.round((r.value / recentTotal) * 100) : 0}%`,
+                  value: `${formatARS(r.value)} · ${recentTotal ? Math.round((r.value / recentTotal) * 100) : 0}%`,
                 }))}
               />
             </>
@@ -781,7 +781,7 @@ function CustomersReportScreen() {
               <th>Compras</th>
               <th>Total</th>
               <th>Ticket promedio</th>
-              <th>Ãšltima</th>
+              <th>Última</th>
             </tr>
           </thead>
           <tbody>
@@ -796,12 +796,12 @@ function CustomersReportScreen() {
                 <td className="mono t-num">{c.count}</td>
                 <td className="mono t-num t-money">{formatARS(c.total)}</td>
                 <td className="mono t-num">{formatARS(c.avg)}</td>
-                <td className="t-date">{c.last ? shortDate(c.last) : 'â€”'}</td>
+                <td className="t-date">{c.last ? shortDate(c.last) : '—'}</td>
               </tr>
             ))}
           </tbody>
         </table>
-        {data.items.length === 0 && <EmptyNote text="Sin compras en el perÃ­odo." />}
+        {data.items.length === 0 && <EmptyNote text="Sin compras en el período." />}
       </div>
     </div>
   )

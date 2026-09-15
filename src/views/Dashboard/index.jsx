@@ -128,7 +128,9 @@ export default function Dashboard({ onExit }) {
       .catch((err) => {
         if (!alive) return
         if (err.code === 'AUTH') {
+          clearSession()
           setGate('login')
+          setGateError('Tu sesión expiró. Entrá de nuevo.')
         } else {
           setGate('error')
           setGateError(err.message)
@@ -178,12 +180,14 @@ export default function Dashboard({ onExit }) {
       .then((loggedUser) => {
         if (getSession().token) {
           setUser(loggedUser)
+          setLoginAttempts(0)
           setAttempt((n) => n + 1)
         }
       })
       .catch((err) => {
         if (err.code === 'AUTH') {
           setGate('login')
+          setGateError(err.message)
         } else {
           setGate('error')
           setGateError(err.message)
@@ -452,7 +456,7 @@ export default function Dashboard({ onExit }) {
         {gate === 'loading' && !needsBusiness && <ScreenLoading />}
 
         {gate === 'login' && (
-          <LoginPanel attempts={loginAttempts} onLogin={handleLogin} />
+          <LoginPanel attempts={loginAttempts} error={gateError} onLogin={handleLogin} />
         )}
 
         {gate === 'error' && (
@@ -562,7 +566,7 @@ export default function Dashboard({ onExit }) {
 }
 
 
-function LoginPanel({ attempts, onLogin }) {
+function LoginPanel({ attempts, error, onLogin }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
 
@@ -600,9 +604,11 @@ function LoginPanel({ attempts, onLogin }) {
             required
             autoFocus
           />
-          {attempts > 1 && (
+          {error ? (
+            <em className="unlock-error">{error}</em>
+          ) : attempts > 1 ? (
             <em className="unlock-error">Email o contraseña incorrectos</em>
-          )}
+          ) : null}
           <button type="submit" className="primary-btn">
             Abrir caja
           </button>

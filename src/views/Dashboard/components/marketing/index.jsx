@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { apiDelete, apiGet, apiPost, apiPut } from '@/lib/api'
 import { IconCheck, IconClock, IconEdit, IconPlus, IconTrash } from '@/components/Icons'
 import { shortDate } from '../../consts.js'
@@ -64,7 +64,7 @@ function CouponsScreen({ canManage }) {
       } else {
         await apiPost('/api/admin/coupons', payload)
       }
-      setNote(editing ? 'CupÃ³n actualizado.' : `CupÃ³n ${form.code.toUpperCase()} creado.`)
+      setNote(editing ? 'Cupón actualizado.' : `Cupón ${form.code.toUpperCase()} creado.`)
       setFormOpen(false)
       setRefresh((n) => n + 1)
     } catch (err) {
@@ -78,7 +78,7 @@ function CouponsScreen({ canManage }) {
     setNote('')
     try {
       await apiPut(`/api/admin/coupons/${c.id}`, { active: !c.active })
-      setNote(c.active ? 'CupÃ³n desactivado.' : 'CupÃ³n activado.')
+      setNote(c.active ? 'Cupón desactivado.' : 'Cupón activado.')
       setRefresh((n) => n + 1)
     } catch (err) {
       setNote(err.message)
@@ -86,18 +86,18 @@ function CouponsScreen({ canManage }) {
   }
 
   const remove = async (c) => {
-    if (!window.confirm(`Â¿Eliminar el cupÃ³n ${c.code}?`)) return
+    if (!window.confirm(`¿Eliminar el cupón ${c.code}?`)) return
     setNote('')
     try {
       await apiDelete(`/api/admin/coupons/${c.id}`)
-      setNote('CupÃ³n eliminado.')
+      setNote('Cupón eliminado.')
       setRefresh((n) => n + 1)
     } catch (err) {
       setNote(err.message)
     }
   }
 
-  if (!data && !error) return <ScreenLoading label="Cargando cuponesâ€¦" />
+  if (!data && !error) return <ScreenLoading label="Cargando cupones…" />
   if (error) return <ScreenBlocked message={error} />
 
   const activeCount = data.items.filter((c) => c.active).length
@@ -117,12 +117,12 @@ function CouponsScreen({ canManage }) {
 
       <div className="dash-toolbar">
         <p className="list-note">
-          El cliente ingresa el cÃ³digo en el checkout y recibe el descuento sobre el total.
+          El cliente ingresa el código en el checkout y recibe el descuento sobre el total.
         </p>
         {canManage && (
           <button type="button" className="primary-btn dash-add" onClick={openNew}>
             <IconPlus />
-            Nuevo cupÃ³n
+            Nuevo cupón
           </button>
         )}
       </div>
@@ -132,7 +132,7 @@ function CouponsScreen({ canManage }) {
       {formOpen && (
         <section className="dash-card promo-form">
           <div className="dash-card-head">
-            <h2>{editing ? `Editar ${form.code}` : 'Nuevo cupÃ³n'}</h2>
+            <h2>{editing ? `Editar ${form.code}` : 'Nuevo cupón'}</h2>
             <button type="button" className="ghost-btn" onClick={() => setFormOpen(false)}>
               Cancelar
             </button>
@@ -140,7 +140,7 @@ function CouponsScreen({ canManage }) {
           <form onSubmit={submit}>
             <div className="pf-grid">
               <label className="pf-field">
-                <span>CÃ³digo</span>
+                <span>Código</span>
                 <input
                   type="text"
                   value={form.code}
@@ -165,7 +165,7 @@ function CouponsScreen({ canManage }) {
               </label>
 
               <label className="pf-field pf-full">
-                <span>DescripciÃ³n (opcional)</span>
+                <span>Descripción (opcional)</span>
                 <input
                   type="text"
                   value={form.description}
@@ -176,13 +176,13 @@ function CouponsScreen({ canManage }) {
 
               <label className="pf-field pf-full promo-check">
                 <input type="checkbox" checked={form.active} onChange={set('active')} />
-                <span>CupÃ³n activo</span>
+                <span>Cupón activo</span>
               </label>
             </div>
 
             <div className="pf-actions">
               <button type="submit" className="primary-btn" disabled={saving}>
-                {saving ? 'Guardandoâ€¦' : editing ? 'Guardar cambios' : 'Crear cupÃ³n'}
+                {saving ? 'Guardando…' : editing ? 'Guardar cambios' : 'Crear cupón'}
               </button>
             </div>
           </form>
@@ -193,9 +193,9 @@ function CouponsScreen({ canManage }) {
         <table className="dash-table">
           <thead>
             <tr>
-              <th>CÃ³digo</th>
+              <th>Código</th>
               <th>Descuento</th>
-              <th>DescripciÃ³n</th>
+              <th>Descripción</th>
               <th>Estado</th>
               {canManage && <th>Acciones</th>}
             </tr>
@@ -210,7 +210,7 @@ function CouponsScreen({ canManage }) {
                   </span>
                 </td>
                 <td className="mono t-num t-money">{c.percent}%</td>
-                <td className="t-desc">{c.description || 'â€”'}</td>
+                <td className="t-desc">{c.description || '—'}</td>
                 <td>{promoStateChip(c.active, 'Activo', 'Pausado')}</td>
                 {canManage && (
                   <td>
@@ -247,7 +247,7 @@ function CouponsScreen({ canManage }) {
           </tbody>
         </table>
         {data.items.length === 0 && (
-          <EmptyNote text="TodavÃ­a no hay cupones." />
+          <EmptyNote text="Todavía no hay cupones." />
         )}
       </div>
     </div>

@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { formatARS } from '@/data/format'
 import { apiConfirmOrder, apiDelete, apiGet, apiPost, apiPut } from '@/lib/api'
 import { useOrderEvents } from '@/lib/useOrderEvents'
@@ -28,7 +28,7 @@ function SaleDetail({ order, onClose }) {
             {salePaymentLabel(order)}
           </span>
           {order.status === 'refunded' && order.returnedAt && (
-            <span className="quote-status cancelled">Devuelta Â· {shortDate(order.returnedAt)}</span>
+            <span className="quote-status cancelled">Devuelta · {shortDate(order.returnedAt)}</span>
           )}
           <em className="detail-date">{fullDate(order.createdAt)}</em>
         </div>
@@ -42,24 +42,24 @@ function SaleDetail({ order, onClose }) {
             </div>
             <div>
               <span className="detail-k">Email</span>
-              <strong>{order.payer?.email || 'â€”'}</strong>
+              <strong>{order.payer?.email || '—'}</strong>
             </div>
             <div>
               <span className="detail-k">Documento</span>
-              <strong>{idDoc(order) || 'â€”'}</strong>
+              <strong>{idDoc(order) || '—'}</strong>
             </div>
           </div>
         </div>
 
         <div className="detail-block">
-          <h3 className="detail-title">ArtÃ­culos</h3>
+          <h3 className="detail-title">Artículos</h3>
           <ul className="detail-items">
             {order.items.map((item) => (
               <li key={item.productId}>
                 <span className="detail-item-name">
                   <strong>{item.name}</strong>
                   <em>
-                    {item.quantity} Ã— {formatARS(item.unitPrice)}
+                    {item.quantity} × {formatARS(item.unitPrice)}
                   </em>
                 </span>
                 <span className="mono detail-item-total">{formatARS(item.unitPrice * item.quantity)}</span>
@@ -76,8 +76,8 @@ function SaleDetail({ order, onClose }) {
               <strong>{salePaymentLabel(order)}</strong>
             </div>
             <div>
-              <span className="detail-k">CupÃ³n</span>
-              <strong>{order.coupon || 'â€”'}</strong>
+              <span className="detail-k">Cupón</span>
+              <strong>{order.coupon || '—'}</strong>
             </div>
             {order.paymentId && (
               <div>
@@ -102,11 +102,11 @@ function SaleDetail({ order, onClose }) {
           {Number(order.discount) > 0 && (
             <div className="ticket-row">
               <span>Descuento</span>
-              <strong className="mono">âˆ’{formatARS(order.discount)}</strong>
+              <strong className="mono">−{formatARS(order.discount)}</strong>
             </div>
           )}
           <div className="ticket-row">
-            <span>EnvÃ­o</span>
+            <span>Envío</span>
             <strong className="mono">{Number(order.shippingCost) > 0 ? formatARS(order.shippingCost) : 'Gratis'}</strong>
           </div>
           <div className="ticket-row total">
@@ -179,7 +179,7 @@ function SalesScreen() {
         )
         setNote(
           changed
-            ? `Pedido #${shortId(order.id)} verificado: ${order.status} â†’ ${updated.status}`
+            ? `Pedido #${shortId(order.id)} verificado: ${order.status} → ${updated.status}`
             : `Pedido #${shortId(order.id)} verificado: sigue ${updated.status}`,
         )
       })
@@ -202,7 +202,7 @@ function SalesScreen() {
     )
   })
 
-  if (!data && !error) return <ScreenLoading label="Contando las ventasâ€¦" />
+  if (!data && !error) return <ScreenLoading label="Contando las ventas…" />
   if (error) return <ScreenBlocked message={error} />
 
   const chips = [
@@ -232,7 +232,7 @@ function SalesScreen() {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Buscar por nombre, email o cÃ³digo de pedidoâ€¦"
+            placeholder="Buscar por nombre, email o código de pedido…"
             aria-label="Buscar ventas"
           />
         </form>
@@ -299,7 +299,7 @@ function SalesScreen() {
               <th>Cliente</th>
               <th>Detalle</th>
               <th>Pago</th>
-              <th>CupÃ³n</th>
+              <th>Cupón</th>
               <th>Total</th>
               <th>Estado</th>
               <th>Acciones</th>
@@ -320,11 +320,11 @@ function SalesScreen() {
                           [order.payer.idType, order.payer.idNumber].filter(Boolean).join(' '),
                         ]
                           .filter(Boolean)
-                          .join(' Â· ')}
+                          .join(' · ')}
                       </span>
                     </>
                   ) : (
-                    <span className="t-dim">â€”</span>
+                    <span className="t-dim">—</span>
                   )}
                 </td>
                 <td className="t-detail">{itemsSummary(order.items)}</td>
@@ -334,7 +334,7 @@ function SalesScreen() {
                   </span>
                 </td>
                 <td className="mono t-coupon">
-                  {order.coupon || <span className="t-dim">â€”</span>}
+                  {order.coupon || <span className="t-dim">—</span>}
                 </td>
                 <td className="mono t-num t-money">{formatARS(order.total)}</td>
                 <td>
@@ -347,7 +347,7 @@ function SalesScreen() {
                       disabled={rechecking[order.id]}
                     >
                       <IconRefresh />
-                      {rechecking[order.id] ? 'Verificandoâ€¦' : 'Reintentar'}
+                      {rechecking[order.id] ? 'Verificando…' : 'Reintentar'}
                     </button>
                   )}
                 </td>
@@ -361,7 +361,7 @@ function SalesScreen() {
           </tbody>
         </table>
         {data.items.length === 0 && (
-          <EmptyNote text="AÃºn no hay ventas con esos filtros." />
+          <EmptyNote text="Aún no hay ventas con esos filtros." />
         )}
       </div>
 
@@ -372,17 +372,17 @@ function SalesScreen() {
             disabled={data.page <= 1}
             onClick={() => setParams((prev) => ({ ...prev, page: prev.page - 1 }))}
           >
-            â† Anterior
+            ← Anterior
           </button>
           <span className="mono">
-            pÃ¡gina {data.page} de {data.totalPages}
+            página {data.page} de {data.totalPages}
           </span>
           <button
             type="button"
             disabled={data.page >= data.totalPages}
             onClick={() => setParams((prev) => ({ ...prev, page: prev.page + 1 }))}
           >
-            Siguiente â†’
+            Siguiente →
           </button>
         </div>
       )}
@@ -426,20 +426,20 @@ function ReturnsScreen({ canManage }) {
   const setFilter = (id) => setParams((prev) => ({ ...prev, filter: id, page: 1 }))
 
   const doReturn = (order) => {
-    if (!window.confirm(`Â¿Registrar la devoluciÃ³n de "#${shortId(order.id)}"? SaldrÃ¡ ${formatARS(order.total)} del stock de caja.`)) return
+    if (!window.confirm(`¿Registrar la devolución de "#${shortId(order.id)}"? Saldrá ${formatARS(order.total)} del stock de caja.`)) return
     setProcessing((m) => ({ ...m, [order.id]: true }))
     setNote('')
     apiPost(`/api/admin/orders/${order.id}/return`, {})
       .then((res) => {
         setData((prev) => (prev ? { ...prev, items: prev.items.map((o) => (o.id === order.id ? { ...o, status: res.status, returnedAt: res.returnedAt } : o)) } : prev))
-        setNote(`DevoluciÃ³n de "#${shortId(order.id)}" registrada.`)
+        setNote(`Devolución de "#${shortId(order.id)}" registrada.`)
         setVersion((v) => v + 1)
       })
       .catch((err) => setNote(err.message))
       .finally(() => setProcessing((m) => ({ ...m, [order.id]: false })))
   }
 
-  if (!data && !error) return <ScreenLoading label="Leyendo devolucionesâ€¦" />
+  if (!data && !error) return <ScreenLoading label="Leyendo devoluciones…" />
   if (error) return <ScreenBlocked message={error} />
 
   const filters = data.counts || {}
@@ -502,7 +502,7 @@ function ReturnsScreen({ canManage }) {
                       {order.payer.email && <span className="t-dim">{order.payer.email}</span>}
                     </>
                   ) : (
-                    <span className="t-dim">â€”</span>
+                    <span className="t-dim">—</span>
                   )}
                 </td>
                 <td className="t-detail">{itemsSummary(order.items)}</td>
@@ -522,7 +522,7 @@ function ReturnsScreen({ canManage }) {
                         onClick={() => doReturn(order)}
                         disabled={processing[order.id]}
                       >
-                        {processing[order.id] ? 'Devolviendoâ€¦' : 'Devolver'}
+                        {processing[order.id] ? 'Devolviendo…' : 'Devolver'}
                       </button>
                     )}
                   </span>
@@ -541,17 +541,17 @@ function ReturnsScreen({ canManage }) {
             disabled={data.page <= 1}
             onClick={() => setParams((prev) => ({ ...prev, page: prev.page - 1 }))}
           >
-            â† Anterior
+            ← Anterior
           </button>
           <span className="mono">
-            pÃ¡gina {data.page} de {data.totalPages}
+            página {data.page} de {data.totalPages}
           </span>
           <button
             type="button"
             disabled={data.page >= data.totalPages}
             onClick={() => setParams((prev) => ({ ...prev, page: prev.page + 1 }))}
           >
-            Siguiente â†’
+            Siguiente →
           </button>
         </div>
       )}
@@ -602,7 +602,7 @@ function QuotesScreen({ canManage }) {
   }
 
   const deleteQuote = (quote) => {
-    if (!window.confirm(`Â¿Eliminar el presupuesto #${quote.number}?`)) return
+    if (!window.confirm(`¿Eliminar el presupuesto #${quote.number}?`)) return
     apiDelete(`/api/admin/quotes/${quote._id}`)
       .then(() => {
         setData((d) => ({ ...d, items: d.items.filter((q) => q._id !== quote._id), total: d.total - 1 }))
@@ -611,7 +611,7 @@ function QuotesScreen({ canManage }) {
       .catch((err) => setNote(err.message))
   }
 
-  if (!data && !error) return <ScreenLoading label="Leyendo presupuestosâ€¦" />
+  if (!data && !error) return <ScreenLoading label="Leyendo presupuestos…" />
   if (error) return <ScreenBlocked message={error} />
 
   const chips = [
@@ -625,7 +625,7 @@ function QuotesScreen({ canManage }) {
     <div className="dash-screen">
       <header className="dash-head">
         <div>
-          <span className="dash-eyebrow">CotizaciÃ³n a medida</span>
+          <span className="dash-eyebrow">Cotización a medida</span>
           <h1>Presupuestos</h1>
         </div>
         <button type="button" className="primary-btn" onClick={() => setFormOpen(true)} disabled={!canManage}>
@@ -640,7 +640,7 @@ function QuotesScreen({ canManage }) {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="BuscÃ¡ por cliente, producto o notaâ€¦"
+            placeholder="Buscá por cliente, producto o nota…"
             aria-label="Buscar presupuestos"
           />
         </form>
@@ -666,7 +666,7 @@ function QuotesScreen({ canManage }) {
         <table className="dash-table">
           <thead>
             <tr>
-              <th>NÂº</th>
+              <th>Nº</th>
               <th>Cliente</th>
               <th>Detalle</th>
               <th>Total</th>
@@ -689,7 +689,7 @@ function QuotesScreen({ canManage }) {
                       {quote.note && <span className="t-dim">{quote.note}</span>}
                     </>
                   ) : (
-                    <span className="t-dim">â€”</span>
+                    <span className="t-dim">—</span>
                   )}
                 </td>
                 <td className="t-detail">{itemsSummary(quote.items)}</td>
@@ -736,17 +736,17 @@ function QuotesScreen({ canManage }) {
             disabled={params.page <= 1}
             onClick={() => setParams((prev) => ({ ...prev, page: prev.page - 1 }))}
           >
-            â† Anterior
+            ← Anterior
           </button>
           <span className="mono">
-            pÃ¡gina {params.page} de {data.totalPages}
+            página {params.page} de {data.totalPages}
           </span>
           <button
             type="button"
             disabled={params.page >= data.totalPages}
             onClick={() => setParams((prev) => ({ ...prev, page: prev.page + 1 }))}
           >
-            Siguiente â†’
+            Siguiente →
           </button>
         </div>
       )}
@@ -835,7 +835,7 @@ function QuoteForm({ onClose, onSaved }) {
       <div className="product-panel c-light">
         <header className="panel-head">
           <div>
-            <span className="dash-eyebrow">CotizaciÃ³n</span>
+            <span className="dash-eyebrow">Cotización</span>
             <h2>Nuevo presupuesto</h2>
           </div>
           <button type="button" className="x-btn" onClick={onClose} aria-label="Cerrar">
@@ -848,10 +848,10 @@ function QuoteForm({ onClose, onSaved }) {
             <label className="pf-field pf-grow">
               <span>Producto</span>
               <select value={form.productId} onChange={set('productId')}>
-                <option value="">SeleccionÃ¡â€¦</option>
+                <option value="">Seleccioná…</option>
                 {products.map((p) => (
                   <option key={p.id} value={p.id}>
-                    {p.name} â€” {formatARS(p.price)}
+                    {p.name} — {formatARS(p.price)}
                   </option>
                 ))}
               </select>
@@ -871,16 +871,16 @@ function QuoteForm({ onClose, onSaved }) {
                 <span className="ticket-name">
                   <strong>{l.product.name}</strong>
                   <em>
-                    {l.quantity} Ã— {formatARS(l.product.price)}
+                    {l.quantity} × {formatARS(l.product.price)}
                   </em>
                 </span>
                 <span className="ticket-line-total mono">{formatARS(l.product.price * l.quantity)}</span>
-                <button type="button" className="row-btn row-btn-danger" onClick={() => removeLine(l.product.id)} aria-label="Quitar lÃ­nea">
+                <button type="button" className="row-btn row-btn-danger" onClick={() => removeLine(l.product.id)} aria-label="Quitar línea">
                   <IconTrash />
                 </button>
               </li>
             ))}
-            {lines.length === 0 && <li className="ticket-empty mono">AgregÃ¡ productos al presupuesto</li>}
+            {lines.length === 0 && <li className="ticket-empty mono">Agregá productos al presupuesto</li>}
           </ul>
 
           <div className="pf-row">
@@ -889,7 +889,7 @@ function QuoteForm({ onClose, onSaved }) {
               <input type="text" value={form.customerName} onChange={set('customerName')} placeholder="Nombre y apellido" />
             </label>
             <label className="pf-field">
-              <span>TelÃ©fono</span>
+              <span>Teléfono</span>
               <input type="text" value={form.customerPhone} onChange={set('customerPhone')} placeholder="Ej. 351 555-1234" />
             </label>
           </div>
@@ -905,7 +905,7 @@ function QuoteForm({ onClose, onSaved }) {
           </div>
           <label className="pf-field">
             <span>Nota</span>
-            <input type="text" value={form.note} onChange={set('note')} placeholder="Ej. vÃ¡lido por 7 dÃ­as, incluye instalaciÃ³n" />
+            <input type="text" value={form.note} onChange={set('note')} placeholder="Ej. válido por 7 días, incluye instalación" />
           </label>
 
           <div className="panel-summary">
@@ -922,7 +922,7 @@ function QuoteForm({ onClose, onSaved }) {
               Cancelar
             </button>
             <button type="submit" className="primary-btn" disabled={saving || lines.length === 0}>
-              {saving ? 'Guardandoâ€¦' : 'Guardar presupuesto'}
+              {saving ? 'Guardando…' : 'Guardar presupuesto'}
             </button>
           </footer>
         </form>

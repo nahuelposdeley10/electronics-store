@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { formatARS } from '@/data/format'
 import { apiGet, apiPost } from '@/lib/api'
 import { IconPlus } from '@/components/Icons'
@@ -25,7 +25,7 @@ function CashCurrentScreen({ canManage, onView }) {
     }
   }, [])
 
-  if (!data && !error) return <ScreenLoading label="Abriendo la cajaâ€¦" />
+  if (!data && !error) return <ScreenLoading label="Abriendo la caja…" />
   if (error) return <ScreenBlocked message={error} />
 
   const { open, shift, lastShift, today } = data
@@ -46,7 +46,7 @@ function CashCurrentScreen({ canManage, onView }) {
       <div className="kpi-rack">
         {open ? (
           <>
-            <KpiTicket label="Apertura" value={formatARS(shift.openingBalance)} note={`turno #${shift.number} Â· ${shortDate(shift.openedAt)}`} />
+            <KpiTicket label="Apertura" value={formatARS(shift.openingBalance)} note={`turno #${shift.number} · ${shortDate(shift.openedAt)}`} />
             <KpiTicket label="Ventas en efectivo" value={formatARS(shift.sales)} note={`${shift.salesCount} ventas`} />
             <KpiTicket label="Ingresos" value={formatARS(shift.income)} note="incluye ventas" />
             <KpiTicket label="Egresos" value={formatARS(shift.outcome)} note="gastos y devoluciones" />
@@ -55,7 +55,7 @@ function CashCurrentScreen({ canManage, onView }) {
           <>
             <KpiTicket label="Ventas hoy" value={formatARS(today.revenue)} note={`${today.orders} aprobadas`} />
             <KpiTicket label="Efectivo hoy" value={formatARS(today.cash)} note="pagos en efectivo" />
-            <KpiTicket label="Turno" value={lastShift ? `#${lastShift.number}` : 'â€”'} note={lastShift ? shortDate(lastShift.openedAt) : 'nunca abrÃ­ caja'} />
+            <KpiTicket label="Turno" value={lastShift ? `#${lastShift.number}` : '—'} note={lastShift ? shortDate(lastShift.openedAt) : 'nunca abrí caja'} />
           </>
         )}
       </div>
@@ -64,10 +64,10 @@ function CashCurrentScreen({ canManage, onView }) {
         {open ? (
           <>
             <div className="cash-hero-txt">
-              <span className="dash-eyebrow">{canManage ? 'Abierta por ' + (shift.openedBy || 'â€”') : 'Caja abierta'}</span>
+              <span className="dash-eyebrow">{canManage ? 'Abierta por ' + (shift.openedBy || '—') : 'Caja abierta'}</span>
               <strong className="cash-hero-amount mono">{formatARS(shift.expected)}</strong>
               <em>
-                apertura {formatARS(shift.openingBalance)} Â· ingresos {formatARS(shift.income)} Â· egresos {formatARS(shift.outcome)}
+                apertura {formatARS(shift.openingBalance)} · ingresos {formatARS(shift.income)} · egresos {formatARS(shift.outcome)}
               </em>
             </div>
             <div className="cash-hero-actions">
@@ -85,11 +85,11 @@ function CashCurrentScreen({ canManage, onView }) {
           <>
             <div className="cash-hero-txt">
               <span className="dash-eyebrow">Caja cerrada</span>
-              <strong className="cash-hero-amount">{lastShift ? `Turno #${lastShift.number} Â· ${formatARS(lastShift.closedBalance ?? 0)}` : 'TodavÃ­a no abriste caja'}</strong>
+              <strong className="cash-hero-amount">{lastShift ? `Turno #${lastShift.number} · ${formatARS(lastShift.closedBalance ?? 0)}` : 'Todavía no abriste caja'}</strong>
               <em>
                 {lastShift
-                  ? `cerrado ${shortDate(lastShift.closedAt)} Â· esperado ${formatARS(lastShift.expectedClose ?? 0)}`
-                  : 'AbrÃ­ un turno para registrar el efectivo del cajÃ³n'}
+                  ? `cerrado ${shortDate(lastShift.closedAt)} · esperado ${formatARS(lastShift.expectedClose ?? 0)}`
+                  : 'Abrí un turno para registrar el efectivo del cajón'}
               </em>
             </div>
             <div className="cash-hero-actions">
@@ -135,7 +135,7 @@ function CashMovementsScreen({ canManage }) {
     }
   }, [params])
 
-  if (!data && !error) return <ScreenLoading label="Leyendo los movimientosâ€¦" />
+  if (!data && !error) return <ScreenLoading label="Leyendo los movimientos…" />
   if (error) return <ScreenBlocked message={error} />
 
   const addMovement = (e) => {
@@ -167,8 +167,8 @@ function CashMovementsScreen({ canManage }) {
           <h1>Movimientos</h1>
         </div>
         <div className="dash-head-today">
-          <strong className="mono">{shift ? `turno #${shift.number}` : 'â€”'}</strong>
-          <em>{shift ? 'movimientos del cajÃ³n' : 'sin caja abierta'}</em>
+          <strong className="mono">{shift ? `turno #${shift.number}` : '—'}</strong>
+          <em>{shift ? 'movimientos del cajón' : 'sin caja abierta'}</em>
         </div>
       </header>
 
@@ -176,7 +176,7 @@ function CashMovementsScreen({ canManage }) {
         <div className="cash-summary">
           <strong className="mono">{formatARS(data.balance.net)}</strong>
           <em>
-            neto Â· +{formatARS(data.balance.income)} / âˆ’{formatARS(data.balance.outcome)}
+            neto · +{formatARS(data.balance.income)} / −{formatARS(data.balance.outcome)}
           </em>
         </div>
         {canManage && shift && (
@@ -223,13 +223,13 @@ function CashMovementsScreen({ canManage }) {
                 type="text"
                 value={form.description}
                 onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-                placeholder="Ej: pago colilla, gastos, vueltosâ€¦"
+                placeholder="Ej: pago colilla, gastos, vueltos…"
               />
             </label>
           </div>
           <div className="cash-form-foot">
             <button type="submit" className="btn cta" disabled={saving}>
-              {saving ? 'Guardandoâ€¦' : 'Guardar movimiento'}
+              {saving ? 'Guardando…' : 'Guardar movimiento'}
             </button>
             <button type="button" className="btn" onClick={() => setFormOpen(false)}>
               Cancelar
@@ -258,7 +258,7 @@ function CashMovementsScreen({ canManage }) {
               <th>Fecha</th>
               <th>Concepto</th>
               <th>Tipo</th>
-              <th>OperaciÃ³n</th>
+              <th>Operación</th>
               <th>Monto</th>
             </tr>
           </thead>
@@ -270,24 +270,24 @@ function CashMovementsScreen({ canManage }) {
                 </td>
                 <td>
                   <span className="t-cell-name">
-                    <strong>{m.description || 'â€”'}</strong>
+                    <strong>{m.description || '—'}</strong>
                     {m.ref && <em>#{String(m.ref).slice(-6).toUpperCase()}</em>}
                   </span>
                 </td>
                 <td>
                   <span className={`cash-kind ${m.kind}`}>{CASH_KIND_LABELS[m.kind] || m.kind}</span>
                 </td>
-                <td className="t-dim">{m.by || 'â€”'}</td>
+                <td className="t-dim">{m.by || '—'}</td>
                 <td className="mono">
                   <span className={`mv-delta ${m.flow === 'in' ? 'up' : 'down'}`}>
-                    {m.flow === 'in' ? `+${formatARS(m.amount)}` : `âˆ’${formatARS(m.amount)}`}
+                    {m.flow === 'in' ? `+${formatARS(m.amount)}` : `−${formatARS(m.amount)}`}
                   </span>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
-        {data.items.length === 0 && <EmptyNote text="TodavÃ­a no hay movimientos con esos filtros." />}
+        {data.items.length === 0 && <EmptyNote text="Todavía no hay movimientos con esos filtros." />}
       </div>
 
       {data.total > data.pageSize && (
@@ -297,17 +297,17 @@ function CashMovementsScreen({ canManage }) {
             disabled={data.page <= 1}
             onClick={() => setParams((prev) => ({ ...prev, page: prev.page - 1 }))}
           >
-            â† Anterior
+            ← Anterior
           </button>
           <span className="mono">
-            pÃ¡gina {data.page} de {data.totalPages}
+            página {data.page} de {data.totalPages}
           </span>
           <button
             type="button"
             disabled={data.page >= data.totalPages}
             onClick={() => setParams((prev) => ({ ...prev, page: prev.page + 1 }))}
           >
-            Siguiente â†’
+            Siguiente →
           </button>
         </div>
       )}
@@ -340,7 +340,7 @@ function CashShiftScreen({ canManage }) {
 
   if (!status || !shifts) {
     if (error) return <ScreenBlocked message={error} />
-    return <ScreenLoading label="Escuchando la campanaâ€¦" />
+    return <ScreenLoading label="Escuchando la campana…" />
   }
 
   const openBox = (e) => {
@@ -429,11 +429,11 @@ function CashShiftScreen({ canManage }) {
                   />
                 </label>
                 <button type="submit" className="btn cta" disabled={busy}>
-                  {busy ? 'Abriendoâ€¦' : 'Abrir caja'}
+                  {busy ? 'Abriendo…' : 'Abrir caja'}
                 </button>
               </form>
             ) : (
-              <p className="sale-note">NecesitÃ¡s permiso de caja para abrir un turno.</p>
+              <p className="sale-note">Necesitás permiso de caja para abrir un turno.</p>
             )}
           </section>
         ) : (
@@ -483,18 +483,18 @@ function CashShiftScreen({ canManage }) {
                   />
                 </label>
                 <button type="submit" className="btn cta" disabled={busy}>
-                  {busy ? 'Cerrandoâ€¦' : 'Cerrar caja'}
+                  {busy ? 'Cerrando…' : 'Cerrar caja'}
                 </button>
               </form>
             ) : (
-              <p className="sale-note">NecesitÃ¡s permiso de caja para cerrar el turno.</p>
+              <p className="sale-note">Necesitás permiso de caja para cerrar el turno.</p>
             )}
           </section>
         )}
 
         <section className="dash-card">
           <div className="dash-card-head">
-            <h2>Ãšltimo turno</h2>
+            <h2>Último turno</h2>
           </div>
           {status.lastShift ? (
             <div className="cash-strip">
@@ -518,7 +518,7 @@ function CashShiftScreen({ canManage }) {
               </span>
             </div>
           ) : (
-            <EmptyNote text="Sin turnos cerrados todavÃ­a." />
+            <EmptyNote text="Sin turnos cerrados todavía." />
           )}
         </section>
       </div>
@@ -551,21 +551,21 @@ function CashShiftScreen({ canManage }) {
                   <td className="mono t-num">{formatARS(s.income)}</td>
                   <td className="mono t-num">{formatARS(s.outcome)}</td>
                   <td className="mono t-num">{formatARS(s.expected)}</td>
-                  <td className="mono t-num">{s.closedBalance === null ? 'â€”' : formatARS(s.closedBalance)}</td>
+                  <td className="mono t-num">{s.closedBalance === null ? '—' : formatARS(s.closedBalance)}</td>
                   <td className="mono t-num">
                     <span className={`mv-delta ${diff >= 0 ? 'up' : 'down'}`}>
-                      {s.closedBalance === null ? 'â€”' : `${diff >= 0 ? '+' : 'âˆ’'}${formatARS(Math.abs(diff))}`}
+                      {s.closedBalance === null ? '—' : `${diff >= 0 ? '+' : '−'}${formatARS(Math.abs(diff))}`}
                     </span>
                   </td>
                   <td className="t-dim">
-                    {s.closedAt ? `${shortDate(s.closedAt)} Â· ${s.closedBy || 'â€”'}` : 'abierto'}
+                    {s.closedAt ? `${shortDate(s.closedAt)} · ${s.closedBy || '—'}` : 'abierto'}
                   </td>
                 </tr>
               )
             })}
           </tbody>
         </table>
-        {shifts.items.length === 0 && <EmptyNote text="TodavÃ­a no hay turnos registrados." />}
+        {shifts.items.length === 0 && <EmptyNote text="Todavía no hay turnos registrados." />}
       </div>
     </div>
   )
@@ -594,7 +594,7 @@ function CashCountScreen({ canManage }) {
 
   if (!data) {
     if (error) return <ScreenBlocked message={error} />
-    return <ScreenLoading label="Contando los pesosâ€¦" />
+    return <ScreenLoading label="Contando los pesos…" />
   }
 
   const doArqueo = (e) => {
@@ -640,12 +640,12 @@ function CashCountScreen({ canManage }) {
 
       {!status.open ? (
         <div className="dash-card">
-          <EmptyNote text="No hay caja abierta. ArqueÃ¡ despuÃ©s de abrir el turno." />
+          <EmptyNote text="No hay caja abierta. Arqueá después de abrir el turno." />
         </div>
       ) : (
         <section className="dash-card">
           <div className="dash-card-head">
-            <h2>Nuevo arqueo Â· turno #{counts.shift ? counts.shift.number : status.shift.number}</h2>
+            <h2>Nuevo arqueo · turno #{counts.shift ? counts.shift.number : status.shift.number}</h2>
           </div>
           {canManage ? (
             <form className="cash-form" onSubmit={doArqueo}>
@@ -671,15 +671,15 @@ function CashCountScreen({ canManage }) {
                   type="text"
                   value={form.note}
                   onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))}
-                  placeholder="Ej: arqueo de mitad de dÃ­a"
+                  placeholder="Ej: arqueo de mitad de día"
                 />
               </label>
               <button type="submit" className="btn cta" disabled={busy}>
-                {busy ? 'Registrandoâ€¦' : 'Registrar arqueo'}
+                {busy ? 'Registrando…' : 'Registrar arqueo'}
               </button>
             </form>
           ) : (
-            <p className="sale-note">NecesitÃ¡s permiso de caja para registrar arqueos.</p>
+            <p className="sale-note">Necesitás permiso de caja para registrar arqueos.</p>
           )}
         </section>
       )}
@@ -708,18 +708,18 @@ function CashCountScreen({ canManage }) {
                   <td className="mono t-num">{formatARS(c.countedAmount)}</td>
                   <td className="mono t-num">
                     <span className={`mv-delta ${diff >= 0 ? 'up' : 'down'}`}>
-                      {diff >= 0 ? '+' : 'âˆ’'}
+                      {diff >= 0 ? '+' : '−'}
                       {formatARS(Math.abs(diff))}
                     </span>
                   </td>
-                  <td className="t-dim">{c.note || 'â€”'}</td>
-                  <td className="t-dim">{c.by || 'â€”'}</td>
+                  <td className="t-dim">{c.note || '—'}</td>
+                  <td className="t-dim">{c.by || '—'}</td>
                 </tr>
               )
             })}
           </tbody>
         </table>
-        {counts.items.length === 0 && <EmptyNote text="TodavÃ­a no hay arqueos en el turno actual." />}
+        {counts.items.length === 0 && <EmptyNote text="Todavía no hay arqueos en el turno actual." />}
       </div>
     </div>
   )

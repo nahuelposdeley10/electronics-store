@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { formatARS } from '@/data/format'
 import SearchSelect from '@/components/SearchSelect'
 import { apiGet, apiPost, apiPut } from '@/lib/api'
@@ -22,7 +22,7 @@ function StockScreen() {
       .then((res) => {
         if (alive) setCats(res.categories || [])
       })
-      .catch((err) => console.warn('No se pudieron cargar las categorÃ­as', err))
+      .catch((err) => console.warn('No se pudieron cargar las categorías', err))
     apiGet('/api/brands')
       .then((res) => {
         if (alive) setBrands(res.brands || [])
@@ -75,7 +75,7 @@ function StockScreen() {
     setParams((prev) => ({ ...prev, low: prev.low ? '' : '1', page: 1 }))
   }
 
-  if (!data && !error) return <ScreenLoading label="Contando el stockâ€¦" />
+  if (!data && !error) return <ScreenLoading label="Contando el stock…" />
   if (error) return <ScreenBlocked message={error} />
 
   const lowCount = data.items.filter((p) => p.status !== 'ok').length
@@ -89,7 +89,7 @@ function StockScreen() {
         </div>
         <div className="dash-head-today">
           <strong className="mono">{data.total}</strong>
-          <em>productos en el depÃ³sito</em>
+          <em>productos en el depósito</em>
         </div>
       </header>
 
@@ -100,14 +100,14 @@ function StockScreen() {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="BuscÃ¡ producto, marca o categorÃ­aâ€¦"
+            placeholder="Buscá producto, marca o categoría…"
             aria-label="Buscar en stock"
           />
         </form>
         <div className="dash-filters">
           <SearchSelect
             id="stock-category-filter"
-            label="CategorÃ­a"
+            label="Categoría"
             value={params.category}
             onChange={onCategory}
             options={cats.map((c) => ({ value: c.key, label: c.name }))}
@@ -139,10 +139,10 @@ function StockScreen() {
           <thead>
             <tr>
               <th>Producto</th>
-              <th>CategorÃ­a</th>
+              <th>Categoría</th>
               <th>Precio</th>
               <th>Stock</th>
-              <th>MÃ­nimo</th>
+              <th>Mínimo</th>
             </tr>
           </thead>
           <tbody>
@@ -180,17 +180,17 @@ function StockScreen() {
             disabled={data.page <= 1}
             onClick={() => setParams((prev) => ({ ...prev, page: prev.page - 1 }))}
           >
-            â† Anterior
+            ← Anterior
           </button>
           <span className="mono">
-            pÃ¡gina {data.page} de {data.totalPages}
+            página {data.page} de {data.totalPages}
           </span>
           <button
             type="button"
             disabled={data.page >= data.totalPages}
             onClick={() => setParams((prev) => ({ ...prev, page: prev.page + 1 }))}
           >
-            Siguiente â†’
+            Siguiente →
           </button>
         </div>
       )}
@@ -235,7 +235,7 @@ function MovementsScreen() {
     setParams((prev) => ({ ...prev, q: query.trim(), page: 1 }))
   }
 
-  if (!data && !error) return <ScreenLoading label="Leyendo los movimientosâ€¦" />
+  if (!data && !error) return <ScreenLoading label="Leyendo los movimientos…" />
   if (error) return <ScreenBlocked message={error} />
 
   return (
@@ -258,7 +258,7 @@ function MovementsScreen() {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="BuscÃ¡ por productoâ€¦"
+            placeholder="Buscá por producto…"
             aria-label="Buscar movimientos"
           />
         </form>
@@ -287,8 +287,8 @@ function MovementsScreen() {
               <th>Fecha</th>
               <th>Producto</th>
               <th>Tipo</th>
-              <th>VariaciÃ³n</th>
-              <th>Antes â†’ DespuÃ©s</th>
+              <th>Variación</th>
+              <th>Antes → Después</th>
               <th>Motivo</th>
             </tr>
           </thead>
@@ -313,14 +313,14 @@ function MovementsScreen() {
                   </span>
                 </td>
                 <td className="mono t-num">
-                  {m.stockBefore} â†’ {m.stockAfter}
+                  {m.stockBefore} → {m.stockAfter}
                 </td>
-                <td className="t-dim">{m.reason || 'â€”'}</td>
+                <td className="t-dim">{m.reason || '—'}</td>
               </tr>
             ))}
           </tbody>
         </table>
-        {data.items.length === 0 && <EmptyNote text="TodavÃ­a no hay movimientos con esos filtros." />}
+        {data.items.length === 0 && <EmptyNote text="Todavía no hay movimientos con esos filtros." />}
       </div>
 
       {data.total > data.pageSize && (
@@ -330,17 +330,17 @@ function MovementsScreen() {
             disabled={data.page <= 1}
             onClick={() => setParams((prev) => ({ ...prev, page: prev.page - 1 }))}
           >
-            â† Anterior
+            ← Anterior
           </button>
           <span className="mono">
-            pÃ¡gina {data.page} de {data.totalPages}
+            página {data.page} de {data.totalPages}
           </span>
           <button
             type="button"
             disabled={data.page >= data.totalPages}
             onClick={() => setParams((prev) => ({ ...prev, page: prev.page + 1 }))}
           >
-            Siguiente â†’
+            Siguiente →
           </button>
         </div>
       )}
@@ -401,7 +401,7 @@ function AdjustmentsScreen({ canManage }) {
         reason: form.reason.trim(),
       })
       const product = products.find((p) => p.id === Number(form.productId))
-      setNote(`Ajuste aplicado en "${product?.name || res.movement.productName}" â†’ stock ${res.stock}`)
+      setNote(`Ajuste aplicado en "${product?.name || res.movement.productName}" → stock ${res.stock}`)
       setForm((f) => ({ ...f, delta: '', reason: '' }))
       setMovements((prev) => (prev ? { ...prev } : prev))
       setParams((prev) => ({ ...prev }))
@@ -413,7 +413,7 @@ function AdjustmentsScreen({ canManage }) {
   }
 
   if (error) return <ScreenBlocked message={error} />
-  if (!movements) return <ScreenLoading label="Preparando ajustesâ€¦" />
+  if (!movements) return <ScreenLoading label="Preparando ajustes…" />
 
   const selectedProduct = form.productId
     ? products.find((p) => p.id === Number(form.productId))
@@ -451,10 +451,10 @@ function AdjustmentsScreen({ canManage }) {
               onChange={(e) => setForm((f) => ({ ...f, productId: e.target.value }))}
               required
             >
-              <option value="">ElegÃ­ un productoâ€¦</option>
+              <option value="">Elegí un producto…</option>
               {products.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.name} Â· {p.brand} (stock {p.stock})
+                  {p.name} · {p.brand} (stock {p.stock})
                 </option>
               ))}
             </select>
@@ -464,13 +464,13 @@ function AdjustmentsScreen({ canManage }) {
               <span>Stock actual: <strong>{selectedProduct.stock}</strong></span>
               {resultingStock !== null && !Number.isNaN(resultingStock) && (
                 <span className={resultingStock < 0 ? 'inv-stock-neg' : ''}>
-                  despuÃ©s: <strong>{resultingStock}</strong>
+                  después: <strong>{resultingStock}</strong>
                 </span>
               )}
             </div>
           )}
           <label className="inv-field">
-            <span>Cantidad (+o âˆ’)</span>
+            <span>Cantidad (+o −)</span>
             <input
               type="number"
               value={form.delta}
@@ -485,19 +485,19 @@ function AdjustmentsScreen({ canManage }) {
               type="text"
               value={form.reason}
               onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))}
-              placeholder="Ej. Se encontrÃ³ mercaderÃ­a en depÃ³sito"
+              placeholder="Ej. Se encontró mercadería en depósito"
               required
             />
           </label>
           <button type="submit" className="primary-btn" disabled={saving || !canManage}>
-            {saving ? 'Aplicandoâ€¦' : 'Aplicar ajuste'}
+            {saving ? 'Aplicando…' : 'Aplicar ajuste'}
           </button>
         </form>
 
         <div className="inv-panel">
-          <h2>Ãšltimos ajustes</h2>
+          <h2>Últimos ajustes</h2>
           <div className="inv-mov-list">
-            {movements.items.length === 0 && <p className="inv-empty">TodavÃ­a no hay ajustes.</p>}
+            {movements.items.length === 0 && <p className="inv-empty">Todavía no hay ajustes.</p>}
             {movements.items.slice(0, 10).map((m) => (
               <div key={m.id} className="inv-mov-item">
                 <div className="inv-mov-top">
@@ -507,10 +507,10 @@ function AdjustmentsScreen({ canManage }) {
                   </span>
                 </div>
                 <div className="inv-mov-sub">
-                  <span>{m.reason || 'â€”'}</span>
+                  <span>{m.reason || '—'}</span>
                   <em>{shortDate(m.createdAt)}</em>
                 </div>
-                <div className="inv-mov-stock mono">{m.stockBefore} â†’ {m.stockAfter}</div>
+                <div className="inv-mov-stock mono">{m.stockBefore} → {m.stockAfter}</div>
               </div>
             ))}
           </div>
@@ -539,7 +539,7 @@ function MinStockScreen({ canManage }) {
       .then((res) => {
         if (alive) setCats(res.categories || [])
       })
-      .catch((err) => console.warn('No se pudieron cargar las categorÃ­as', err))
+      .catch((err) => console.warn('No se pudieron cargar las categorías', err))
     apiGet('/api/brands')
       .then((res) => {
         if (alive) setBrands(res.brands || [])
@@ -584,7 +584,7 @@ function MinStockScreen({ canManage }) {
         productId: product.id,
         minStock: Number(drafts[product.id]),
       })
-      setNote(`MÃ­nimo guardado: "${product.name}" â‰¥ ${res.minStock}`)
+      setNote(`Mínimo guardado: "${product.name}" ≥ ${res.minStock}`)
       setVersion((v) => v + 1)
     } catch (err) {
       setNote(err.message)
@@ -604,7 +604,7 @@ function MinStockScreen({ canManage }) {
   const onBrand = (value) =>
     setParams((prev) => ({ ...prev, brand: value, page: 1 }))
 
-  if (!data && !error) return <ScreenLoading label="Leyendo los mÃ­nimosâ€¦" />
+  if (!data && !error) return <ScreenLoading label="Leyendo los mínimos…" />
   if (error) return <ScreenBlocked message={error} />
 
   const lowCount = data.items.filter((p) => p.status !== 'ok').length
@@ -617,17 +617,17 @@ function MinStockScreen({ canManage }) {
       <header className="dash-head">
         <div>
           <span className="dash-eyebrow">Inventario</span>
-          <h1>Stock mÃ­nimo</h1>
+          <h1>Stock mínimo</h1>
         </div>
         <div className="dash-head-today">
           <strong className="mono">{lowCount}</strong>
-          <em>productos bajo el mÃ­nimo</em>
+          <em>productos bajo el mínimo</em>
         </div>
       </header>
 
       {note && <p className="sale-note">{note}</p>}
       {!canManage && (
-        <p className="sale-note">Solo el administrador puede cambiar los mÃ­nimos.</p>
+        <p className="sale-note">Solo el administrador puede cambiar los mínimos.</p>
       )}
 
       <div className="dash-toolbar">
@@ -637,14 +637,14 @@ function MinStockScreen({ canManage }) {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="BuscÃ¡ producto, marca o categorÃ­aâ€¦"
-            aria-label="Buscar en stock mÃ­nimo"
+            placeholder="Buscá producto, marca o categoría…"
+            aria-label="Buscar en stock mínimo"
           />
         </form>
         <div className="dash-filters">
           <SearchSelect
             id="stock-category-filter"
-            label="CategorÃ­a"
+            label="Categoría"
             value={params.category}
             onChange={onCategory}
             options={cats.map((c) => ({ value: c.key, label: c.name }))}
@@ -668,7 +668,7 @@ function MinStockScreen({ canManage }) {
             <tr>
               <th>Producto</th>
               <th>Stock</th>
-              <th>MÃ­nimo</th>
+              <th>Mínimo</th>
               {canManage && <th>Guardar</th>}
             </tr>
           </thead>
@@ -695,7 +695,7 @@ function MinStockScreen({ canManage }) {
                       min="0"
                       value={drafts[p.id] ?? String(p.minStock)}
                       onChange={(e) => setDrafts((d) => ({ ...d, [p.id]: e.target.value }))}
-                      aria-label={`MÃ­nimo de ${p.name}`}
+                      aria-label={`Mínimo de ${p.name}`}
                     />
                   ) : (
                     <span className="mono">{p.minStock}</span>
@@ -728,17 +728,17 @@ function MinStockScreen({ canManage }) {
             disabled={data.page <= 1}
             onClick={() => setParams((prev) => ({ ...prev, page: prev.page - 1 }))}
           >
-            â† Anterior
+            ← Anterior
           </button>
           <span className="mono">
-            pÃ¡gina {data.page} de {data.totalPages}
+            página {data.page} de {data.totalPages}
           </span>
           <button
             type="button"
             disabled={data.page >= data.totalPages}
             onClick={() => setParams((prev) => ({ ...prev, page: prev.page + 1 }))}
           >
-            Siguiente â†’
+            Siguiente →
           </button>
         </div>
       )}
@@ -834,7 +834,7 @@ function PurchasesScreen({ canManage }) {
         }))
         .filter((l) => Number.isFinite(l.productId) && l.quantity > 0 && Number.isFinite(l.cost) && l.cost >= 0)
       if (items.length === 0) {
-        setNote('ElegÃ­ un producto y cargÃ¡ cantidad y costo.')
+        setNote('Elegí un producto y cargá cantidad y costo.')
         setSaving(false)
         return
       }
@@ -843,7 +843,7 @@ function PurchasesScreen({ canManage }) {
         invoice: form.invoice.trim(),
         items,
       })
-      setNote(`Compra #${res.purchase.number} registrada â€” total ${formatARS(res.purchase.total)}. Stock actualizado.`)
+      setNote(`Compra #${res.purchase.number} registrada — total ${formatARS(res.purchase.total)}. Stock actualizado.`)
       setForm({
         supplier: '',
         invoice: '',
@@ -857,7 +857,7 @@ function PurchasesScreen({ canManage }) {
     }
   }
 
-  if (!data && !error) return <ScreenLoading label="Preparando comprasâ€¦" />
+  if (!data && !error) return <ScreenLoading label="Preparando compras…" />
   if (error) return <ScreenBlocked message={error} />
 
   const lineTotal = (line) => (Number(line.quantity) || 0) * (Number(line.cost) || 0)
@@ -895,7 +895,7 @@ function PurchasesScreen({ canManage }) {
             />
           </label>
           <label className="inv-field">
-            <span>NÂº factura / remito</span>
+            <span>Nº factura / remito</span>
             <input
               type="text"
               value={form.invoice}
@@ -915,10 +915,10 @@ function PurchasesScreen({ canManage }) {
                       onChange={(e) => updateLine(index, 'productId', e.target.value)}
                       required
                     >
-                      <option value="">ElegÃ­â€¦</option>
+                      <option value="">Elegí…</option>
                       {products.map((p) => (
                         <option key={p.id} value={p.id}>
-                          {p.name} Â· {p.brand} (stock {p.stock})
+                          {p.name} · {p.brand} (stock {p.stock})
                         </option>
                       ))}
                     </select>
@@ -926,7 +926,7 @@ function PurchasesScreen({ canManage }) {
                   <button
                     type="button"
                     className="pur-line-remove"
-                    aria-label="Quitar lÃ­nea"
+                    aria-label="Quitar línea"
                     onClick={() => removeLine(index)}
                     disabled={form.lines.length <= 1}
                   >
@@ -969,12 +969,12 @@ function PurchasesScreen({ canManage }) {
           </div>
 
           <button type="submit" className="primary-btn" disabled={saving || !canManage}>
-            {saving ? 'Guardandoâ€¦' : 'Registrar compra'}
+            {saving ? 'Guardando…' : 'Registrar compra'}
           </button>
         </form>
 
         <div className="inv-panel">
-          <h2>Ãšltimas compras</h2>
+          <h2>Últimas compras</h2>
           <div className="dash-toolbar inv-toolbar">
             <form className="dash-search" role="search" onSubmit={submitSearch}>
               <IconSearch />
@@ -982,18 +982,18 @@ function PurchasesScreen({ canManage }) {
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="BuscÃ¡ por proveedorâ€¦"
+                placeholder="Buscá por proveedor…"
                 aria-label="Buscar compras"
               />
             </form>
           </div>
-          {data.items.length === 0 && <p className="inv-empty">TodavÃ­a no hay compras.</p>}
+          {data.items.length === 0 && <p className="inv-empty">Todavía no hay compras.</p>}
           <div className="inv-mov-list">
             {data.items.map((p) => (
               <div key={p.id} className="inv-mov-item">
                 <div className="inv-mov-top">
                   <strong>
-                    #{p.number} Â· {p.supplier}
+                    #{p.number} · {p.supplier}
                   </strong>
                   <span className="mono pur-item-total">{formatARS(p.total)}</span>
                 </div>
@@ -1012,17 +1012,17 @@ function PurchasesScreen({ canManage }) {
                 disabled={data.page <= 1}
                 onClick={() => setParams((prev) => ({ ...prev, page: prev.page - 1 }))}
               >
-                â† Anterior
+                ← Anterior
               </button>
               <span className="mono">
-                pÃ¡gina {data.page} de {data.totalPages}
+                página {data.page} de {data.totalPages}
               </span>
               <button
                 type="button"
                 disabled={data.page >= data.totalPages}
                 onClick={() => setParams((prev) => ({ ...prev, page: prev.page + 1 }))}
               >
-                Siguiente â†’
+                Siguiente →
               </button>
             </div>
           )}
@@ -1052,7 +1052,7 @@ function PhysicalInventoryScreen({ canManage }) {
       .then((res) => {
         if (alive) setCats(res.categories || [])
       })
-      .catch((err) => console.warn('No se pudieron cargar las categorÃ­as', err))
+      .catch((err) => console.warn('No se pudieron cargar las categorías', err))
     apiGet('/api/brands')
       .then((res) => {
         if (alive) setBrands(res.brands || [])
@@ -1099,7 +1099,7 @@ function PhysicalInventoryScreen({ canManage }) {
         .map((p) => ({ productId: p.id, units: Number(counts[p.id]) }))
         .filter((row) => Number.isFinite(row.units) && row.units >= 0)
       if (countsBody.length === 0) {
-        setNote('CargÃ¡ al menos un conteo.')
+        setNote('Cargá al menos un conteo.')
         setSaving(false)
         return
       }
@@ -1125,7 +1125,7 @@ function PhysicalInventoryScreen({ canManage }) {
   const onBrand = (value) =>
     setParams((prev) => ({ ...prev, brand: value, page: 1 }))
 
-  if (!data && !error) return <ScreenLoading label="Preparando el conteoâ€¦" />
+  if (!data && !error) return <ScreenLoading label="Preparando el conteo…" />
   if (error) return <ScreenBlocked message={error} />
 
   const diffFor = (product) => {
@@ -1138,7 +1138,7 @@ function PhysicalInventoryScreen({ canManage }) {
       <header className="dash-head">
         <div>
           <span className="dash-eyebrow">Inventario</span>
-          <h1>Inventario fÃ­sico</h1>
+          <h1>Inventario físico</h1>
         </div>
         <div className="dash-head-today">
           <strong className="mono">{data.total}</strong>
@@ -1159,14 +1159,14 @@ function PhysicalInventoryScreen({ canManage }) {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="BuscÃ¡ producto, marca o categorÃ­aâ€¦"
-            aria-label="Buscar en inventario fÃ­sico"
+            placeholder="Buscá producto, marca o categoría…"
+            aria-label="Buscar en inventario físico"
           />
         </form>
         <div className="dash-filters">
           <SearchSelect
             id="stock-category-filter"
-            label="CategorÃ­a"
+            label="Categoría"
             value={params.category}
             onChange={onCategory}
             options={cats.map((c) => ({ value: c.key, label: c.name }))}
@@ -1191,7 +1191,7 @@ function PhysicalInventoryScreen({ canManage }) {
               <tr>
                 <th>Producto</th>
                 <th>Stock actual</th>
-                <th>Conteo fÃ­sico</th>
+                <th>Conteo físico</th>
                 <th>Diferencia</th>
               </tr>
             </thead>
@@ -1239,19 +1239,19 @@ function PhysicalInventoryScreen({ canManage }) {
                   <li key={r.productId}>
                     <span>{r.name}</span>
                     <em className="mono">
-                      era {r.stockBefore} â†’ {r.units} ({r.delta > 0 ? `+${r.delta}` : r.delta})
+                      era {r.stockBefore} → {r.units} ({r.delta > 0 ? `+${r.delta}` : r.delta})
                     </em>
                   </li>
                 ),
               )}
             </ul>
-            {result.updated === 0 && <p className="inv-empty">Todo cuadrÃ³: el conteo coincide con el stock.</p>}
+            {result.updated === 0 && <p className="inv-empty">Todo cuadró: el conteo coincide con el stock.</p>}
           </div>
         )}
 
         <div className="inv-submit">
           <button type="submit" className="primary-btn" disabled={saving || !canManage}>
-            {saving ? 'Guardandoâ€¦' : 'Guardar inventario fÃ­sico'}
+            {saving ? 'Guardando…' : 'Guardar inventario físico'}
           </button>
           {data.total > data.pageSize && (
             <div className="dash-pager" style={{ marginTop: 0 }}>
@@ -1260,17 +1260,17 @@ function PhysicalInventoryScreen({ canManage }) {
                 disabled={data.page <= 1}
                 onClick={() => setParams((prev) => ({ ...prev, page: prev.page - 1 }))}
               >
-                â† Anterior
+                ← Anterior
               </button>
               <span className="mono">
-                pÃ¡gina {data.page} de {data.totalPages}
+                página {data.page} de {data.totalPages}
               </span>
               <button
                 type="button"
                 disabled={data.page >= data.totalPages}
                 onClick={() => setParams((prev) => ({ ...prev, page: prev.page + 1 }))}
               >
-                Siguiente â†’
+                Siguiente →
               </button>
             </div>
           )}

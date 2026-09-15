@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { formatARS } from '@/data/format'
 import { apiDelete, apiGet, apiPost, apiPut, getSession } from '@/lib/api'
 import { getSuperTenant } from '@/lib/tenant'
@@ -26,7 +26,7 @@ function BusinessesScreen({ current, onPick }) {
     }
   }, [])
 
-  if (!items && !error) return <ScreenLoading label="Leyendo negociosâ€¦" />
+  if (!items && !error) return <ScreenLoading label="Leyendo negocios…" />
   if (error) return <ScreenBlocked message={error} />
 
   return (
@@ -34,19 +34,19 @@ function BusinessesScreen({ current, onPick }) {
       <header className="dash-head">
         <div>
           <span className="dash-eyebrow">Super admin</span>
-          <h1>ElegÃ­ el negocio</h1>
+          <h1>Elegí el negocio</h1>
         </div>
       </header>
 
       <div className="dash-toolbar">
         <p className="list-note">
-          Como super admin ves todos los negocios. ElegÃ­ uno para operar su panel:
-          ventas, inventario, caja, reportes y configuraciÃ³n.
+          Como super admin ves todos los negocios. Elegí uno para operar su panel:
+          ventas, inventario, caja, reportes y configuración.
         </p>
       </div>
 
       {items.length === 0 && (
-        <EmptyNote text="TodavÃ­a no hay negocios. CreÃ¡ un admin de negocio en Usuarios." />
+        <EmptyNote text="Todavía no hay negocios. Creá un admin de negocio en Usuarios." />
       )}
 
       <div className="biz-grid">
@@ -64,7 +64,7 @@ function BusinessesScreen({ current, onPick }) {
               </span>
               <span className="biz-card-meta">
                 <strong>{b.storeName}</strong>
-                <em>{b.name} Â· {b.email}</em>
+                <em>{b.name} · {b.email}</em>
                 {b.businessSlug && <code className="mono">/u/{b.businessSlug}</code>}
               </span>
               <span className="biz-card-stats">
@@ -202,7 +202,7 @@ function UsersScreen() {
   }
 
   const deleteUser = async (u) => {
-    if (!window.confirm(`Â¿Eliminar a ${u.name} (${u.email})? Esta acciÃ³n no se puede deshacer.`)) return
+    if (!window.confirm(`¿Eliminar a ${u.name} (${u.email})? Esta acción no se puede deshacer.`)) return
     setNote('')
     try {
       await apiDelete(`/api/admin/users/${u.id}`)
@@ -213,7 +213,7 @@ function UsersScreen() {
     }
   }
 
-  if (!users && !error) return <ScreenLoading label="Cargando usuariosâ€¦" />
+  if (!users && !error) return <ScreenLoading label="Cargando usuarios…" />
   if (error) return <ScreenBlocked message={error} />
 
   const activeCount = users.filter((u) => u.active).length
@@ -222,7 +222,7 @@ function UsersScreen() {
     <div className="dash-screen">
       <header className="dash-head">
         <div>
-          <span className="dash-eyebrow">ConfiguraciÃ³n</span>
+          <span className="dash-eyebrow">Configuración</span>
           <h1>Usuarios</h1>
         </div>
         <div className="dash-head-today">
@@ -233,7 +233,7 @@ function UsersScreen() {
 
       <div className="dash-toolbar">
         <p className="list-note">
-          PodÃ©s definir la contraseÃ±a del usuario o dejarla en blanco para generarla. Nunca se guarda en texto plano.
+          Podés definir la contraseña del usuario o dejarla en blanco para generarla. Nunca se guarda en texto plano.
         </p>
         <button type="button" className="primary-btn dash-add" onClick={openNew}>
           <IconPlus />
@@ -245,7 +245,7 @@ function UsersScreen() {
 
       {generatedPassword && (
         <div className="set-password-box">
-          <span>ContraseÃ±a generada (mostrala una sola vez):</span>
+          <span>Contraseña generada (mostrala una sola vez):</span>
           <code className="mono">{generatedPassword}</code>
         </div>
       )}
@@ -292,10 +292,10 @@ function UsersScreen() {
               <label className="inv-field">
                 <span>Negocio</span>
                 <select value={form.adminId} onChange={set('adminId')} required>
-                  <option value="">ElegÃ­ el negocioâ€¦</option>
+                  <option value="">Elegí el negocio…</option>
                   {(businesses || []).map((b) => (
                     <option key={b.id} value={b.id}>
-                      {b.storeName} â€” {b.email}
+                      {b.storeName} — {b.email}
                     </option>
                   ))}
                 </select>
@@ -314,13 +314,13 @@ function UsersScreen() {
                   />
                 </div>
                 <span className="set-hint">
-                  URL pÃºblica de este negocio. MinÃºsculas, nÃºmeros y guiones. Dejala vacÃ­a para quitarla.
+                  URL pública de este negocio. Minúsculas, números y guiones. Dejala vacía para quitarla.
                 </span>
               </label>
             )}
             {!editing && (
               <label className="inv-field">
-                <span>ContraseÃ±a (dejala vacÃ­a para generar una)</span>
+                <span>Contraseña (dejala vacía para generar una)</span>
                 <input
                   type="password"
                   value={form.password || ''}
@@ -332,7 +332,7 @@ function UsersScreen() {
             )}
             {editing && (
               <label className="inv-field">
-                <span>Nueva contraseÃ±a (opcional)</span>
+                <span>Nueva contraseña (opcional)</span>
                 <input
                   type="password"
                   value={form.password || ''}
@@ -343,7 +343,7 @@ function UsersScreen() {
             )}
             <div className="set-actions">
               <button type="submit" className="primary-btn" disabled={saving}>
-                {saving ? 'Guardandoâ€¦' : editing ? 'Guardar cambios' : 'Crear usuario'}
+                {saving ? 'Guardando…' : editing ? 'Guardar cambios' : 'Crear usuario'}
               </button>
             </div>
           </form>
@@ -456,7 +456,7 @@ function RolesScreen() {
     }
   }, [isSuper])
 
-  if (!users && !error) return <ScreenLoading label="Leyendo permisosâ€¦" />
+  if (!users && !error) return <ScreenLoading label="Leyendo permisos…" />
   if (error) return <ScreenBlocked message={error} />
 
   const superTenantNow = isSuper ? getSuperTenant() : null
@@ -479,7 +479,7 @@ function RolesScreen() {
     <div className="dash-screen">
       <header className="dash-head">
         <div>
-          <span className="dash-eyebrow">ConfiguraciÃ³n</span>
+          <span className="dash-eyebrow">Configuración</span>
           <h1>Permisos por usuario</h1>
         </div>
         <div className="dash-head-today">
@@ -492,13 +492,13 @@ function RolesScreen() {
         <p className="list-note">
           {isSuper ? (
             <>
-              Cada usuario tiene sus propios permisos: activÃ¡ o desactivÃ¡ los mÃ³dulos que
+              Cada usuario tiene sus propios permisos: activá o desactivá los módulos que
               puede ver y usar. Los cambios aplican al instante, sin pedirle que vuelva a
               ingresar. El <strong>superadmin</strong> siempre tiene acceso total.
             </>
           ) : (
             <>
-              ActivÃ¡ o desactivÃ¡ quÃ© mÃ³dulos puede usar cada <strong>operador</strong> de tu
+              Activá o desactivá qué módulos puede usar cada <strong>operador</strong> de tu
               negocio. Los cambios aplican al instante.
             </>
           )}
@@ -518,7 +518,7 @@ function RolesScreen() {
             setQuery(e.target.value)
             setPage(1)
           }}
-          placeholder={isSuper ? 'Buscar por nombre o emailâ€¦' : 'Buscar operador por nombre o emailâ€¦'}
+          placeholder={isSuper ? 'Buscar por nombre o email…' : 'Buscar operador por nombre o email…'}
           aria-label="Buscar usuarios"
         />
         {query && (
@@ -539,7 +539,7 @@ function RolesScreen() {
 
       {isSuper && !superTenantNow && (
         <p className="list-note">
-          ElegÃ­ un negocio con el selector para ver y editar los permisos de sus usuarios.
+          Elegí un negocio con el selector para ver y editar los permisos de sus usuarios.
         </p>
       )}
 
@@ -549,7 +549,7 @@ function RolesScreen() {
             <tr>
               <th>Usuario</th>
               <th>Rol</th>
-              <th>MÃ³dulos</th>
+              <th>Módulos</th>
               <th>Acciones</th>
             </tr>
           </thead>
@@ -572,8 +572,8 @@ function RolesScreen() {
                 </td>
                 <td className="t-date">
                   {Array.isArray(u.permissions)
-                    ? `${u.permissions.length} de ${PERM_CODES.length} mÃ³dulos`
-                    : 'Sin mÃ³dulos'}
+                    ? `${u.permissions.length} de ${PERM_CODES.length} módulos`
+                    : 'Sin módulos'}
                 </td>
                 <td>
                   <button
@@ -591,7 +591,7 @@ function RolesScreen() {
       </div>
 
       {filtered.length === 0 && users.length > 0 && (
-        <EmptyNote text="NingÃºn usuario coincide con la bÃºsqueda." />
+        <EmptyNote text="Ningún usuario coincide con la búsqueda." />
       )}
 
       {totalPages > 1 && (
@@ -601,10 +601,10 @@ function RolesScreen() {
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={safePage <= 1}
           >
-            â† Anterior
+            ← Anterior
           </button>
           <span className="mono">
-            PÃ¡gina {safePage} de {totalPages} Â· {filtered.length}{' '}
+            Página {safePage} de {totalPages} · {filtered.length}{' '}
             {isSuper ? 'usuarios' : 'operadores'}
           </span>
           <button
@@ -612,14 +612,14 @@ function RolesScreen() {
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             disabled={safePage >= totalPages}
           >
-            Siguiente â†’
+            Siguiente →
           </button>
         </div>
       )}
 
       {users.length === 0 && !isSuper && (
         <p className="list-note">
-          TodavÃ­a no tenÃ©s operadores. CreÃ¡ uno desde la secciÃ³n Usuarios.
+          Todavía no tenés operadores. Creá uno desde la sección Usuarios.
         </p>
       )}
 
@@ -681,7 +681,7 @@ function PermUserEditor({ user, onSaved }) {
           />
         ))}
       </div>
-      {saving && <p className="list-note">Guardandoâ€¦</p>}
+      {saving && <p className="list-note">Guardando…</p>}
       <SettingsNote text={error} />
     </section>
   )

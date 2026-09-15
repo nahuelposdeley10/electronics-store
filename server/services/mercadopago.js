@@ -26,7 +26,7 @@ export async function getMpConfig(tenantId = null) {
       publicKey: env.mpPublicKey || null,
     }
   }
-  const settings = await getSettings({ tenantId })
+  const settings = await getSettings({ tenant: tenantId })
   const mp = settings?.payments?.mercadopago || {}
   const token = mp.accessToken || env.mpAccessToken
   return {

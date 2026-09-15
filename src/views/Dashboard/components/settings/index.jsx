@@ -1,5 +1,6 @@
 ﻿import { useState } from 'react'
 import { apiPut, apiUpload, getSession } from '@/lib/api'
+import { getSuperTenant } from '@/lib/tenant'
 import { IconCross, IconEdit, IconPlus } from '@/components/Icons'
 import { SetImageField, SettingsFetcher, SettingsNote, ToggleRow } from '../common'
 
@@ -20,6 +21,15 @@ function PasswordInput({ label, value, onChange, ...rest }) {
   )
 }
 
+function generateWebhookSecret() {
+  const bytes = new Uint8Array(24)
+  const cryptoObj = globalThis.crypto
+  if (typeof cryptoObj?.getRandomValues === 'function') {
+    cryptoObj.getRandomValues(bytes)
+  }
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('')
+}
+
 function PaymentsScreen() {
   const [saving, setSaving] = useState(false)
   const [note, setNote] = useState('')
@@ -28,7 +38,7 @@ function PaymentsScreen() {
     setSaving(true)
     setNote('')
     try {
-      await apiPut('/api/admin/settings', { section: 'payments', value: { ...methods, mercadopago } })
+      await apiPut('/api/admin/settings', { section: 'payments', value: { methods, mercadopago } })
       await apiPut('/api/admin/settings', { section: 'checkout', value: checkout })
       setNote('Medios de pago guardados.')
     } catch (err) {
@@ -54,7 +64,9 @@ function PaymentsScreenBody({ settings, saving, note, setNote, onSave }) {
   const mpConfigured = Boolean(mp.accessToken && mp.webhookSecret)
   const checkout = settings.checkout || {}
   const session = typeof getSession === 'function' ? getSession() : { user: {} }
-  const adminId = session?.user?.adminId
+  const user = session?.user || {}
+  const adminId =
+    user.adminId || (user.role === 'superadmin' ? getSuperTenant() : user.id) || ''
   const webhookUrl = adminId
     ? `${window.location.origin}/api/webhooks/mercadopago?tenant=${adminId}`
     : ''
@@ -65,10 +77,14 @@ function PaymentsScreenBody({ settings, saving, note, setNote, onSave }) {
     statementDescriptor: checkout.statementDescriptor || 'TechStore',
     accessToken: mp.accessToken || '',
     publicKey: mp.publicKey || '',
-    webhookSecret: mp.webhookSecret || '',
+    webhookSecret: mp.webhookSecret || generateWebhookSecret(),
   })
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }))
+
+  const regenerateSecret = () => {
+    setForm((f) => ({ ...f, webhookSecret: generateWebhookSecret() }))
+  }
 
   const copyWebhook = () => {
     if (!webhookUrl) return
@@ -100,14 +116,14 @@ function PaymentsScreenBody({ settings, saving, note, setNote, onSave }) {
     <div className="dash-screen">
       <header className="dash-head">
         <div>
-          <span className="dash-eyebrow">ConfiguraciÃ³n</span>
-          <h1>MÃ©todos de pago</h1>
+          <span className="dash-eyebrow">Configuración</span>
+          <h1>Métodos de pago</h1>
         </div>
       </header>
 
       <div className="dash-toolbar">
         <p className="list-note">
-          Cada tienda usa su propia cuenta de Mercado Pago. La web cobra con MP y la webhook URL es Ãºnica por negocio.
+          Cada tienda usa su propia cuenta de Mercado Pago. La web cobra con MP y la webhook URL es única por negocio.
         </p>
       </div>
 
@@ -125,7 +141,7 @@ function PaymentsScreenBody({ settings, saving, note, setNote, onSave }) {
       <form className="set-card set-form" onSubmit={submit}>
         <h3>Webhook de Mercado Pago</h3>
         <p className="set-hint">
-          En el panel de Mercado Pago, configurÃ¡ la URL de notificaciÃ³n que copias abajo y elegÃ¡ el evento{" "}
+          En el panel de Mercado Pago, configurá la URL de notificación que copias abajo y elegí el evento{" "}
           <code>mercado_pago/payment</code>.
         </p>
         <div className="set-row">
@@ -139,14 +155,14 @@ function PaymentsScreenBody({ settings, saving, note, setNote, onSave }) {
         </div>
         {mpConfigured && (
           <p className="set-hint">
-            VerificÃ¡ que la firma sea vÃ¡lida en <code>/api/webhooks/mercadopago</code> con tu <code>webhook secret</code>.
+            Verificá que la firma sea válida en <code>/api/webhooks/mercadopago</code> con tu <code>webhook secret</code>.
           </p>
         )}
 
         <h3>En la caja (panel)</h3>
         <div className="set-toggles">
           <ToggleRow label="Efectivo" hint="Pago en el local" checked={form.efectivo} onChange={toggle('efectivo')} />
-          <ToggleRow label="Tarjeta" hint="Tarjeta de dÃ©bito o crÃ©dito" checked={form.tarjeta} onChange={toggle('tarjeta')} />
+          <ToggleRow label="Tarjeta" hint="Tarjeta de débito o crédito" checked={form.tarjeta} onChange={toggle('tarjeta')} />
           <ToggleRow label="Transferencia" hint="Transferencia bancaria" checked={form.transferencia} onChange={toggle('transferencia')} />
         </div>
 
@@ -165,12 +181,17 @@ function PaymentsScreenBody({ settings, saving, note, setNote, onSave }) {
             maxLength={300}
           />
         </div>
+        <div className="set-row">
+          <button type="button" className="ghost-btn" onClick={regenerateSecret}>
+            Regenerar Webhook Secret
+          </button>
+        </div>
         <label className="inv-field">
           <span>Public Key (opcional)</span>
           <input value={form.publicKey} onChange={set('publicKey')} maxLength={300} />
         </label>
         <p className="set-hint">
-          ObtenÃ© las claves en <a href="https://www.mercadopago.com.ar/developers" target="_blank" rel="noreferrer">MercadoPago Developers</a>. Las claves se guardan en la base de datos de esta tienda solamente.
+          Obtené las claves en <a href="https://www.mercadopago.com.ar/developers" target="_blank" rel="noreferrer">MercadoPago Developers</a>. Las claves se guardan en la base de datos de esta tienda solamente. Cada tienda tiene su propio webhook secret por defecto; si lo regenerás, actualizá el nuevo valor en el panel de webhooks de Mercado Pago de esta tienda.
         </p>
 
         <div className="set-actions">
@@ -249,7 +270,7 @@ function StoreScreenBody({ settings, saving, note, onSave }) {
       const res = await apiUpload('/api/admin/settings/media', fd)
       setForm((f) => ({ ...f, [`${which}Url`]: res[which] }))
       setImageResult(
-        `${which === 'logo' ? 'Logo' : 'Portada'} actualizado. Guardalo con los demÃ¡s cambios.`,
+        `${which === 'logo' ? 'Logo' : 'Portada'} actualizado. Guardalo con los demás cambios.`,
       )
     } catch (err) {
       setImageResult(err.message)
@@ -279,14 +300,14 @@ function StoreScreenBody({ settings, saving, note, onSave }) {
     <div className="dash-screen">
       <header className="dash-head">
         <div>
-          <span className="dash-eyebrow">ConfiguraciÃ³n</span>
+          <span className="dash-eyebrow">Configuración</span>
           <h1>Datos del negocio</h1>
         </div>
       </header>
 
       <div className="dash-toolbar">
         <p className="list-note">
-          Estos datos se muestran en la tienda: cabecera, pie de pÃ¡gina, mapa, portada y botÃ³n de WhatsApp.
+          Estos datos se muestran en la tienda: cabecera, pie de página, mapa, portada y botón de WhatsApp.
         </p>
       </div>
 
@@ -330,7 +351,7 @@ function StoreScreenBody({ settings, saving, note, onSave }) {
         <h3>Contacto</h3>
         <div className="set-row">
           <label className="inv-field">
-            <span>TelÃ©fono fijo</span>
+            <span>Teléfono fijo</span>
             <input value={form.phone} onChange={set('phone')} placeholder="11 5555 4294" />
           </label>
           <label className="inv-field">
@@ -343,44 +364,44 @@ function StoreScreenBody({ settings, saving, note, onSave }) {
           </label>
         </div>
 
-        <h3>UbicaciÃ³n y horarios</h3>
+        <h3>Ubicación y horarios</h3>
         <div className="set-row">
           <label className="inv-field set-grow">
-            <span>DirecciÃ³n completa (para el mapa)</span>
+            <span>Dirección completa (para el mapa)</span>
             <input value={form.addressFull} onChange={set('addressFull')} />
           </label>
           <label className="inv-field">
-            <span>DirecciÃ³n corta (marcas de la tienda)</span>
+            <span>Dirección corta (marcas de la tienda)</span>
             <input value={form.addressShort} onChange={set('addressShort')} />
           </label>
         </div>
         <label className="inv-field">
-          <span>Horarios de atenciÃ³n</span>
+          <span>Horarios de atención</span>
           <input value={form.hours} onChange={set('hours')} />
         </label>
 
         <h3>Hero de inicio</h3>
         <div className="set-row">
           <label className="inv-field">
-            <span>TÃ­tulo principal</span>
+            <span>Título principal</span>
             <input value={form.heroTitle} onChange={set('heroTitle')} maxLength={160} />
           </label>
           <label className="inv-field">
-            <span>Remate del tÃ­tulo</span>
+            <span>Remate del título</span>
             <input value={form.heroAccent} onChange={set('heroAccent')} maxLength={160} />
           </label>
         </div>
         <label className="inv-field">
-          <span>Texto de presentaciÃ³n</span>
+          <span>Texto de presentación</span>
           <textarea value={form.heroLead} onChange={set('heroLead')} rows={3} maxLength={300} />
         </label>
         <p className="set-hint">
-          GuardÃ¡ el texto que se muestra en el hero del inicio. PodÃ©s usar{' '}
-          <code>{'{cuotas}'}</code> (mÃ¡x. cuotas sin interÃ©s) y <code>{'{ciudad}'}</code>{' '}
-          (direcciÃ³n corta) dentro del texto.
+          Guardá el texto que se muestra en el hero del inicio. Podés usar{' '}
+          <code>{'{cuotas}'}</code> (máx. cuotas sin interés) y <code>{'{ciudad}'}</code>{' '}
+          (dirección corta) dentro del texto.
         </p>
 
-        <h3>Franja del pie de pÃ¡gina</h3>
+        <h3>Franja del pie de página</h3>
         <label className="inv-field">
           <span>Texto promocional</span>
           <textarea value={form.band} onChange={set('band')} rows={2} />
@@ -388,7 +409,7 @@ function StoreScreenBody({ settings, saving, note, onSave }) {
 
         <div className="set-actions">
           <button type="submit" className="primary-btn" disabled={saving}>
-            {saving ? 'Guardandoâ€¦' : 'Guardar cambios'}
+            {saving ? 'Guardando...' : 'Guardar cambios'}
           </button>
         </div>
       </form>
@@ -407,7 +428,7 @@ function GeneralScreen() {
     try {
       await apiPut('/api/admin/settings', { section: 'shipping', value: shipping })
       await apiPut('/api/admin/settings', { section: 'general', value: general })
-      setNote('ConfiguraciÃ³n general guardada.')
+      setNote('Configuración general guardada.')
     } catch (err) {
       setNote(err.message)
     } finally {
@@ -431,7 +452,7 @@ function GeneralScreenBody({ settings, saving, note, onSave }) {
   const [form, setForm] = useState({
     cost: String(shipping.cost || 5999),
     freeThreshold: String(shipping.freeThreshold || 300000),
-    label: shipping.label || 'EnvÃ­o a domicilio',
+    label: shipping.label || 'Envío a domicilio',
   })
   const [marquee, setMarquee] = useState(
     (Array.isArray(general.marquee) ? general.marquee : []).filter(Boolean),
@@ -469,7 +490,7 @@ function GeneralScreenBody({ settings, saving, note, onSave }) {
 
   const clearMarquee = () => {
     if (marquee.length === 0) return
-    if (window.confirm('Â¿Quitar todos los mensajes de la cinta superior?')) {
+    if (window.confirm('¿Quitar todos los mensajes de la cinta superior?')) {
       setMarquee([])
     }
   }
@@ -480,7 +501,7 @@ function GeneralScreenBody({ settings, saving, note, onSave }) {
       {
         cost: Math.max(0, Number(form.cost) || 0),
         freeThreshold: Math.max(0, Number(form.freeThreshold) || 0),
-        label: form.label.trim() || 'EnvÃ­o a domicilio',
+        label: form.label.trim() || 'Envío a domicilio',
       },
       {
         marquee: marquee.filter(Boolean),
@@ -492,36 +513,36 @@ function GeneralScreenBody({ settings, saving, note, onSave }) {
     <div className="dash-screen">
       <header className="dash-head">
         <div>
-          <span className="dash-eyebrow">ConfiguraciÃ³n</span>
-          <h1>ConfiguraciÃ³n general</h1>
+          <span className="dash-eyebrow">Configuración</span>
+          <h1>Configuración general</h1>
         </div>
       </header>
 
       <div className="dash-toolbar">
         <p className="list-note">
-          EnvÃ­os y la cinta superior de la tienda. Afecta el checkout, el carrito y las tarjetas de producto.
+          Envíos y la cinta superior de la tienda. Afecta el checkout, el carrito y las tarjetas de producto.
         </p>
       </div>
 
       <SettingsNote text={note} />
 
       <form className="set-card set-form" onSubmit={submit}>
-        <h3>EnvÃ­os</h3>
+        <h3>Envíos</h3>
         <div className="set-row">
           <label className="inv-field">
-            <span>Costo de envÃ­o (ARS)</span>
+            <span>Costo de envío (ARS)</span>
             <input type="number" min="0" value={form.cost} onChange={set('cost')} className="mono" />
           </label>
           <label className="inv-field">
-            <span>EnvÃ­o gratis desde (ARS)</span>
+            <span>Envío gratis desde (ARS)</span>
             <input type="number" min="0" value={form.freeThreshold} onChange={set('freeThreshold')} className="mono" />
           </label>
           <label className="inv-field">
-            <span>Nombre del envÃ­o</span>
+            <span>Nombre del envío</span>
             <input value={form.label} onChange={set('label')} />
           </label>
         </div>
-        <p className="set-hint">Si el costo es 0, el envÃ­o es siempre gratis.</p>
+        <p className="set-hint">Si el costo es 0, el envío es siempre gratis.</p>
 
         <h3>Cinta superior (marquee)</h3>
         <div className="set-list">
@@ -536,7 +557,7 @@ function GeneralScreenBody({ settings, saving, note, onSave }) {
                     if (e.key === 'Escape') setEditingIndex(null)
                   }}
                   autoFocus
-                  placeholder="Mensajeâ€¦"
+                  placeholder="Mensaje…"
                 />
                 <button type="button" className="ghost-btn" onClick={() => saveEdit(index)}>
                   Guardar
@@ -572,10 +593,10 @@ function GeneralScreenBody({ settings, saving, note, onSave }) {
           {marquee.length === 0 && <p className="set-empty">Sin mensajes. La cinta queda oculta.</p>}
         </div>
         <p className="set-hint">
-          El lÃ¡piz edita el mensaje y la X lo elimina. DespuÃ©s apretÃ¡ "Guardar cambios".
+          El lápiz edita el mensaje y la X lo elimina. Después apretá "Guardar cambios".
         </p>
         <div className="set-inline-add">
-          <input value={marqueeInput} onChange={(e) => setMarqueeInput(e.target.value)} placeholder="Nuevo mensajeâ€¦" />
+          <input value={marqueeInput} onChange={(e) => setMarqueeInput(e.target.value)} placeholder="Nuevo mensaje…" />
           <button type="button" className="ghost-btn" onClick={addMarquee}>
             <IconPlus />
             Agregar
@@ -589,7 +610,7 @@ function GeneralScreenBody({ settings, saving, note, onSave }) {
 
         <div className="set-actions">
           <button type="submit" className="primary-btn" disabled={saving}>
-            {saving ? 'Guardandoâ€¦' : 'Guardar cambios'}
+            {saving ? 'Guardando...' : 'Guardar cambios'}
           </button>
         </div>
       </form>

@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { formatARS } from '@/data/format'
 import SearchSelect from '@/components/SearchSelect'
 import { apiGet, apiPost } from '@/lib/api'
@@ -33,7 +33,7 @@ function PosScreen({ canManage }) {
       .then((res) => {
         if (alive) setCatOptions(res.categories || [])
       })
-      .catch((err) => console.warn('No se pudieron cargar las categorÃ­as', err))
+      .catch((err) => console.warn('No se pudieron cargar las categorías', err))
     apiGet('/api/brands')
       .then((res) => {
         if (alive) setBrandOptions(res.brands || [])
@@ -143,18 +143,18 @@ function PosScreen({ canManage }) {
     <div className="dash-screen">
       <header className="dash-head">
         <div>
-          <span className="dash-eyebrow">Caja Â· mostrador</span>
+          <span className="dash-eyebrow">Caja · mostrador</span>
           <h1>Nueva venta / POS</h1>
         </div>
         <div className="dash-head-today">
           <strong className="mono">{lines.length}</strong>
-          <em>lÃ­neas</em>
+          <em>líneas</em>
         </div>
       </header>
 
       {lastSale && (
         <p className="sale-note sale-note-ok">
-          <IconCheck /> Venta #{shortId(lastSale.id)} registrada por {formatARS(lastSale.total)} â€” {lastSale.payment}
+          <IconCheck /> Venta #{shortId(lastSale.id)} registrada por {formatARS(lastSale.total)} — {lastSale.payment}
         </p>
       )}
       {note && <p className="sale-note">{note}</p>}
@@ -167,14 +167,14 @@ function PosScreen({ canManage }) {
               type="text"
               value={query}
               onChange={onQuery}
-              placeholder="BuscÃ¡ en el catÃ¡logoâ€¦"
+              placeholder="Buscá en el catálogo…"
               aria-label="Buscar productos"
             />
           </div>
           <div className="pos-filters">
             <SearchSelect
               id="pos-category-filter"
-              label="CategorÃ­a"
+              label="Categoría"
               value={category}
               onChange={onCategory}
               options={catOptions.map((c) => ({ value: c.key, label: c.name }))}
@@ -209,7 +209,7 @@ function PosScreen({ canManage }) {
                 <IconPlus />
               </button>
             ))}
-            {loading && products.length === 0 && <EmptyNote text="Cargando productosâ€¦" />}
+            {loading && products.length === 0 && <EmptyNote text="Cargando productos…" />}
             {!loading && products.length === 0 && <EmptyNote text="Sin productos para esos filtros." />}
           </div>
           {totalPages > 1 && (
@@ -219,17 +219,17 @@ function PosScreen({ canManage }) {
                 disabled={page <= 1}
                 onClick={() => setPage((n) => n - 1)}
               >
-                â† Anterior
+                ← Anterior
               </button>
               <span className="mono">
-                pÃ¡gina {page} de {totalPages}
+                página {page} de {totalPages}
               </span>
               <button
                 type="button"
                 disabled={page >= totalPages}
                 onClick={() => setPage((n) => n + 1)}
               >
-                Siguiente â†’
+                Siguiente →
               </button>
             </div>
           )}
@@ -254,12 +254,12 @@ function PosScreen({ canManage }) {
                   </button>
                 </span>
                 <span className="ticket-line-total mono">{formatARS(l.product.price * l.quantity)}</span>
-                <button type="button" className="row-btn row-btn-danger" onClick={() => removeLine(l.product.id)} aria-label="Quitar lÃ­nea">
+                <button type="button" className="row-btn row-btn-danger" onClick={() => removeLine(l.product.id)} aria-label="Quitar línea">
                   <IconTrash />
                 </button>
               </li>
             ))}
-            {lines.length === 0 && <li className="ticket-empty mono">El ticket estÃ¡ vacÃ­o</li>}
+            {lines.length === 0 && <li className="ticket-empty mono">El ticket está vacío</li>}
           </ul>
 
           <div className="ticket-totals">
@@ -310,7 +310,7 @@ function PosScreen({ canManage }) {
               disabled={!canManage || lines.length === 0 || saving}
               onClick={checkout}
             >
-              {saving ? 'Cobrandoâ€¦' : `Cobrar ${formatARS(total)}`}
+              {saving ? 'Cobrando…' : `Cobrar ${formatARS(total)}`}
             </button>
           </div>
         </section>

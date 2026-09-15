@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { apiGet } from '@/lib/api'
 import { REPORT_PERIODS, STATUS_META, STOCK_STATUS_LABELS } from '../../consts.js'
 import { IconChart, IconClock, IconSearchOff } from '@/components/Icons'
@@ -27,7 +27,7 @@ function EmptyNote({ text }) {
 }
 
 
-function ScreenLoading({ label = 'Leyendo la cajaâ€¦' }) {
+function ScreenLoading({ label = 'Leyendo la caja…' }) {
   return (
     <div className="dash-screen dash-loading">
       <span className="skel-head" />
@@ -117,7 +117,7 @@ function ScreenBlocked({ message }) {
         <span className="unlock-icon">
           <IconChart />
         </span>
-        <span className="dash-eyebrow">Algo se trabÃ³</span>
+        <span className="dash-eyebrow">Algo se trabó</span>
         <h1>No pudimos leer el panel</h1>
         <p>{message}.</p>
       </div>
@@ -145,7 +145,7 @@ function ToggleRow({ label, hint, checked, onChange, disabled = false }) {
 
 
 function isErrorNote(text) {
-  return /(No se pudo|No pod|No tenÃ©s|Ya existe|requeridos|invÃ¡lido|vencida|incorrectas)/i.test(
+  return /(No se pudo|No pod|No tenés|Ya existe|requeridos|inválido|vencida|incorrectas)/i.test(
     text || '',
   )
 }
@@ -187,7 +187,7 @@ function SetImageField({ label, hint, value, uploading, onFile, onRemove, wide }
       )}
       <div className="set-image-actions">
         <label className="primary-btn set-image-upload">
-          {uploading ? 'Subiendoâ€¦' : 'Subir imagen'}
+          {uploading ? 'Subiendo…' : 'Subir imagen'}
           <input
             type="file"
             accept="image/*"
@@ -237,7 +237,7 @@ function SettingsFetcher({ render }) {
   }, [])
 
   if (error) return <ScreenBlocked message={error} />
-  if (!data) return <ScreenLoading label="Leyendo ajustesâ€¦" />
+  if (!data) return <ScreenLoading label="Leyendo ajustes…" />
   return render(data)
 }
 

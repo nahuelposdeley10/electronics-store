@@ -1,6 +1,4 @@
 import 'dotenv/config'
-import fs from 'node:fs'
-import path from 'node:path'
 import readline from 'node:readline'
 import { Writable } from 'node:stream'
 import mongoose from 'mongoose'
@@ -8,9 +6,7 @@ import bcrypt from 'bcryptjs'
 import { env } from './config/env.js'
 import { User } from './models/User.js'
 
-const ENV_FILE = path.resolve(process.cwd(), '.env')
 const dbName = process.env.SEED_DB_NAME || 'electronics-store'
-const persistEnv = dbName === 'electronics-store'
 
 function createPasswordReader() {
   const isTTY = Boolean(process.stdin.isTTY && process.stdout.isTTY)
@@ -59,19 +55,13 @@ async function promptPassword(pw, label) {
   }
 }
 
-function saveEnv(key, value) {
-  try {
-    const raw = fs.existsSync(ENV_FILE) ? fs.readFileSync(ENV_FILE, 'utf8') : ''
-    const eol = raw.includes('\r\n') ? '\r\n' : '\n'
-    const lines = raw.split(/\r?\n/)
-    const line = `${key}="${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`
-    const idx = lines.findIndex((l) => new RegExp(`^${key}\\s*=`).test(l))
-    if (idx >= 0) lines[idx] = line
-    else lines.push(line)
-    fs.writeFileSync(ENV_FILE, lines.join(eol))
-  } catch (error) {
-    console.warn(`  No se pudo guardar ${key} en .env:`, error.message)
+async function resolveCredentials({ role, email, envKey, ask, pw }) {
+  const existing = process.env[envKey]
+  if (existing && !ask) {
+    return { password: existing, saved: false }
   }
+  const password = await promptPassword(pw, `${role} — ${email}`)
+  return { password, saved: true }
 }
 
 async function ensureUser({ name, email, password, role, adminId = null, businessSlug = null }) {
@@ -95,21 +85,6 @@ async function ensureUser({ name, email, password, role, adminId = null, busines
   }
   console.log(`${user.role.padEnd(10)} ${user.email} (contraseña actualizada)`)
   return user
-}
-
-async function resolveCredentials({ role, email, envKey, ask, pw }) {
-  const existing = process.env[envKey]
-  if (existing && !ask) {
-    return { password: existing, saved: false }
-  }
-  const password = await promptPassword(pw, `${role} — ${email}`)
-  if (password !== existing) {
-    if (persistEnv) {
-      saveEnv(envKey, password)
-      console.log(`  Guardada en .env como ${envKey}.`)
-    }
-  }
-  return { password, saved: true }
 }
 
 async function run() {
@@ -139,7 +114,7 @@ async function run() {
 
     if (missing.length) {
       console.log(
-        `Faltan en .env: ${missing.join(', ')}. Por las contraseñas te las pido por consola (o definilas en .env).`,
+        `Faltan en .env: ${missing.join(', ')}. Por las contraseñas te las pido por consola.`,
       )
     }
 
@@ -191,8 +166,6 @@ async function run() {
     console.log('Usuarios listos.')
     if (ask) {
       console.log('Podés cambiar las contraseñas cuando quieras con: npm run seed:users -- --ask')
-    } else if (persistEnv && !process.env.OPERATOR_PASSWORD) {
-      console.log('Operador: contraseña definida recién (guardada en .env como OPERATOR_PASSWORD).')
     }
   } finally {
     pw.close()

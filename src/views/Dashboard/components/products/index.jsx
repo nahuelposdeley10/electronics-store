@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { formatARS } from '@/data/format'
 import SearchSelect from '@/components/SearchSelect'
 import { apiDelete, apiGet, apiPost, apiPut, apiUpdate, apiUpload } from '@/lib/api'
@@ -27,7 +27,7 @@ function ProductsScreen({ canManage }) {
       .then((res) => {
         if (alive) setCats(res.categories || [])
       })
-      .catch((err) => console.warn('No se pudieron cargar las categorÃ­as', err))
+      .catch((err) => console.warn('No se pudieron cargar las categorías', err))
     apiGet('/api/brands')
       .then((res) => {
         if (alive) setBrands(res.brands || [])
@@ -96,7 +96,7 @@ function ProductsScreen({ canManage }) {
   }
 
   const handleDelete = async (product) => {
-    if (!window.confirm(`Â¿Eliminar "${product.name}" ${product.brand} de la galerÃ­a?`)) {
+    if (!window.confirm(`¿Eliminar "${product.name}" ${product.brand} de la galería?`)) {
       return
     }
     try {
@@ -122,7 +122,7 @@ function ProductsScreen({ canManage }) {
         value: Number(bulk.value),
         category: bulk.category,
       })
-      const bucket = bulk.category === 'todas' ? 'todas las categorÃ­as' : bulk.category
+      const bucket = bulk.category === 'todas' ? 'todas las categorías' : bulk.category
       setNote(`Ajuste masivo aplicado a ${bucket}`)
       setBulk((b) => ({ ...b, value: '' }))
       setParams((prev) => ({ ...prev }))
@@ -133,19 +133,19 @@ function ProductsScreen({ canManage }) {
     }
   }
 
-  if (!data && !error) return <ScreenLoading label="Cargando la estanterÃ­aâ€¦" />
+  if (!data && !error) return <ScreenLoading label="Cargando la estantería…" />
   if (error) return <ScreenBlocked message={error} />
 
   return (
     <div className="dash-screen">
       <header className="dash-head">
         <div>
-          <span className="dash-eyebrow">EstanterÃ­a</span>
+          <span className="dash-eyebrow">Estantería</span>
           <h1>Productos</h1>
         </div>
         <div className="dash-head-today">
           <strong className="mono">{data.total}</strong>
-          <em>en la galerÃ­a</em>
+          <em>en la galería</em>
         </div>
       </header>
 
@@ -156,14 +156,14 @@ function ProductsScreen({ canManage }) {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="BuscÃ¡ producto, marca o categorÃ­aâ€¦"
+            placeholder="Buscá producto, marca o categoría…"
             aria-label="Buscar productos"
           />
         </form>
         <div className="dash-filters">
           <SearchSelect
             id="products-category-filter"
-            label="CategorÃ­a"
+            label="Categoría"
             value={params.category}
             onChange={onCategory}
             options={cats.map((c) => ({ value: c.key, label: c.name }))}
@@ -195,7 +195,7 @@ function ProductsScreen({ canManage }) {
         <form className="bulk-bar" onSubmit={applyBulk}>
           <strong>Ajuste masivo</strong>
           <label className="bulk-field">
-            <span>CategorÃ­a</span>
+            <span>Categoría</span>
             <SearchSelect
               id="bulk-category-filter"
               value={bulk.category}
@@ -217,7 +217,7 @@ function ProductsScreen({ canManage }) {
             </select>
           </label>
           <label className="bulk-field">
-            <span>{bulk.mode === 'round' ? 'Redondear aâ€¦' : 'Valor'}</span>
+            <span>{bulk.mode === 'round' ? 'Redondear a…' : 'Valor'}</span>
             <input
               type="number"
               value={bulk.value}
@@ -233,7 +233,7 @@ function ProductsScreen({ canManage }) {
             />
           </label>
           <button type="submit" className="primary-btn" disabled={bulkSaving}>
-            {bulkSaving ? 'Aplicandoâ€¦' : 'Aplicar ajuste'}
+            {bulkSaving ? 'Aplicando…' : 'Aplicar ajuste'}
           </button>
         </form>
       )}
@@ -253,7 +253,7 @@ function ProductsScreen({ canManage }) {
           <thead>
             <tr>
               <th>Producto</th>
-              <th>CategorÃ­a</th>
+              <th>Categoría</th>
               <th>Precio</th>
               <th>Costo</th>
               <th>Ganancia</th>
@@ -279,14 +279,14 @@ function ProductsScreen({ canManage }) {
                   {CATEGORY_LABELS[p.category] || p.category}
                 </td>
                 <td className="mono t-num">{formatARS(p.price)}</td>
-                <td className="mono t-num t-cost">{p.costPrice ? formatARS(p.costPrice) : 'â€”'}</td>
+                <td className="mono t-num t-cost">{p.costPrice ? formatARS(p.costPrice) : '—'}</td>
                 <td className="mono t-num t-margin">
                   {p.costPrice ? (
                     <span className={p.price - p.costPrice >= 0 ? 'mv-delta up' : 'mv-delta down'}>
                       {formatARS(p.price - p.costPrice)}
                     </span>
                   ) : (
-                    'â€”'
+                    '—'
                   )}
                 </td>
                 <td className="mono t-num">{p.stock}</td>
@@ -319,7 +319,7 @@ function ProductsScreen({ canManage }) {
           </tbody>
         </table>
         {data.items.length === 0 && (
-          <EmptyNote text="NingÃºn producto con ese nombre, marca o categorÃ­a." />
+          <EmptyNote text="Ningún producto con ese nombre, marca o categoría." />
         )}
       </div>
 
@@ -330,17 +330,17 @@ function ProductsScreen({ canManage }) {
             onClick={() => setParams((prev) => ({ ...prev, page: prev.page - 1 }))}
             disabled={data.page <= 1}
           >
-            â† Anterior
+            ← Anterior
           </button>
           <span className="mono">
-            PÃ¡gina {data.page} de {data.totalPages} Â· {data.total} productos
+            Página {data.page} de {data.totalPages} · {data.total} productos
           </span>
           <button
             type="button"
             onClick={() => setParams((prev) => ({ ...prev, page: prev.page + 1 }))}
             disabled={data.page >= data.totalPages}
           >
-            Siguiente â†’
+            Siguiente →
           </button>
         </div>
       )}
@@ -405,7 +405,7 @@ function ProductForm({ product, onClose, onSaved }) {
       >
         <header className="product-head">
           <div>
-            <span className="dash-eyebrow">EstanterÃ­a</span>
+            <span className="dash-eyebrow">Estantería</span>
             <h2>{product ? 'Editar producto' : 'Agregar producto'}</h2>
           </div>
           <button
@@ -443,7 +443,7 @@ function ProductForm({ product, onClose, onSaved }) {
             </label>
 
             <label className="pf-field">
-              <span>CategorÃ­a</span>
+              <span>Categoría</span>
               <select
                 value={form.category}
                 onChange={set('category')}
@@ -495,7 +495,7 @@ function ProductForm({ product, onClose, onSaved }) {
             </label>
 
             <label className="pf-field">
-              <span>Rating (0â€“5)</span>
+              <span>Rating (0–5)</span>
               <input
                 type="number"
                 min="0"
@@ -518,12 +518,12 @@ function ProductForm({ product, onClose, onSaved }) {
             </label>
 
             <label className="pf-field pf-full">
-              <span>DescripciÃ³n</span>
+              <span>Descripción</span>
               <textarea
                 rows={3}
                 value={form.description}
                 onChange={set('description')}
-                placeholder="De quÃ© se trata el productoâ€¦"
+                placeholder="De qué se trata el producto…"
               />
             </label>
 
@@ -540,7 +540,7 @@ function ProductForm({ product, onClose, onSaved }) {
             <label className="pf-field pf-full">
               <span>
                 {product
-                  ? 'Imagen nueva (dejÃ¡ vacÃ­o para conservar la actual)'
+                  ? 'Imagen nueva (dejá vacío para conservar la actual)'
                   : 'Imagen (PNG, JPG o WEBP)'}
               </span>
               {product && product.image && !image && (
@@ -562,7 +562,7 @@ function ProductForm({ product, onClose, onSaved }) {
                   setForm((f) => ({ ...f, freeShipping: e.target.checked }))
                 }
               />
-              <span>EnvÃ­o gratis</span>
+              <span>Envío gratis</span>
             </label>
           </div>
 
@@ -583,7 +583,7 @@ function ProductForm({ product, onClose, onSaved }) {
               disabled={saving}
             >
               {saving
-                ? 'Guardandoâ€¦'
+                ? 'Guardando…'
                 : product
                   ? 'Guardar cambios'
                   : 'Guardar producto'}
@@ -605,8 +605,8 @@ function MetaScreen({ kind, title, eyebrow, empty, canManage }) {
   const [formOpen, setFormOpen] = useState(false)
 
   const hasKey = kind === 'categories'
-  const singular = hasKey ? 'categorÃ­a' : 'marca'
-  const plural = hasKey ? 'categorÃ­as' : 'marcas'
+  const singular = hasKey ? 'categoría' : 'marca'
+  const plural = hasKey ? 'categorías' : 'marcas'
 
   useEffect(() => {
     let alive = true
@@ -645,7 +645,7 @@ function MetaScreen({ kind, title, eyebrow, empty, canManage }) {
   }
 
   const handleDelete = async (item) => {
-    if (!window.confirm(`Â¿Eliminar ${singular} "${item.name}"?`)) return
+    if (!window.confirm(`¿Eliminar ${singular} "${item.name}"?`)) return
     try {
       const target = hasKey ? item.key : encodeURIComponent(item.name)
       await apiDelete(`/api/admin/${kind}/${target}`)
@@ -656,7 +656,7 @@ function MetaScreen({ kind, title, eyebrow, empty, canManage }) {
     }
   }
 
-  if (!items && !error) return <ScreenLoading label="Cargando la estanterÃ­aâ€¦" />
+  if (!items && !error) return <ScreenLoading label="Cargando la estantería…" />
   if (error) return <ScreenBlocked message={error} />
 
   return (
@@ -668,7 +668,7 @@ function MetaScreen({ kind, title, eyebrow, empty, canManage }) {
         </div>
         <div className="dash-head-today">
           <strong className="mono">{items.length}</strong>
-          <em>en la estanterÃ­a</em>
+          <em>en la estantería</em>
         </div>
       </header>
 
@@ -801,7 +801,7 @@ function MetaForm({ hasKey, item, noun, path, onClose, onSaved }) {
       >
         <header className="product-head">
           <div>
-            <span className="dash-eyebrow">EstanterÃ­a</span>
+            <span className="dash-eyebrow">Estantería</span>
             <h2>{item ? `Editar ${noun}` : `Agregar ${noun}`}</h2>
           </div>
           <button
@@ -833,13 +833,13 @@ function MetaForm({ hasKey, item, noun, path, onClose, onSaved }) {
                   type="text"
                   value={form.key}
                   onChange={set('key')}
-                  placeholder="Ej. audio â€” se genera sola si la dejÃ¡s vacÃ­a"
+                  placeholder="Ej. audio — se genera sola si la dejás vacía"
                 />
               </label>
             )}
             <label className="pf-check pf-full">
               <input type="checkbox" checked={form.active} onChange={set('active')} />
-              <span>{hasKey ? 'CategorÃ­a activa' : 'Marca activa'}</span>
+              <span>{hasKey ? 'Categoría activa' : 'Marca activa'}</span>
             </label>
           </div>
 
@@ -850,7 +850,7 @@ function MetaForm({ hasKey, item, noun, path, onClose, onSaved }) {
               Cancelar
             </button>
             <button type="submit" className="primary-btn" disabled={saving}>
-              {saving ? 'Guardandoâ€¦' : 'Guardar'}
+              {saving ? 'Guardando…' : 'Guardar'}
             </button>
           </div>
         </form>
@@ -878,7 +878,7 @@ function OffersScreen({ canManage }) {
       .then((res) => {
         if (alive) setCats(res.categories || [])
       })
-      .catch((err) => console.warn('No se pudieron cargar las categorÃ­as', err))
+      .catch((err) => console.warn('No se pudieron cargar las categorías', err))
     apiGet('/api/brands')
       .then((res) => {
         if (alive) setBrands(res.brands || [])
@@ -962,7 +962,7 @@ function OffersScreen({ canManage }) {
   }
 
   const removeOffer = async (p) => {
-    if (!window.confirm(`Â¿Quitar "${p.name}" de las ofertas?`)) return
+    if (!window.confirm(`¿Quitar "${p.name}" de las ofertas?`)) return
     setNote('')
     try {
       await apiDelete(`/api/admin/offers/${p.id}`)
@@ -983,14 +983,14 @@ function OffersScreen({ canManage }) {
     setParams((prev) => ({ ...prev, page: 1 }))
   }
 
-  if (!data && !error) return <ScreenLoading label="Cargando ofertasâ€¦" />
+  if (!data && !error) return <ScreenLoading label="Cargando ofertas…" />
   if (error) return <ScreenBlocked message={error} />
 
   return (
     <div className="dash-screen">
       <header className="dash-head">
         <div>
-          <span className="dash-eyebrow">EstanterÃ­a</span>
+          <span className="dash-eyebrow">Estantería</span>
           <h1>Ofertas de la semana</h1>
         </div>
         <div className="dash-head-today">
@@ -1006,14 +1006,14 @@ function OffersScreen({ canManage }) {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="BuscÃ¡ producto, marca o categorÃ­aâ€¦"
+            placeholder="Buscá producto, marca o categoría…"
             aria-label="Buscar ofertas"
           />
         </form>
         <div className="dash-filters">
           <SearchSelect
             id="stock-category-filter"
-            label="CategorÃ­a"
+            label="Categoría"
             value={params.category}
             onChange={onCategory}
             options={cats.map((c) => ({ value: c.key, label: c.name }))}
@@ -1103,7 +1103,7 @@ function OffersScreen({ canManage }) {
                     />
                   </td>
                   <td className="mono t-num t-money">
-                    {discount > 0 ? `${discount}% OFF` : 'â€”'}
+                    {discount > 0 ? `${discount}% OFF` : '—'}
                   </td>
                   <td className="mono t-num">{p.stock}</td>
                   {canManage && (
@@ -1135,7 +1135,7 @@ function OffersScreen({ canManage }) {
           </tbody>
         </table>
         {data.items.length === 0 && (
-          <EmptyNote text="TodavÃ­a no hay productos en oferta." />
+          <EmptyNote text="Todavía no hay productos en oferta." />
         )}
       </div>
 
@@ -1146,17 +1146,17 @@ function OffersScreen({ canManage }) {
             onClick={() => setParams((prev) => ({ ...prev, page: prev.page - 1 }))}
             disabled={data.page <= 1}
           >
-            â† Anterior
+            ← Anterior
           </button>
           <span className="mono">
-            PÃ¡gina {data.page} de {data.totalPages} Â· {data.total} ofertas
+            Página {data.page} de {data.totalPages} · {data.total} ofertas
           </span>
           <button
             type="button"
             onClick={() => setParams((prev) => ({ ...prev, page: prev.page + 1 }))}
             disabled={data.page >= data.totalPages}
           >
-            Siguiente â†’
+            Siguiente →
           </button>
         </div>
       )}
@@ -1235,7 +1235,7 @@ function OfferForm({ onClose, onSaved }) {
       >
         <header className="product-head">
           <div>
-            <span className="dash-eyebrow">EstanterÃ­a</span>
+            <span className="dash-eyebrow">Estantería</span>
             <h2>Poner en oferta</h2>
           </div>
           <button
@@ -1253,10 +1253,10 @@ function OfferForm({ onClose, onSaved }) {
             <label className="pf-field pf-full">
               <span>Producto</span>
               <select value={form.productId} onChange={selectProduct} required>
-                <option value="">ElegÃ­ un productoâ€¦</option>
+                <option value="">Elegí un producto…</option>
                 {products.map((p) => (
                   <option key={p.id} value={p.id}>
-                    {p.name} Â· {p.brand}
+                    {p.name} · {p.brand}
                   </option>
                 ))}
               </select>
@@ -1283,7 +1283,7 @@ function OfferForm({ onClose, onSaved }) {
             </label>
 
             <label className="pf-field pf-full">
-              <span>Precio anterior ($) â€” para mostrar el % OFF</span>
+              <span>Precio anterior ($) — para mostrar el % OFF</span>
               <input
                 type="number"
                 min="1"
@@ -1300,7 +1300,7 @@ function OfferForm({ onClose, onSaved }) {
                 {previewDiscount > 0 && (
                   <>
                     {' '}
-                    Â· <span className="tag-discount inline">{previewDiscount}% OFF</span>
+                    · <span className="tag-discount inline">{previewDiscount}% OFF</span>
                   </>
                 )}
               </p>
@@ -1314,7 +1314,7 @@ function OfferForm({ onClose, onSaved }) {
               Cancelar
             </button>
             <button type="submit" className="primary-btn" disabled={saving || !form.productId}>
-              {saving ? 'Guardandoâ€¦' : 'Poner en oferta'}
+              {saving ? 'Guardando…' : 'Poner en oferta'}
             </button>
           </div>
         </form>
@@ -1346,7 +1346,7 @@ function ImportScreen({ canManage }) {
     try {
       products = JSON.parse(text)
     } catch {
-      setError('El texto no es un JSON vÃ¡lido. RevisÃ¡ comas, llaves y corchetes.')
+      setError('El texto no es un JSON válido. Revisá comas, llaves y corchetes.')
       setBusy(false)
       return
     }
@@ -1365,7 +1365,7 @@ function ImportScreen({ canManage }) {
     <div className="dash-screen">
       <header className="dash-head">
         <div>
-          <span className="dash-eyebrow">EstanterÃ­a</span>
+          <span className="dash-eyebrow">Estantería</span>
           <h1>Importar productos</h1>
         </div>
       </header>
@@ -1388,7 +1388,7 @@ function ImportScreen({ canManage }) {
 
           <p className="import-help">
             Requeridos: <strong>name</strong>, <strong>brand</strong>,{' '}
-            <strong>category</strong> (clave vÃ¡lida) y <strong>price</strong>.
+            <strong>category</strong> (clave válida) y <strong>price</strong>.
             Opcionales: oldPrice, stock, rating, freeShipping, badge, image,
             description y specs (arreglo o texto separado por coma).
           </p>
@@ -1398,7 +1398,7 @@ function ImportScreen({ canManage }) {
               Cargar ejemplo
             </button>
             <button type="submit" className="primary-btn" disabled={busy}>
-              {busy ? 'Importandoâ€¦' : 'Importar productos'}
+              {busy ? 'Importando…' : 'Importar productos'}
             </button>
           </div>
 
@@ -1415,7 +1415,7 @@ function ImportScreen({ canManage }) {
                   <ul>
                     {result.skipped.map((skip, index) => (
                       <li key={index}>
-                        LÃ­nea {skip.index}: {skip.error}
+                        Línea {skip.index}: {skip.error}
                       </li>
                     ))}
                   </ul>
