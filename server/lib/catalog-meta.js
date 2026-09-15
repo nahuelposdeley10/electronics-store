@@ -39,9 +39,18 @@ export async function ensureCatalogMeta({ tenant } = {}) {
   const filter = tenantFilter(tenant)
   const categoryCount = await Category.countDocuments(filter)
   if (categoryCount === 0) {
-    await Category.insertMany(
-      LEGACY_CATEGORIES.map((c) => ({ ...filter, ...c })),
-    )
+    const legacyNames = new Map(LEGACY_CATEGORIES.map((c) => [c.key, c.name]))
+    const used = await Product.distinct('category', filter)
+    const seen = new Set()
+    const categoryDocs = []
+    for (const raw of used) {
+      const clean = String(raw || '').trim()
+      const key = slugify(clean)
+      if (!key || seen.has(key)) continue
+      seen.add(key)
+      categoryDocs.push({ ...filter, key, name: legacyNames.get(key) || clean })
+    }
+    if (categoryDocs.length) await Category.insertMany(categoryDocs)
   }
 
   const brandCount = await Brand.countDocuments(filter)
