@@ -16,7 +16,7 @@ import {
   IconTicket,
   IconWrench,
 } from '@/components/Icons'
-import { ScreenLoading } from './components/common'
+import DashboardLoading from '@/components/DashboardLoading'
 import { initials } from './consts.js'
 import {
   CashCurrentScreen,
@@ -83,6 +83,8 @@ export default function Dashboard({ onExit }) {
   const [superTenant, setSuperTenantState] = useState(() => getSuperTenant())
   const [copiedStoreUrl, setCopiedStoreUrl] = useState(false)
   const [storeInfo, setStoreInfo] = useState(null)
+  const [mpNeedSetup, setMpNeedSetup] = useState(false)
+  const [mpWarningClosed, setMpWarningClosed] = useState(false)
   const userIsSuper = user?.role === 'superadmin'
   const needsBusiness = userIsSuper && !superTenant
 
@@ -151,6 +153,11 @@ export default function Dashboard({ onExit }) {
           name: data?.store?.name || null,
           address: data?.store?.addressShort || null,
         })
+        setMpNeedSetup(
+          getSession().user?.role === 'admin' &&
+            data?.payments?.online !== false &&
+            !data?.payments?.mercadopago?.accessToken,
+        )
       })
       .catch(() => undefined)
     return () => {
@@ -203,6 +210,8 @@ export default function Dashboard({ onExit }) {
     setUser(null)
     setPerms([])
     setOverview(null)
+    setMpNeedSetup(false)
+    setMpWarningClosed(false)
     setGate('login')
   }
 
@@ -335,6 +344,8 @@ export default function Dashboard({ onExit }) {
     },
   ].filter((item) => !item.children || item.children.length > 0)
 
+  if (gate === 'loading' && !needsBusiness) return <DashboardLoading />
+
   return (
     <div className="dash">
       <aside className="dash-side">
@@ -453,8 +464,6 @@ export default function Dashboard({ onExit }) {
             }}
           />
         )}
-        {gate === 'loading' && !needsBusiness && <ScreenLoading />}
-
         {gate === 'login' && (
           <LoginPanel attempts={loginAttempts} error={gateError} onLogin={handleLogin} />
         )}
@@ -561,6 +570,53 @@ export default function Dashboard({ onExit }) {
         {gate === 'ready' && screen === 'settings-store' && <StoreScreen />}
         {gate === 'ready' && screen === 'settings-general' && <GeneralScreen />}
       </main>
+
+      {gate === 'ready' && !needsBusiness && mpNeedSetup && !mpWarningClosed && (
+        <MpSetupWarning
+          onConfigure={() => {
+            setMpWarningClosed(true)
+            changeScreen('settings-payments')
+          }}
+          onClose={() => setMpWarningClosed(true)}
+        />
+      )}
+    </div>
+  )
+}
+
+
+function MpSetupWarning({ onConfigure, onClose }) {
+  return (
+    <div className="product-overlay" role="dialog" aria-modal="true" aria-labelledby="mp-warning-title">
+      <div className="product-panel mp-warning">
+        <h2 id="mp-warning-title">Necesitás conectar Mercado Pago</h2>
+        <p>
+          Tu tienda todavía no tiene cargado el Access Token de Mercado Pago (
+          <code>APP_USR-...</code>). Hasta que lo configures, el check-out de tu
+          web no va a poder cobrar pagos online.
+        </p>
+        <div className="mp-warning-actions">
+          <button type="button" className="primary-btn" onClick={onConfigure}>
+            Configurar Mercado Pago
+          </button>
+          <a
+            className="ghost-btn"
+            href="https://www.mercadopago.com.ar/developers/panel/app"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Ver mi Access Token en MP
+          </a>
+        </div>
+        <p className="mp-warning-hint">
+          En Mercado Pago: <em>Panel de desarrolladores → tu aplicación → Credenciales →
+          Access Token</em>. Pegá ese token (empieza con <code>APP_USR-</code>) en{' '}
+          <em>Configuración → Métodos de pago</em>.
+        </p>
+        <button type="button" className="mp-warning-skip" onClick={onClose}>
+          Ahora no
+        </button>
+      </div>
     </div>
   )
 }

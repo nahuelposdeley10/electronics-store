@@ -1,12 +1,14 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import CatalogProvider from './context/CatalogProvider'
 import CartProvider from './context/CartProvider'
+import { ToastProvider } from './context/ToastContext'
 import { useCatalog } from './context/useCatalog'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import Toast from '@/components/Toast'
 import WhatsAppButton from '@/components/WhatsAppButton'
 import ProductCard from '@/components/ProductCard'
+import DashboardLoading from '@/components/DashboardLoading'
 import { IconSearchOff } from '@/components/Icons'
 import Home from '@/views/Home'
 import CartView from '@/views/CartView'
@@ -23,15 +25,6 @@ import './styles/ui.css'
 initMotion()
 
 const Dashboard = lazy(() => import('./views/Dashboard'))
-
-function DashboardLoading() {
-  return (
-    <main className="catalog-loading" role="status">
-      <span className="empty-draw">📦</span>
-      <h1>Cargando panel…</h1>
-    </main>
-  )
-}
 
 function CatalogLoading() {
   return (
@@ -294,6 +287,7 @@ function AppContent() {
 
   return (
     <CartProvider>
+      <Toast />
       {view.name === 'dashboard' ? (
         <Suspense fallback={<DashboardLoading />}>
           <Dashboard onExit={() => navigate('home')} />
@@ -304,7 +298,6 @@ function AppContent() {
           <Header onNavigate={(n) => navigate(n)} view={view.name} onSearch={handleSearch} />
           {content}
           <Footer onNavigate={(n) => navigate(n)} />
-          <Toast />
           <WhatsAppButton />
         </>
       )}
@@ -315,7 +308,9 @@ function AppContent() {
 function App() {
   return (
     <CatalogProvider>
-      <AppContent />
+      <ToastProvider>
+        <AppContent />
+      </ToastProvider>
     </CatalogProvider>
   )
 }

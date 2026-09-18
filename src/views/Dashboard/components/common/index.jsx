@@ -29,9 +29,9 @@ function EmptyNote({ text }) {
 
 function ScreenLoading({ label = 'Leyendo la caja…' }) {
   return (
-    <div className="dash-screen dash-loading">
-      <span className="skel-head" />
-      <p>{label}</p>
+    <div className="dash-screen dash-loading" role="status">
+      <span className="load-ring" aria-hidden="true" />
+      <p className="load-label">{label}</p>
     </div>
   )
 }

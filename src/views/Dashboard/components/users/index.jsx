@@ -3,8 +3,9 @@ import { formatARS } from '@/data/format'
 import { apiDelete, apiGet, apiPost, apiPut, getSession } from '@/lib/api'
 import { getSuperTenant } from '@/lib/tenant'
 import { IconCheck, IconCross, IconEdit, IconPlus, IconSearch, IconTrash } from '@/components/Icons'
+import { useToast } from '@/context/useToast'
 import { PERM_CODES, PERM_LABELS, initials, shortDate } from '../../consts.js'
-import { EmptyNote, ScreenBlocked, ScreenLoading, SettingsNote, ToggleRow } from '../common'
+import { EmptyNote, ScreenBlocked, ScreenLoading, ToggleRow } from '../common'
 
 import './styles.css'
 
@@ -89,12 +90,13 @@ function BusinessesScreen({ current, onPick }) {
 
 
 function UsersScreen() {
+  const { showToast } = useToast()
   const [users, setUsers] = useState(null)
   const [error, setError] = useState('')
-  const [note, setNote] = useState('')
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState(null)
   const [form, setForm] = useState(null)
+  const [formInitial, setFormInitial] = useState(null)
   const [saving, setSaving] = useState(false)
   const [generatedPassword, setGeneratedPassword] = useState('')
   const [refresh, setRefresh] = useState(0)
@@ -134,31 +136,40 @@ function UsersScreen() {
   const openNew = () => {
     setEditing(null)
     setGeneratedPassword('')
-    setForm({ name: '', email: '', role: 'admin', adminId: '', password: '', businessSlug: '' })
+    const base = { name: '', email: '', role: 'admin', adminId: '', password: '', businessSlug: '' }
+    setForm({ ...base })
+    setFormInitial({ ...base })
     setFormOpen(true)
   }
 
   const openEdit = (u) => {
     setEditing(u.id)
     setGeneratedPassword('')
-    setForm({
+    const base = {
       name: u.name,
       email: u.email,
       role: u.role,
       password: '',
       adminId: u.adminId || '',
       businessSlug: u.businessSlug || '',
-    })
+    }
+    setForm({ ...base })
+    setFormInitial({ ...base })
     setFormOpen(true)
   }
 
   const set = (key) => (e) =>
     setForm((f) => ({ ...f, [key]: e.target.value }))
 
+  const formDirty = form !== null && JSON.stringify(form) !== JSON.stringify(formInitial || {})
+  const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test((form?.email || '').trim())
+  const validRole = form?.role === 'operator' ? Boolean(form?.adminId) : Boolean(form?.role)
+  const canSave = formDirty && (form?.name || '').trim().length >= 2 && validEmail && validRole
+
   const submit = async (e) => {
     e.preventDefault()
+    if (!canSave) return
     setSaving(true)
-    setNote('')
     setGeneratedPassword('')
     try {
       if (editing) {
@@ -167,7 +178,7 @@ function UsersScreen() {
         if (form.role === 'operator' && form.adminId) payload.adminId = form.adminId
         if (form.role === 'admin') payload.businessSlug = String(form.businessSlug || '').trim()
         await apiPut(`/api/admin/users/${editing}`, payload)
-        setNote('Usuario actualizado.')
+        showToast('Usuario actualizado.', 'success')
       } else {
         const payload = {
           name: form.name,
@@ -179,37 +190,35 @@ function UsersScreen() {
         if (form.role === 'admin') payload.businessSlug = String(form.businessSlug || '').trim()
         const created = await apiPost('/api/admin/users', payload)
         setGeneratedPassword(created.password || '')
-        setNote(`Usuario ${created.email} creado.`)
+        showToast(`Usuario ${created.email} creado.`, 'success')
       }
       setFormOpen(false)
       setRefresh((n) => n + 1)
     } catch (err) {
-      setNote(err.message)
+      showToast(err.message, 'error')
     } finally {
       setSaving(false)
     }
   }
 
   const toggleActive = async (u) => {
-    setNote('')
     try {
       await apiPut(`/api/admin/users/${u.id}`, { active: !u.active })
-      setNote(u.active ? 'Usuario desactivado.' : 'Usuario activado.')
+      showToast(u.active ? 'Usuario desactivado.' : 'Usuario activado.', 'success')
       setRefresh((n) => n + 1)
     } catch (err) {
-      setNote(err.message)
+      showToast(err.message, 'error')
     }
   }
 
   const deleteUser = async (u) => {
     if (!window.confirm(`¿Eliminar a ${u.name} (${u.email})? Esta acción no se puede deshacer.`)) return
-    setNote('')
     try {
       await apiDelete(`/api/admin/users/${u.id}`)
-      setNote('Usuario eliminado.')
+      showToast('Usuario eliminado.', 'success')
       setRefresh((n) => n + 1)
     } catch (err) {
-      setNote(err.message)
+      showToast(err.message, 'error')
     }
   }
 
@@ -240,8 +249,6 @@ function UsersScreen() {
           Nuevo usuario
         </button>
       </div>
-
-      <SettingsNote text={note} />
 
       {generatedPassword && (
         <div className="set-password-box">
@@ -342,7 +349,7 @@ function UsersScreen() {
               </label>
             )}
             <div className="set-actions">
-              <button type="submit" className="primary-btn" disabled={saving}>
+              <button type="submit" className="primary-btn" disabled={saving || !canSave}>
                 {saving ? 'Guardando…' : editing ? 'Guardar cambios' : 'Crear usuario'}
               </button>
             </div>
@@ -421,15 +428,19 @@ function UsersScreen() {
 
 
 function RolesScreen() {
+  const { showToast } = useToast()
   const [sessionUser] = useState(() => getSession().user)
   const isSuper = sessionUser?.role === 'superadmin'
   const [users, setUsers] = useState(null)
   const [error, setError] = useState('')
   const [expanded, setExpanded] = useState(null)
-  const [note, setNote] = useState('')
   const [query, setQuery] = useState('')
   const [page, setPage] = useState(1)
+  const [onlinePayments, setOnlinePayments] = useState(true)
+  const [savingOnline, setSavingOnline] = useState(false)
   const PAGE_SIZE = 8
+
+  const superTenantNow = isSuper ? getSuperTenant() : null
 
   useEffect(() => {
     let alive = true
@@ -456,10 +467,38 @@ function RolesScreen() {
     }
   }, [isSuper])
 
+  useEffect(() => {
+    if (!superTenantNow) return undefined
+    let alive = true
+    apiGet('/api/admin/settings')
+      .then((data) => {
+        if (alive) setOnlinePayments(data?.payments?.online !== false)
+      })
+      .catch(() => undefined)
+    return () => {
+      alive = false
+    }
+  }, [superTenantNow])
+
+  const toggleOnline = (on) => {
+    if (!superTenantNow) return
+    setSavingOnline(true)
+    apiPut(`/api/admin/users/businesses/${superTenantNow}/online`, { online: on })
+      .then(() => {
+        setOnlinePayments(on)
+        showToast(
+          on
+            ? 'Pagos online activados para este negocio.'
+            : 'Pagos online desactivados: la web de este negocio pasa a pedir por WhatsApp.',
+          'success',
+        )
+      })
+      .catch((err) => showToast(err.message, 'error'))
+      .finally(() => setSavingOnline(false))
+  }
+
   if (!users && !error) return <ScreenLoading label="Leyendo permisos…" />
   if (error) return <ScreenBlocked message={error} />
-
-  const superTenantNow = isSuper ? getSuperTenant() : null
 
   const q = query.trim().toLowerCase()
   const filtered = q
@@ -534,8 +573,6 @@ function RolesScreen() {
           </button>
         )}
       </form>
-
-      <SettingsNote text={note} />
 
       {isSuper && !superTenantNow && (
         <p className="list-note">
@@ -626,23 +663,29 @@ function RolesScreen() {
       {users
         .filter((u) => expanded === u.id)
         .map((u) => (
-          <PermUserEditor key={u.id} user={u} onSaved={setNote} />
+          <PermUserEditor
+            key={u.id}
+            user={u}
+            onSaved={(t) => t && showToast(t, 'success')}
+            isBusinessOwner={isSuper && u.role === 'admin'}
+            onlinePayments={onlinePayments}
+            savingOnline={savingOnline}
+            onToggleOnline={toggleOnline}
+          />
         ))}
     </div>
   )
 }
 
 
-function PermUserEditor({ user, onSaved }) {
+function PermUserEditor({ user, onSaved, isBusinessOwner, onlinePayments, savingOnline, onToggleOnline }) {
+  const { showToast } = useToast()
   const [perms, setPerms] = useState(user.permissions || [])
   const [saved, setSaved] = useState(user.permissions || [])
   const [saving, setSaving] = useState(null)
-  const [error, setError] = useState('')
 
   const toggle = async (code) => {
     if (saving) return
-    setError('')
-    onSaved('')
     const next = perms.includes(code)
       ? perms.filter((c) => c !== code)
       : [...perms, code]
@@ -658,7 +701,7 @@ function PermUserEditor({ user, onSaved }) {
       onSaved(`Permisos de ${user.name} actualizados.`)
     } catch (err) {
       setPerms(saved)
-      setError(err.message)
+      showToast(err.message, 'error')
     } finally {
       setSaving(null)
     }
@@ -669,6 +712,25 @@ function PermUserEditor({ user, onSaved }) {
       <div className="dash-card-head">
         <h2>Permisos de {user.name}</h2>
       </div>
+      {isBusinessOwner && (
+        <div className="set-toggles">
+          <p className="set-hint">
+            Este usuario es el <strong>admin del negocio</strong>: además de sus módulos, el
+            súper admin decide si esta web cobra con Mercado Pago o pide el pedido por WhatsApp.
+          </p>
+          <ToggleRow
+            label="Recibir pagos online"
+            hint={
+              onlinePayments
+                ? 'La web cobra con Mercado Pago y el carrito usa el botón de pago.'
+                : 'Desactivado: la web usa "Pedir por WhatsApp" con el número de Datos del negocio.'
+            }
+            checked={onlinePayments !== false}
+            disabled={savingOnline}
+            onChange={onToggleOnline}
+          />
+        </div>
+      )}
       <div className="set-toggles">
         {PERM_CODES.map((code) => (
           <ToggleRow
@@ -682,7 +744,6 @@ function PermUserEditor({ user, onSaved }) {
         ))}
       </div>
       {saving && <p className="list-note">Guardando…</p>}
-      <SettingsNote text={error} />
     </section>
   )
 }

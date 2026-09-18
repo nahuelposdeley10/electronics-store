@@ -5,6 +5,7 @@ import { useOrderEvents } from '@/lib/useOrderEvents'
 import { IconCross, IconPlus, IconRefresh, IconSearch, IconTrash } from '@/components/Icons'
 import { PENDING_GROUP, PAYMENT_LABELS, PAYMENT_OPTIONS, QUOTE_STATUS_LABELS, fullDate, idDoc, itemsSummary, salePaymentLabel, shortDate, shortId } from '../../consts.js'
 import { EmptyNote, ScreenBlocked, ScreenLoading, StatusTag } from '../common'
+import { useToast } from '@/context/useToast'
 
 import './styles.css'
 
@@ -127,12 +128,12 @@ function SaleDetail({ order, onClose }) {
 
 
 function SalesScreen() {
+  const { showToast } = useToast()
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
   const [params, setParams] = useState({ group: 'all', payment: 'all', from: '', to: '', q: '', page: 1 })
   const [query, setQuery] = useState('')
   const [rechecking, setRechecking] = useState({})
-  const [note, setNote] = useState('')
   const [detail, setDetail] = useState(null)
 
   useEffect(() => {
@@ -177,13 +178,14 @@ function SalesScreen() {
               }
             : d,
         )
-        setNote(
+        showToast(
           changed
             ? `Pedido #${shortId(order.id)} verificado: ${order.status} → ${updated.status}`
             : `Pedido #${shortId(order.id)} verificado: sigue ${updated.status}`,
+          'success',
         )
       })
-      .catch((err) => setNote(err.message))
+      .catch((err) => showToast(err.message, 'error'))
       .finally(() => setRechecking((m) => ({ ...m, [order.id]: false })))
   }
 
@@ -287,8 +289,6 @@ function SalesScreen() {
           </button>
         ))}
       </div>
-
-      {note && <p className="sale-note">{note}</p>}
 
       <div className="table-wrap">
         <table className="dash-table">
@@ -394,11 +394,11 @@ function SalesScreen() {
 
 
 function ReturnsScreen({ canManage }) {
+  const { showToast } = useToast()
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
   const [params, setParams] = useState({ filter: 'all', page: 1 })
   const [processing, setProcessing] = useState({})
-  const [note, setNote] = useState('')
   const [detail, setDetail] = useState(null)
   const [version, setVersion] = useState(0)
 
@@ -428,14 +428,13 @@ function ReturnsScreen({ canManage }) {
   const doReturn = (order) => {
     if (!window.confirm(`¿Registrar la devolución de "#${shortId(order.id)}"? Saldrá ${formatARS(order.total)} del stock de caja.`)) return
     setProcessing((m) => ({ ...m, [order.id]: true }))
-    setNote('')
     apiPost(`/api/admin/orders/${order.id}/return`, {})
       .then((res) => {
         setData((prev) => (prev ? { ...prev, items: prev.items.map((o) => (o.id === order.id ? { ...o, status: res.status, returnedAt: res.returnedAt } : o)) } : prev))
-        setNote(`Devolución de "#${shortId(order.id)}" registrada.`)
+        showToast(`Devolución de "#${shortId(order.id)}" registrada.`, 'success')
         setVersion((v) => v + 1)
       })
-      .catch((err) => setNote(err.message))
+      .catch((err) => showToast(err.message, 'error'))
       .finally(() => setProcessing((m) => ({ ...m, [order.id]: false })))
   }
 
@@ -474,8 +473,6 @@ function ReturnsScreen({ canManage }) {
           </button>
         ))}
       </div>
-
-      {note && <p className="sale-note">{note}</p>}
 
       <div className="table-wrap">
         <table className="dash-table">
@@ -563,9 +560,9 @@ function ReturnsScreen({ canManage }) {
 
 
 function QuotesScreen({ canManage }) {
+  const { showToast } = useToast()
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
-  const [note, setNote] = useState('')
   const [formOpen, setFormOpen] = useState(false)
   const [params, setParams] = useState({ status: 'all', q: '', page: 1 })
   const [query, setQuery] = useState('')
@@ -596,9 +593,9 @@ function QuotesScreen({ canManage }) {
     apiPut(`/api/admin/quotes/${quote._id}`, { status })
       .then((updated) => {
         setData((d) => ({ ...d, items: d.items.map((q) => (q._id === updated._id ? updated : q)) }))
-        setNote(`Presupuesto #${quote.number} ${status === 'confirmed' ? 'confirmado' : 'cancelado'}.`)
+        showToast(`Presupuesto #${quote.number} ${status === 'confirmed' ? 'confirmado' : 'cancelado'}.`, 'success')
       })
-      .catch((err) => setNote(err.message))
+      .catch((err) => showToast(err.message, 'error'))
   }
 
   const deleteQuote = (quote) => {
@@ -606,9 +603,9 @@ function QuotesScreen({ canManage }) {
     apiDelete(`/api/admin/quotes/${quote._id}`)
       .then(() => {
         setData((d) => ({ ...d, items: d.items.filter((q) => q._id !== quote._id), total: d.total - 1 }))
-        setNote(`Presupuesto #${quote.number} eliminado.`)
+        showToast(`Presupuesto #${quote.number} eliminado.`, 'success')
       })
-      .catch((err) => setNote(err.message))
+      .catch((err) => showToast(err.message, 'error'))
   }
 
   if (!data && !error) return <ScreenLoading label="Leyendo presupuestos…" />
@@ -659,8 +656,6 @@ function QuotesScreen({ canManage }) {
           </button>
         ))}
       </div>
-
-      {note && <p className="sale-note">{note}</p>}
 
       <div className="table-wrap">
         <table className="dash-table">

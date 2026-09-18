@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useEffect, useMemo } from 'react'
 import { CartContext } from './cartContext'
 import { useCatalog } from './useCatalog'
+import { useToast } from './useToast'
 import { fetchSiteSettings } from '../lib/siteSettings'
 import { getTenantHeaders } from '../lib/tenant'
 
@@ -12,6 +13,7 @@ const round2 = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100
 
 export default function CartProvider({ children }) {
   const { products } = useCatalog()
+  const { showToast } = useToast()
   const [items, setItems] = useState(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY)
@@ -28,12 +30,13 @@ export default function CartProvider({ children }) {
     }
   })
   const [couponMap, setCouponMap] = useState({})
-  const [toast, setToast] = useState(null)
   const [shippingConfig, setShippingConfig] = useState({
     enabled: true,
     cost: 5999,
     freeThreshold: 300000,
   })
+  const [onlinePayEnabled, setOnlinePayEnabled] = useState(true)
+  const [storeWhatsapp, setStoreWhatsapp] = useState('')
 
   useEffect(() => {
     fetchSiteSettings().then((data) => {
@@ -46,6 +49,10 @@ export default function CartProvider({ children }) {
               ? Number(data.shipping.freeThreshold)
               : 300000,
         })
+      }
+      if (data.store?.whatsapp) setStoreWhatsapp(String(data.store.whatsapp))
+      if (data.payments?.mercadopago) {
+        setOnlinePayEnabled(data.payments.mercadopago.onlineEnabled !== false)
       }
     })
   }, [])
@@ -121,11 +128,6 @@ export default function CartProvider({ children }) {
     }
   }, [appliedCoupon])
 
-  const notify = (message) => {
-    setToast(message)
-    setTimeout(() => setToast(null), 2500)
-  }
-
   const addItem = (product) => {
     setItems((prev) => {
       const existing = prev.find((item) => item.id === product.id)
@@ -148,7 +150,7 @@ export default function CartProvider({ children }) {
         },
       ]
     })
-    notify(`${product.name} agregado al carrito`)
+    showToast(`${product.name} agregado al carrito`, 'success')
   }
 
   const removeItem = (id) => {
@@ -158,7 +160,7 @@ export default function CartProvider({ children }) {
   const updateQuantity = (id, quantity) => {
     const product = products.find((p) => p.id === Number(id))
     if (product && quantity > product.stock) {
-      notify(`Solo hay ${product.stock} unidades en stock`)
+      showToast(`Solo hay ${product.stock} unidades en stock`, 'warn')
       return
     }
     if (quantity <= 0) {
@@ -175,17 +177,17 @@ export default function CartProvider({ children }) {
   const applyCoupon = (code) => {
     const normalized = (code || '').trim().toUpperCase()
     if (!(normalized in couponMap)) {
-      notify('Cupón inválido')
+      showToast('Cupón inválido', 'warn')
       return false
     }
     setAppliedCoupon(normalized)
-    notify(`Cupón ${normalized} aplicado`)
+    showToast(`Cupón ${normalized} aplicado`, 'success')
     return true
   }
 
   const removeCoupon = () => {
     setAppliedCoupon(null)
-    notify('Cupón quitado')
+    showToast('Cupón quitado', 'success')
   }
 
   const totalItems = useMemo(
@@ -236,8 +238,9 @@ export default function CartProvider({ children }) {
     shippingEnabled,
     hasFreeShipping,
     freeShippingThreshold,
+    onlinePayEnabled,
+    storeWhatsapp,
     total,
-    toast,
   }
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>

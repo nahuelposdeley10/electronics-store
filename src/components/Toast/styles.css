@@ -6,25 +6,55 @@
   bottom: 26px;
   left: 50%;
   transform: translateX(-50%);
-  background: var(--gal-black);
-  color: #fff;
-  padding: 13px 20px;
-  border-radius: 5px;
-  font-size: 14px;
-  font-weight: 700;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
-  z-index: 100;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
+  max-width: min(430px, calc(100vw - 32px));
+  background: var(--gal-white);
+  color: var(--gal-ink);
+  padding: 12px 18px 12px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.35;
+  border: 1.5px solid var(--gal-line-strong);
+  border-left-width: 6px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+  z-index: 200;
   animation: toast-in 0.28s var(--ease-out);
 }
 .toast svg {
-  width: 16px;
-  height: 16px;
-  fill: var(--gal-tag);
-  color: var(--gal-tag);
+  width: 22px;
+  height: 22px;
   flex-shrink: 0;
+  color: #fff;
+  padding: 4px;
+  border-radius: 50%;
+  box-sizing: border-box;
+}
+.toast-success {
+  border-left-color: #16a34a;
+}
+.toast-success svg {
+  background: #16a34a;
+  fill: #fff;
+  color: #fff;
+}
+.toast-error {
+  border-left-color: #dc2626;
+}
+.toast-error svg {
+  background: #dc2626;
+  fill: #fff;
+  color: #fff;
+}
+.toast-warn {
+  border-left-color: #d97706;
+}
+.toast-warn svg {
+  background: #d97706;
+  fill: #fff;
+  color: #fff;
 }
 @keyframes toast-in {
   from {

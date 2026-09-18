@@ -121,7 +121,10 @@ El slug se define en `ADMIN_BUSINESS_SLUG` al correr `seed:users`.
 - **Checkout**: `POST /api/checkout` crea la orden, la asocia a un token de
   refresh único (`refresh_token`) y devuelve el `init_point` de Mercado Pago.
   El carrito guarda ese token y, al volver del pago, `OrderStatus` lo usa para
-  pedir `POST /api/orders/:id/refresh`.
+  pedir `POST /api/orders/:id/refresh`. El checkout **requiere que la tienda
+  tenga su propio `Access Token`** cargado en sus settings: si no hay token por
+  tenant, responde `400` aunque exista un `MP_ACCESS_TOKEN` global (el env solo
+  se usa como respaldo de lectura, no para cobrar).
 - **Refresh de órdenes**: el endpoint exige `x-refresh-token` (o `refreshToken`
   en el body); sin el token correcto responde `404` y no revela si la orden
   existe (anti-IDOR). Además solo muta la orden (verificación de pago, tracker,
@@ -129,10 +132,11 @@ El slug se define en `ADMIN_BUSINESS_SLUG` al correr `seed:users`.
   finales es de solo lectura.
 - **Webhooks**: `POST /api/webhooks/mercadopago` valida la firma `x-signature`
   (`MP_WEBHOOK_SECRET`) y, para órdenes con tenant, exige que el pago declare el
-  mismo `adminId` en `metadata.tenant`. Esto es importante porque todas las
-  tiendas comparten el **mismo `MP_ACCESS_TOKEN`** (los pagos de todas entran por
-  una sola cuenta MP). Para un aislamiento total por tienda harían falta tokens
-  MP por negocio.
+  mismo `adminId` en `metadata.tenant`. Cada tienda cobra por **su propia cuenta
+  de Mercado Pago**: las credenciales (`accessToken`, `publicKey`,
+  `webhookSecret`) se cargan por negocio desde `Configuración → Métodos de
+  pago`. El `MP_ACCESS_TOKEN` global del `.env` queda solo como respaldo de
+  lectura para resolver notificaciones/legacy, no habilita pagos online.
 
 > El tracking de pagos pendientes (estado en vivo por socket) lo maneja
 > `server/lib/order-tracker.js`.

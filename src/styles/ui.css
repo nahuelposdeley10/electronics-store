@@ -247,6 +247,18 @@
 .primary-btn:hover {
   background: var(--gal-facade-deep);
 }
+.primary-btn:disabled,
+.ghost-btn:disabled,
+.secondary-btn:disabled,
+.row-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none;
+  pointer-events: none;
+}
+.primary-btn:disabled:hover {
+  background: var(--gal-facade);
+}
 .cart-empty,
 .results-empty,
 .catalog-loading {

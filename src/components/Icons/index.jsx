@@ -235,6 +235,16 @@ export function IconCheck(props) {
   )
 }
 
+export function IconWarning(props) {
+  return (
+    <svg {...S} {...props}>
+      <path d="M12 4 21 19H3L12 4Z" />
+      <path d="M12 10v4" />
+      <path d="M12 17v.5" strokeLinecap="round" />
+    </svg>
+  )
+}
+
 export function IconStar({ filled = false, ...props }) {
   return (
     <svg

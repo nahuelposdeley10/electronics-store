@@ -6,10 +6,12 @@ import { IconCheck, IconMinus, IconPlus, IconSearch, IconTrash } from '@/compone
 import { shortId } from '../../consts.js'
 import { EmptyNote } from '../common'
 import { loadCatalogOptions } from '../common/catalogOptions.js'
+import { useToast } from '@/context/useToast'
 
 import './styles.css'
 
 function PosScreen({ canManage }) {
+  const { showToast } = useToast()
   const [products, setProducts] = useState([])
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState('')
@@ -25,7 +27,6 @@ function PosScreen({ canManage }) {
   const [customer, setCustomer] = useState('')
   const [payment, setPayment] = useState('efectivo')
   const [saving, setSaving] = useState(false)
-  const [note, setNote] = useState('')
   const [lastSale, setLastSale] = useState(null)
 
   useEffect(() => {
@@ -56,7 +57,7 @@ function PosScreen({ canManage }) {
         setTotalItems(res.total || 0)
       })
       .catch((err) => {
-        if (alive) setNote(err.message)
+        if (alive) showToast(err.message, 'error')
       })
       .finally(() => {
         if (alive) setLoading(false)
@@ -64,7 +65,7 @@ function PosScreen({ canManage }) {
     return () => {
       alive = false
     }
-  }, [query, category, brand, page])
+  }, [query, category, brand, page, showToast])
 
   const onQuery = (e) => {
     setQuery(e.target.value)
@@ -114,7 +115,6 @@ function PosScreen({ canManage }) {
   const checkout = () => {
     if (lines.length === 0 || saving) return
     setSaving(true)
-    setNote('')
     apiPost('/api/admin/pos', {
       items: lines.map((l) => ({ id: l.product.id, quantity: l.quantity })),
       discount: discountNum,
@@ -133,7 +133,7 @@ function PosScreen({ canManage }) {
         setDiscount('')
         setCustomer('')
       })
-      .catch((err) => setNote(err.message))
+      .catch((err) => showToast(err.message, 'error'))
       .finally(() => setSaving(false))
   }
 
@@ -155,7 +155,6 @@ function PosScreen({ canManage }) {
           <IconCheck /> Venta #{shortId(lastSale.id)} registrada por {formatARS(lastSale.total)} — {lastSale.payment}
         </p>
       )}
-      {note && <p className="sale-note">{note}</p>}
 
       <div className="pos-layout">
         <section className="pos-catalog">

@@ -1,7 +1,7 @@
 import express from 'express'
 import { Order } from '../models/Order.js'
 import { buildCart } from '../services/pricing.js'
-import { getMpServices } from '../services/mercadopago.js'
+import { getMpConfig, getMpServices } from '../services/mercadopago.js'
 import { verifyOrderPayment } from '../lib/order-verify.js'
 import { trackOrder } from '../lib/order-tracker.js'
 import { getSettings } from '../lib/settings.js'
@@ -128,6 +128,7 @@ router.post('/checkout', async (req, res) => {
     const slug = String(req.headers['x-tenant-slug'] || '').trim().toLowerCase()
     const storePath = slug ? `/u/${slug}` : ''
 
+    const settings = await getSettings({ tenant })
     const body = {
       items,
       external_reference: String(order._id),
@@ -137,15 +138,23 @@ router.post('/checkout', async (req, res) => {
         failure: `${origin}${storePath}`,
         pending: `${origin}${storePath}`,
       },
-      statement_descriptor: (await getSettings({ tenant })).checkout?.statementDescriptor || 'TechStore',
+      statement_descriptor: settings.checkout?.statementDescriptor || 'TechStore',
+    }
+
+    if (settings.payments?.online === false) {
+      return res.status(400).json({
+        error: 'Esta tienda no recibe pagos online por el momento',
+      })
+    }
+
+    const mpConfig = await getMpConfig(tenant)
+    if (!mpConfig.configured) {
+      return res.status(400).json({
+        error: 'Esta tienda aún no configuró su Access Token de Mercado Pago para recibir pagos online',
+      })
     }
 
     const mp = await getMpServices(tenant)
-    if (!mp.configured) {
-      return res.status(400).json({
-        error: 'Esta tienda aún no configuró Mercado Pago para recibir pagos online',
-      })
-    }
 
     if (env.clientUrl.startsWith('https://')) {
       body.auto_return = 'approved'

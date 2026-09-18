@@ -2,7 +2,8 @@
 import { apiPut, apiUpload, getSession } from '@/lib/api'
 import { getSuperTenant } from '@/lib/tenant'
 import { IconCross, IconEdit, IconPlus } from '@/components/Icons'
-import { SetImageField, SettingsFetcher, SettingsNote, ToggleRow } from '../common'
+import { useToast } from '@/context/useToast'
+import { SetImageField, SettingsFetcher, ToggleRow } from '../common'
 
 import './styles.css'
 
@@ -22,18 +23,17 @@ function PasswordInput({ label, value, onChange, ...rest }) {
 }
 
 function PaymentsScreen() {
+  const { showToast } = useToast()
   const [saving, setSaving] = useState(false)
-  const [note, setNote] = useState('')
 
-  const saveAll = async (methods, mercadopago, checkout) => {
+  const saveAll = async (methods, mercadopago, checkout, online) => {
     setSaving(true)
-    setNote('')
     try {
-      await apiPut('/api/admin/settings', { section: 'payments', value: { methods, mercadopago } })
+      await apiPut('/api/admin/settings', { section: 'payments', value: { methods, mercadopago, online } })
       await apiPut('/api/admin/settings', { section: 'checkout', value: checkout })
-      setNote('Medios de pago guardados.')
+      showToast('Medios de pago guardados.', 'success')
     } catch (err) {
-      setNote(err.message)
+      showToast(err.message, 'error')
     } finally {
       setSaving(false)
     }
@@ -42,17 +42,19 @@ function PaymentsScreen() {
   return (
     <SettingsFetcher
       render={(settings) => (
-        <PaymentsScreenBody settings={settings} saving={saving} note={note} setNote={setNote} onSave={saveAll} />
+        <PaymentsScreenBody settings={settings} saving={saving} onSave={saveAll} />
       )}
     />
   )
 }
 
 
-function PaymentsScreenBody({ settings, saving, note, setNote, onSave }) {
+function PaymentsScreenBody({ settings, saving, onSave }) {
+  const { showToast } = useToast()
   const methods = settings.payments?.methods || { efectivo: true, tarjeta: true, transferencia: true }
   const mp = settings.payments?.mercadopago || {}
   const mpConfigured = Boolean(mp.accessToken && mp.webhookSecret)
+  const online = settings.payments?.online !== false
   const checkout = settings.checkout || {}
   const session = typeof getSession === 'function' ? getSession() : { user: {} }
   const user = session?.user || {}
@@ -62,6 +64,7 @@ function PaymentsScreenBody({ settings, saving, note, setNote, onSave }) {
     ? `${window.location.origin}/api/webhooks/mercadopago?tenant=${adminId}`
     : ''
   const [form, setForm] = useState({
+    online,
     efectivo: methods.efectivo !== false,
     tarjeta: methods.tarjeta !== false,
     transferencia: methods.transferencia !== false,
@@ -71,17 +74,31 @@ function PaymentsScreenBody({ settings, saving, note, setNote, onSave }) {
     webhookSecret: mp.webhookSecret || '',
   })
 
+  const [loadedForm] = useState(form)
+  const toPayload = (f) => ({
+    efectivo: f.efectivo !== false,
+    tarjeta: f.tarjeta !== false,
+    transferencia: f.transferencia !== false,
+    statementDescriptor: f.statementDescriptor.trim() || 'TechStore',
+    accessToken: f.accessToken.trim() || null,
+    publicKey: f.publicKey.trim() || null,
+    webhookSecret: f.webhookSecret.trim() || null,
+    online: f.online,
+  })
+  const dirty = JSON.stringify(toPayload(form)) !== JSON.stringify(toPayload(loadedForm))
+
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }))
 
   const copyWebhook = () => {
     if (!webhookUrl) return
     navigator.clipboard?.writeText(webhookUrl).then(() => {
-      setNote('URL del webhook copiada. Pegala en el panel de webhooks de MP con el evento "mercado_pago/payment".')
+      showToast('URL del webhook copiada. Pegala en el panel de webhooks de MP con el evento "mercado_pago/payment".', 'success')
     })
   }
 
   const submit = (e) => {
     e.preventDefault()
+    if (!dirty) return
     onSave(
       {
         efectivo: form.efectivo,
@@ -94,6 +111,7 @@ function PaymentsScreenBody({ settings, saving, note, setNote, onSave }) {
         webhookSecret: form.webhookSecret.trim() || null,
       },
       { statementDescriptor: form.statementDescriptor.trim() || 'TechStore' },
+      form.online,
     )
   }
 
@@ -114,18 +132,30 @@ function PaymentsScreenBody({ settings, saving, note, setNote, onSave }) {
         </p>
       </div>
 
-      <SettingsNote text={note} />
-
       <div className="set-card">
         <strong>Estado de Mercado Pago</strong>
-        {mpConfigured ? (
-          <p className="settings-ok">Configurado y activo</p>
-        ) : (
-          <p className="settings-warn">Pendiente de configurar — sin credenciales esta tienda no puede cobrar online.</p>
-        )}
+{!online ? (
+        <p className="settings-warn">
+          Pagos online desactivados por el súper admin — esta web usa "Pedir por WhatsApp".
+          Podés dejar cargadas las credenciales igual: quedan guardadas para cuando se reactiven.
+        </p>
+      ) : mpConfigured ? (
+        <p className="settings-ok">Configurado y activo</p>
+      ) : (
+        <p className="settings-warn">Pendiente de configurar — sin credenciales esta tienda no puede cobrar online.</p>
+      )}
       </div>
 
       <form className="set-card set-form" onSubmit={submit}>
+        {!online && (
+          <p className="set-hint mp-paused-note">
+            <strong>Pagos online apagados por el súper admin.</strong> Mientras tanto la web
+            pide el pedido por <strong>WhatsApp</strong> usando el número de{" "}
+            <em>Datos del negocio</em>. Igual podés cargar o editar estas credenciales: se
+            guardan y quedan listas para cuando se vuelvan a activar los pagos online.
+          </p>
+        )}
+
         <h3>Webhook de Mercado Pago</h3>
         <p className="set-hint">
           En el panel de Mercado Pago, configurá la URL de notificación que copias abajo y elegí el evento{" "}
@@ -182,7 +212,7 @@ function PaymentsScreenBody({ settings, saving, note, setNote, onSave }) {
         </p>
 
         <div className="set-actions">
-          <button type="submit" className="primary-btn" disabled={saving}>
+          <button type="submit" className="primary-btn" disabled={saving || !dirty}>
             {saving ? 'Guardando...' : 'Guardar cambios'}
           </button>
         </div>
@@ -193,18 +223,17 @@ function PaymentsScreenBody({ settings, saving, note, setNote, onSave }) {
 
 
 function StoreScreen() {
+  const { showToast } = useToast()
   const [saving, setSaving] = useState(false)
-  const [note, setNote] = useState('')
 
   const save = async (store, hero) => {
     setSaving(true)
-    setNote('')
     try {
       await apiPut('/api/admin/settings', { section: 'store', value: store })
       if (hero) await apiPut('/api/admin/settings', { section: 'hero', value: hero })
-      setNote('Datos del negocio guardados.')
+      showToast('Datos del negocio guardados.', 'success')
     } catch (err) {
-      setNote(err.message)
+      showToast(err.message, 'error')
     } finally {
       setSaving(false)
     }
@@ -213,14 +242,15 @@ function StoreScreen() {
   return (
     <SettingsFetcher
       render={(settings) => (
-        <StoreScreenBody settings={settings} saving={saving} note={note} onSave={save} />
+        <StoreScreenBody settings={settings} saving={saving} onSave={save} />
       )}
     />
   )
 }
 
 
-function StoreScreenBody({ settings, saving, note, onSave }) {
+function StoreScreenBody({ settings, saving, onSave }) {
+  const { showToast } = useToast()
   const store = settings.store || {}
   const hero = settings.hero || {}
   const [form, setForm] = useState({
@@ -239,8 +269,26 @@ function StoreScreenBody({ settings, saving, note, onSave }) {
     heroAccent: hero.titleAccent || '',
     heroLead: hero.lead || '',
   })
+  const [loadedForm] = useState(form)
   const [uploading, setUploading] = useState(null)
-  const [imageResult, setImageResult] = useState('')
+
+  const toPayload = (f) => ({
+    name: f.name.trim(),
+    tagline: f.tagline.trim(),
+    logoUrl: f.logoUrl,
+    coverUrl: f.coverUrl,
+    phone: f.phone.trim(),
+    whatsapp: f.whatsapp.trim(),
+    email: f.email.trim(),
+    addressFull: f.addressFull.trim(),
+    addressShort: f.addressShort.trim(),
+    hours: f.hours.trim(),
+    band: f.band.trim(),
+    heroTitle: f.heroTitle.trim(),
+    heroAccent: f.heroAccent.trim(),
+    heroLead: f.heroLead.trim(),
+  })
+  const dirty = JSON.stringify(toPayload(form)) !== JSON.stringify(toPayload(loadedForm))
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }))
 
@@ -249,30 +297,30 @@ function StoreScreenBody({ settings, saving, note, onSave }) {
     e.target.value = ''
     if (!file) return
     setUploading(which)
-    setImageResult('')
     try {
       const fd = new FormData()
       fd.append('file', file)
       fd.append('field', which)
       const res = await apiUpload('/api/admin/settings/media', fd)
       setForm((f) => ({ ...f, [`${which}Url`]: res[which] }))
-      setImageResult(
+      showToast(
         `${which === 'logo' ? 'Logo' : 'Portada'} actualizado. Guardalo con los demás cambios.`,
+        'success',
       )
     } catch (err) {
-      setImageResult(err.message)
+      showToast(err.message, 'error')
     } finally {
       setUploading(null)
     }
   }
 
   const removeImage = (which) => {
-    setImageResult('')
     setForm((f) => ({ ...f, [`${which}Url`]: '' }))
   }
 
   const submit = (e) => {
     e.preventDefault()
+    if (!dirty) return
     onSave(
       { ...form, phone: form.phone.trim(), email: form.email.trim() },
       {
@@ -297,9 +345,6 @@ function StoreScreenBody({ settings, saving, note, onSave }) {
           Estos datos se muestran en la tienda: cabecera, pie de página, mapa, portada y botón de WhatsApp.
         </p>
       </div>
-
-      <SettingsNote text={note} />
-      <SettingsNote text={imageResult} />
 
       <form className="set-card set-form" onSubmit={submit}>
         <h3>Logo y portada</h3>
@@ -395,7 +440,7 @@ function StoreScreenBody({ settings, saving, note, onSave }) {
         </label>
 
         <div className="set-actions">
-          <button type="submit" className="primary-btn" disabled={saving}>
+          <button type="submit" className="primary-btn" disabled={saving || !dirty}>
             {saving ? 'Guardando...' : 'Guardar cambios'}
           </button>
         </div>
@@ -406,18 +451,17 @@ function StoreScreenBody({ settings, saving, note, onSave }) {
 
 
 function GeneralScreen() {
+  const { showToast } = useToast()
   const [saving, setSaving] = useState(false)
-  const [note, setNote] = useState('')
 
   const save = async (shipping, general) => {
     setSaving(true)
-    setNote('')
     try {
       await apiPut('/api/admin/settings', { section: 'shipping', value: shipping })
       await apiPut('/api/admin/settings', { section: 'general', value: general })
-      setNote('Configuración general guardada.')
+      showToast('Configuración general guardada.', 'success')
     } catch (err) {
-      setNote(err.message)
+      showToast(err.message, 'error')
     } finally {
       setSaving(false)
     }
@@ -426,14 +470,14 @@ function GeneralScreen() {
   return (
     <SettingsFetcher
       render={(settings) => (
-        <GeneralScreenBody settings={settings} saving={saving} note={note} onSave={save} />
+        <GeneralScreenBody settings={settings} saving={saving} onSave={save} />
       )}
     />
   )
 }
 
 
-function GeneralScreenBody({ settings, saving, note, onSave }) {
+function GeneralScreenBody({ settings, saving, onSave }) {
   const shipping = settings.shipping || {}
   const general = settings.general || {}
   const [form, setForm] = useState({
@@ -445,9 +489,20 @@ function GeneralScreenBody({ settings, saving, note, onSave }) {
   const [marquee, setMarquee] = useState(
     (Array.isArray(general.marquee) ? general.marquee : []).filter(Boolean),
   )
+  const [loadedForm] = useState(form)
+  const [loadedMarquee] = useState(marquee)
   const [marqueeInput, setMarqueeInput] = useState('')
   const [editingIndex, setEditingIndex] = useState(null)
   const [draft, setDraft] = useState('')
+
+  const toPayload = (f, m) => ({
+    enabled: f.enabled !== false,
+    cost: Math.max(0, Number(f.cost) || 0),
+    freeThreshold: Math.max(0, Number(f.freeThreshold) || 0),
+    label: f.label.trim() || 'Envío a domicilio',
+    marquee: m.filter(Boolean),
+  })
+  const dirty = JSON.stringify(toPayload(form, marquee)) !== JSON.stringify(toPayload(loadedForm, loadedMarquee))
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }))
 
@@ -485,6 +540,7 @@ function GeneralScreenBody({ settings, saving, note, onSave }) {
 
   const submit = (e) => {
     e.preventDefault()
+    if (!dirty) return
     onSave(
       {
         enabled: form.enabled !== false,
@@ -512,8 +568,6 @@ function GeneralScreenBody({ settings, saving, note, onSave }) {
           Envíos y la cinta superior de la tienda. Afecta el checkout, el carrito y las tarjetas de producto.
         </p>
       </div>
-
-      <SettingsNote text={note} />
 
       <form className="set-card set-form" onSubmit={submit}>
         <h3>Envíos</h3>
@@ -610,7 +664,7 @@ function GeneralScreenBody({ settings, saving, note, onSave }) {
         </div>
 
         <div className="set-actions">
-          <button type="submit" className="primary-btn" disabled={saving}>
+          <button type="submit" className="primary-btn" disabled={saving || !dirty}>
             {saving ? 'Guardando...' : 'Guardar cambios'}
           </button>
         </div>

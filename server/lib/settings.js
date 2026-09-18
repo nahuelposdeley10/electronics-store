@@ -80,6 +80,7 @@ export function defaults() {
       ],
     },
     payments: {
+      online: true,
       methods: {
         efectivo: true,
         tarjeta: true,

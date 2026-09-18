@@ -3,6 +3,7 @@ import { apiDelete, apiGet, apiPost, apiPut } from '@/lib/api'
 import { IconCheck, IconClock, IconEdit, IconPlus, IconTrash } from '@/components/Icons'
 import { shortDate } from '../../consts.js'
 import { EmptyNote, ScreenBlocked, ScreenLoading } from '../common'
+import { useToast } from '@/context/useToast'
 
 import './styles.css'
 
@@ -15,12 +16,13 @@ function promoStateChip(active, onLabel, offLabel) {
 }
 
 function CouponsScreen({ canManage }) {
+  const { showToast } = useToast()
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
-  const [note, setNote] = useState('')
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState(null)
   const [form, setForm] = useState(null)
+  const [formInitial, setFormInitial] = useState(null)
   const [saving, setSaving] = useState(false)
   const [refresh, setRefresh] = useState(0)
 
@@ -40,23 +42,36 @@ function CouponsScreen({ canManage }) {
 
   const openNew = () => {
     setEditing(null)
-    setForm({ code: '', percent: 10, active: true, description: '' })
+    const base = { code: '', percent: 10, active: true, description: '' }
+    setForm({ ...base })
+    setFormInitial({ ...base })
     setFormOpen(true)
   }
 
   const openEdit = (c) => {
     setEditing(c.id)
-    setForm({ code: c.code, percent: c.percent, active: c.active, description: c.description })
+    const base = { code: c.code, percent: c.percent, active: c.active, description: c.description }
+    setForm({ ...base })
+    setFormInitial({ ...base })
     setFormOpen(true)
   }
 
   const set = (key) => (e) =>
     setForm((f) => ({ ...f, [key]: key === 'active' ? e.target.checked : e.target.value }))
 
+  const formDirty = form !== null && JSON.stringify(form) !== JSON.stringify(formInitial || {})
+  const percentNum = Number(form?.percent)
+  const canSave =
+    formDirty &&
+    (form?.code || '').trim().length > 0 &&
+    Number.isFinite(percentNum) &&
+    percentNum >= 1 &&
+    percentNum <= 100
+
   const submit = async (e) => {
     e.preventDefault()
+    if (!canSave) return
     setSaving(true)
-    setNote('')
     try {
       const payload = { ...form, percent: Number(form.percent) }
       if (editing) {
@@ -64,36 +79,34 @@ function CouponsScreen({ canManage }) {
       } else {
         await apiPost('/api/admin/coupons', payload)
       }
-      setNote(editing ? 'Cupón actualizado.' : `Cupón ${form.code.toUpperCase()} creado.`)
+      showToast(editing ? 'Cupón actualizado.' : `Cupón ${form.code.toUpperCase()} creado.`, 'success')
       setFormOpen(false)
       setRefresh((n) => n + 1)
     } catch (err) {
-      setNote(err.message)
+      showToast(err.message, 'error')
     } finally {
       setSaving(false)
     }
   }
 
   const toggleActive = async (c) => {
-    setNote('')
     try {
       await apiPut(`/api/admin/coupons/${c.id}`, { active: !c.active })
-      setNote(c.active ? 'Cupón desactivado.' : 'Cupón activado.')
+      showToast(c.active ? 'Cupón desactivado.' : 'Cupón activado.', 'success')
       setRefresh((n) => n + 1)
     } catch (err) {
-      setNote(err.message)
+      showToast(err.message, 'error')
     }
   }
 
   const remove = async (c) => {
     if (!window.confirm(`¿Eliminar el cupón ${c.code}?`)) return
-    setNote('')
     try {
       await apiDelete(`/api/admin/coupons/${c.id}`)
-      setNote('Cupón eliminado.')
+      showToast('Cupón eliminado.', 'success')
       setRefresh((n) => n + 1)
     } catch (err) {
-      setNote(err.message)
+      showToast(err.message, 'error')
     }
   }
 
@@ -126,8 +139,6 @@ function CouponsScreen({ canManage }) {
           </button>
         )}
       </div>
-
-      {note && <p className="sale-note">{note}</p>}
 
       {formOpen && (
         <section className="dash-card promo-form">
@@ -181,7 +192,7 @@ function CouponsScreen({ canManage }) {
             </div>
 
             <div className="pf-actions">
-              <button type="submit" className="primary-btn" disabled={saving}>
+              <button type="submit" className="primary-btn" disabled={saving || !canSave}>
                 {saving ? 'Guardando…' : editing ? 'Guardar cambios' : 'Crear cupón'}
               </button>
             </div>

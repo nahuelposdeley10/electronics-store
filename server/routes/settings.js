@@ -34,8 +34,13 @@ router.get('/settings/public', async (req, res) => {
       body[section] = settings[section] || {}
     }
     // Las credenciales de MP son privadas del admin; jamás se exponen al público.
+    // Solo se publica si la tienda puede cobrar online (sin revelar el token).
     if (body.payments) {
-      delete body.payments.mercadopago
+      body.payments.mercadopago = {
+        onlineEnabled:
+          settings.payments?.online !== false &&
+          Boolean(settings.payments?.mercadopago?.accessToken),
+      }
     }
     return res.json(body)
   } catch (error) {

@@ -61,3 +61,13 @@
 .set-images {
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 }
+.mp-paused-note {
+  border: 1.5px dashed var(--gal-facade);
+  background: var(--gal-panel);
+  border-radius: 4px;
+  padding: 12px 14px;
+  margin: 0;
+}
+.mp-paused-note strong {
+  color: var(--gal-facade-deep);
+}

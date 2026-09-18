@@ -30,6 +30,8 @@ export default function CartView({ onNavigate }) {
     shippingEnabled,
     hasFreeShipping,
     freeShippingThreshold,
+    onlinePayEnabled,
+    storeWhatsapp,
     total,
   } = useCart()
 
@@ -41,12 +43,13 @@ export default function CartView({ onNavigate }) {
 
   const apply = (e) => {
     e.preventDefault()
+    if (!couponInput.trim()) return
     const ok = applyCoupon(couponInput)
     if (ok) setCouponInput('')
   }
 
   const checkout = async () => {
-    if (items.length === 0 || checkingOut) return
+    if (items.length === 0 || checkingOut || !onlinePayEnabled) return
     const name = buyerName.trim()
     const email = buyerEmail.trim()
     if (name.length < 2) {
@@ -81,6 +84,28 @@ export default function CartView({ onNavigate }) {
       setCheckingOut(false)
     }
   }
+
+  const whatsappNumber = storeWhatsapp ? String(storeWhatsapp).replace(/\D/g, '') : ''
+  const orderLines = items
+    .map(
+      (item) =>
+        `- ${item.quantity}× ${item.name} (${formatARS(item.price * item.quantity)})`,
+    )
+    .join('\n')
+  const orderMsg = [
+    'Hola, quiero hacer este pedido:',
+    orderLines,
+    discount > 0 ? `Descuento (${appliedCoupon}): -${formatARS(discount)}` : '',
+    shippingEnabled && !hasFreeShipping && shippingCost > 0
+      ? `Envío: ${formatARS(shippingCost)}`
+      : '',
+    `Total: ${formatARS(total)}`,
+  ]
+    .filter((line) => line !== '')
+    .join('\n')
+  const whatsappHref = whatsappNumber
+    ? `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(orderMsg)}`
+    : ''
 
   if (items.length === 0) {
     return (
@@ -160,7 +185,7 @@ export default function CartView({ onNavigate }) {
                 onChange={(e) => setCouponInput(e.target.value)}
                 aria-label="Código de cupón"
               />
-              <button type="submit">Aplicar</button>
+              <button type="submit" disabled={!couponInput.trim()}>Aplicar</button>
             </form>
             {appliedCoupon && (
               <div className="coupon-applied">
@@ -213,55 +238,83 @@ export default function CartView({ onNavigate }) {
             <span className="summary-total mono">{formatARS(total)}</span>
           </div>
 
-          <div className="buyer-box">
-            <label htmlFor="buyer-name">Nombre y apellido</label>
-            <input
-              id="buyer-name"
-              type="text"
-              autoComplete="name"
-              placeholder="Ej: Juan Pérez"
-              value={buyerName}
-              onChange={(e) => setBuyerName(e.target.value)}
-            />
-            <label htmlFor="buyer-email">Email</label>
-            <input
-              id="buyer-email"
-              type="email"
-              autoComplete="email"
-              placeholder="tumail@ejemplo.com"
-              value={buyerEmail}
-              onChange={(e) => setBuyerEmail(e.target.value)}
-            />
-          </div>
+          {onlinePayEnabled ? (
+            <>
+              <div className="buyer-box">
+                <label htmlFor="buyer-name">Nombre y apellido</label>
+                <input
+                  id="buyer-name"
+                  type="text"
+                  autoComplete="name"
+                  placeholder="Ej: Juan Pérez"
+                  value={buyerName}
+                  onChange={(e) => setBuyerName(e.target.value)}
+                />
+                <label htmlFor="buyer-email">Email</label>
+                <input
+                  id="buyer-email"
+                  type="email"
+                  autoComplete="email"
+                  placeholder="tumail@ejemplo.com"
+                  value={buyerEmail}
+                  onChange={(e) => setBuyerEmail(e.target.value)}
+                />
+              </div>
 
-          <button
-            type="button"
-            className="primary-btn checkout-btn"
-            onClick={checkout}
-            disabled={checkingOut}
-          >
-            {checkingOut ? (
-              'Iniciando pago…'
-            ) : (
-              <>
-                <IconBolt />
-                Finalizar compra
-              </>
-            )}
-          </button>
-          {checkoutError && (
-            <p role="alert" className="checkout-error">
-              {checkoutError}
-            </p>
+              <button
+                type="button"
+                className="primary-btn checkout-btn"
+                onClick={checkout}
+                disabled={checkingOut}
+              >
+                {checkingOut ? (
+                  'Preparando pago…'
+                ) : (
+                  <>
+                    <IconBolt />
+                    Pagar con Mercado Pago
+                  </>
+                )}
+              </button>
+              {checkoutError && (
+                <p role="alert" className="checkout-error">
+                  {checkoutError}
+                </p>
+              )}
+              <p className="mp-redirect-hint">
+                Al confirmar, te llevamos a Mercado Pago para completar el pago.
+              </p>
+
+              <div className="secure-note">
+                <IconLock />
+                Compra protegida y pago seguro
+              </div>
+            </>
+          ) : (
+            <div className="mp-offline-note">
+              <span className="mp-offline-title">
+                Esta tienda no recibe pagos online
+              </span>
+              <p>Hacé tu pedido por WhatsApp y te lo preparamos.</p>
+              {whatsappHref ? (
+                <a
+                  className="primary-btn checkout-btn mp-whatsapp-btn"
+                  href={whatsappHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Pedir por WhatsApp
+                </a>
+              ) : (
+                <p className="mp-offline-missing">
+                  El negocio todavía no cargó su número de WhatsApp.
+                </p>
+              )}
+            </div>
           )}
           <button type="button" className="ghost-btn" onClick={() => onNavigate('home')}>
             Seguir comprando
           </button>
-
-          <div className="secure-note">
-            <IconLock />
-            Compra protegida y pago seguro
-          </div>
         </aside>
       </div>
     </main>

@@ -6,17 +6,18 @@ import { IconCheck, IconClock, IconCross, IconEdit, IconPlus, IconSearch, IconTr
 import { CATEGORY_LABELS, IMPORT_EXAMPLE } from '../../consts.js'
 import { EmptyNote, ScreenBlocked, ScreenLoading } from '../common'
 import { loadCatalogOptions } from '../common/catalogOptions.js'
+import { useToast } from '@/context/useToast'
 
 import './styles.css'
 
 function ProductsScreen({ canManage }) {
+  const { showToast } = useToast()
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
   const [query, setQuery] = useState('')
   const [params, setParams] = useState({ q: '', category: '', brand: '', page: 1 })
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState(null)
-  const [note, setNote] = useState('')
   const [cats, setCats] = useState([])
   const [brands, setBrands] = useState([])
   const [bulk, setBulk] = useState({ mode: 'percent', value: '', category: 'todas' })
@@ -85,10 +86,11 @@ function ProductsScreen({ canManage }) {
 
   const handleSaved = (saved) => {
     closeForm()
-    setNote(
+    showToast(
       editing
         ? `Producto actualizado: ${saved.name}`
         : `Producto agregado: ${saved.name}`,
+      'success',
     )
     setParams((prev) => ({ ...prev, page: 1 }))
   }
@@ -99,21 +101,21 @@ function ProductsScreen({ canManage }) {
     }
     try {
       await apiDelete(`/api/admin/products/${product.id}`)
-      setNote(`Producto eliminado: ${product.name}`)
+      showToast(`Producto eliminado: ${product.name}`, 'success')
       if (data && data.items.length === 1 && data.page > 1) {
         setParams((prev) => ({ ...prev, page: prev.page - 1 }))
       } else {
         setParams((prev) => ({ ...prev }))
       }
     } catch (err) {
-      setNote(err.message)
+      showToast(err.message, 'error')
     }
   }
 
   const applyBulk = async (e) => {
     e.preventDefault()
+    if (bulk.value === '' || Number(bulk.value) === 0) return
     setBulkSaving(true)
-    setNote('')
     try {
       await apiPost('/api/admin/prices/bulk', {
         mode: bulk.mode,
@@ -121,11 +123,11 @@ function ProductsScreen({ canManage }) {
         category: bulk.category,
       })
       const bucket = bulk.category === 'todas' ? 'todas las categorías' : bulk.category
-      setNote(`Ajuste masivo aplicado a ${bucket}`)
+      showToast(`Ajuste masivo aplicado a ${bucket}`, 'success')
       setBulk((b) => ({ ...b, value: '' }))
       setParams((prev) => ({ ...prev }))
     } catch (err) {
-      setNote(err.message)
+      showToast(err.message, 'error')
     } finally {
       setBulkSaving(false)
     }
@@ -230,13 +232,15 @@ function ProductsScreen({ canManage }) {
               required
             />
           </label>
-          <button type="submit" className="primary-btn" disabled={bulkSaving}>
+          <button
+            type="submit"
+            className="primary-btn"
+            disabled={bulkSaving || bulk.value === '' || Number(bulk.value) === 0}
+          >
             {bulkSaving ? 'Aplicando…' : 'Aplicar ajuste'}
           </button>
         </form>
       )}
-
-      {note && <p className="sale-note">{note}</p>}
 
       {formOpen && (
         <ProductForm
@@ -348,7 +352,7 @@ function ProductsScreen({ canManage }) {
 
 
 function ProductForm({ product, onClose, onSaved }) {
-  const [form, setForm] = useState(() => ({
+  const seed = () => ({
     name: product?.name || '',
     brand: product?.brand || '',
     category: product?.category || 'audio',
@@ -360,16 +364,26 @@ function ProductForm({ product, onClose, onSaved }) {
     badge: product?.badge || '',
     description: product?.description || '',
     specs: product?.specs?.join(', ') || '',
-  }))
+  })
+  const [form, setForm] = useState(seed)
+  const [initial] = useState(seed)
   const [image, setImage] = useState(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+
+  const formDirty = JSON.stringify(form) !== JSON.stringify(initial) || Boolean(image)
+  const valid =
+    (form.name || '').trim().length >= 2 &&
+    (form.brand || '').trim().length >= 2 &&
+    Number(form.price) > 0
+  const canSave = formDirty && valid
 
   const set = (key) => (e) =>
     setForm((f) => ({ ...f, [key]: e.target.value }))
 
   const submit = async (e) => {
     e.preventDefault()
+    if (!canSave) return
     setSaving(true)
     setError('')
 
@@ -578,7 +592,7 @@ function ProductForm({ product, onClose, onSaved }) {
             <button
               type="submit"
               className="primary-btn"
-              disabled={saving}
+              disabled={saving || !canSave}
             >
               {saving
                 ? 'Guardando…'
@@ -595,9 +609,9 @@ function ProductForm({ product, onClose, onSaved }) {
 
 
 function MetaScreen({ kind, title, eyebrow, empty, canManage }) {
+  const { showToast } = useToast()
   const [items, setItems] = useState(null)
   const [error, setError] = useState('')
-  const [note, setNote] = useState('')
   const [editing, setEditing] = useState(null)
   const [refresh, setRefresh] = useState(0)
   const [formOpen, setFormOpen] = useState(false)
@@ -612,7 +626,6 @@ function MetaScreen({ kind, title, eyebrow, empty, canManage }) {
       .then((data) => {
         if (!alive) return
         setItems(data.items || [])
-        setNote('')
       })
       .catch((err) => {
         if (alive) setError(err.message)
@@ -634,10 +647,11 @@ function MetaScreen({ kind, title, eyebrow, empty, canManage }) {
 
   const handleSaved = (saved) => {
     closeForm()
-    setNote(
+    showToast(
       editing
         ? `${singular} actualizada: ${saved.name}`
         : `${singular} creada: ${saved.name}`,
+      'success',
     )
     setRefresh((n) => n + 1)
   }
@@ -647,10 +661,10 @@ function MetaScreen({ kind, title, eyebrow, empty, canManage }) {
     try {
       const target = hasKey ? item.key : encodeURIComponent(item.name)
       await apiDelete(`/api/admin/${kind}/${target}`)
-      setNote(`${singular} eliminada: ${item.name}`)
+      showToast(`${singular} eliminada: ${item.name}`, 'success')
       setRefresh((n) => n + 1)
     } catch (err) {
-      setNote(err.message)
+      showToast(err.message, 'error')
     }
   }
 
@@ -681,8 +695,6 @@ function MetaScreen({ kind, title, eyebrow, empty, canManage }) {
           </button>
         )}
       </div>
-
-      {note && <p className="sale-note">{note}</p>}
 
       {formOpen && (
         <MetaForm
@@ -754,13 +766,19 @@ function MetaScreen({ kind, title, eyebrow, empty, canManage }) {
 
 
 function MetaForm({ hasKey, item, noun, path, onClose, onSaved }) {
-  const [form, setForm] = useState(() => ({
+  const seed = () => ({
     name: item?.name || '',
     key: item?.key || '',
     active: item?.active !== false,
-  }))
+  })
+  const [form, setForm] = useState(seed)
+  const [initial] = useState(seed)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+
+  const formDirty = JSON.stringify(form) !== JSON.stringify(initial)
+  const valid = (form.name || '').trim().length >= 2
+  const canSave = formDirty && valid
 
   const set = (key) => (e) =>
     setForm((f) => ({
@@ -770,6 +788,7 @@ function MetaForm({ hasKey, item, noun, path, onClose, onSaved }) {
 
   const submit = async (e) => {
     e.preventDefault()
+    if (!canSave) return
     setSaving(true)
     setError('')
     const body = hasKey ? form : { name: form.name, active: form.active }
@@ -847,7 +866,7 @@ function MetaForm({ hasKey, item, noun, path, onClose, onSaved }) {
             <button type="button" className="ghost-btn" onClick={onClose} disabled={saving}>
               Cancelar
             </button>
-            <button type="submit" className="primary-btn" disabled={saving}>
+            <button type="submit" className="primary-btn" disabled={saving || !canSave}>
               {saving ? 'Guardando…' : 'Guardar'}
             </button>
           </div>
@@ -859,13 +878,13 @@ function MetaForm({ hasKey, item, noun, path, onClose, onSaved }) {
 
 
 function OffersScreen({ canManage }) {
+  const { showToast } = useToast()
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
   const [query, setQuery] = useState('')
   const [cats, setCats] = useState([])
   const [brands, setBrands] = useState([])
   const [params, setParams] = useState({ q: '', category: '', brand: '', page: 1 })
-  const [note, setNote] = useState('')
   const [savingId, setSavingId] = useState(null)
   const [edits, setEdits] = useState({})
   const [formOpen, setFormOpen] = useState(false)
@@ -935,14 +954,13 @@ function OffersScreen({ canManage }) {
 
   const saveOffer = async (p) => {
     setSavingId(p.id)
-    setNote('')
     try {
       await apiPost('/api/admin/offers', {
         productId: p.id,
         oldPrice: oldPriceOf(p),
         price: priceOf(p),
       })
-      setNote(`Oferta guardada: ${p.name}`)
+      showToast(`Oferta guardada: ${p.name}`, 'success')
       setEdits((prev) => {
         const next = { ...prev }
         delete next[p.id]
@@ -950,7 +968,7 @@ function OffersScreen({ canManage }) {
       })
       setParams((prev) => ({ ...prev }))
     } catch (err) {
-      setNote(err.message)
+      showToast(err.message, 'error')
     } finally {
       setSavingId(null)
     }
@@ -958,23 +976,22 @@ function OffersScreen({ canManage }) {
 
   const removeOffer = async (p) => {
     if (!window.confirm(`¿Quitar "${p.name}" de las ofertas?`)) return
-    setNote('')
     try {
       await apiDelete(`/api/admin/offers/${p.id}`)
-      setNote(`Oferta removida: ${p.name}`)
+      showToast(`Oferta removida: ${p.name}`, 'success')
       if (data && data.items.length === 1 && data.page > 1) {
         setParams((prev) => ({ ...prev, page: prev.page - 1 }))
       } else {
         setParams((prev) => ({ ...prev }))
       }
     } catch (err) {
-      setNote(err.message)
+      showToast(err.message, 'error')
     }
   }
 
   const handleAdded = (saved) => {
     setFormOpen(false)
-    setNote(`Producto en oferta: ${saved.name}`)
+    showToast(`Producto en oferta: ${saved.name}`, 'success')
     setParams((prev) => ({ ...prev, page: 1 }))
   }
 
@@ -1035,8 +1052,6 @@ function OffersScreen({ canManage }) {
           </button>
         )}
       </div>
-
-      {note && <p className="sale-note">{note}</p>}
 
       {formOpen && (
         <OfferForm onClose={() => setFormOpen(false)} onSaved={handleAdded} />
@@ -1197,6 +1212,7 @@ function OfferForm({ onClose, onSaved }) {
 
   const submit = async (e) => {
     e.preventDefault()
+    if (!form.productId || !(newPrice > 0)) return
     setSaving(true)
     setError('')
     try {
@@ -1308,7 +1324,7 @@ function OfferForm({ onClose, onSaved }) {
             <button type="button" className="ghost-btn" onClick={onClose} disabled={saving}>
               Cancelar
             </button>
-            <button type="submit" className="primary-btn" disabled={saving || !form.productId}>
+            <button type="submit" className="primary-btn" disabled={saving || !form.productId || !(newPrice > 0)}>
               {saving ? 'Guardando…' : 'Poner en oferta'}
             </button>
           </div>
@@ -1333,6 +1349,7 @@ function ImportScreen({ canManage }) {
 
   const submit = async (e) => {
     e.preventDefault()
+    if (!text.trim()) return
     setBusy(true)
     setError('')
     setResult(null)
@@ -1392,7 +1409,7 @@ function ImportScreen({ canManage }) {
             <button type="button" className="ghost-btn" onClick={loadExample}>
               Cargar ejemplo
             </button>
-            <button type="submit" className="primary-btn" disabled={busy}>
+            <button type="submit" className="primary-btn" disabled={busy || !text.trim()}>
               {busy ? 'Importando…' : 'Importar productos'}
             </button>
           </div>

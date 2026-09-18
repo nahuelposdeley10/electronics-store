@@ -1,4 +1,5 @@
 import express from 'express'
+import mongoose from 'mongoose'
 import bcrypt from 'bcryptjs'
 import { User } from '../models/User.js'
 import { Order } from '../models/Order.js'
@@ -16,7 +17,7 @@ import { CashMovement } from '../models/CashMovement.js'
 import { CashCount } from '../models/CashCount.js'
 import { requireAuth, requirePermission } from '../middleware/auth.js'
 import { generatePassword } from '../lib/passwords.js'
-import { getSettings, ALL_PERMISSIONS, permissionsForRole } from '../lib/settings.js'
+import { getSettings, saveSettings, ALL_PERMISSIONS, permissionsForRole } from '../lib/settings.js'
 import { requireTenantIdOf } from '../lib/tenant.js'
 
 const router = express.Router()
@@ -80,6 +81,32 @@ router.get('/businesses', async (req, res) => {
   } catch (error) {
     console.error('Businesses error:', error)
     return res.status(500).json({ error: 'No se pudieron leer los negocios' })
+  }
+})
+
+router.put('/businesses/:id/online', async (req, res) => {
+  if (req.user.role !== 'superadmin') {
+    return res.status(403).json({ error: 'No tenés permiso para esto' })
+  }
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(404).json({ error: 'Negocio no encontrado' })
+    }
+    const admin = await User.findOne({ _id: req.params.id, role: 'admin' }).lean()
+    if (!admin) {
+      return res.status(404).json({ error: 'Negocio no encontrado' })
+    }
+    const online = req.body?.online === true || req.body?.online === 'true'
+    const current = await getSettings({ fresh: true, tenant: admin._id })
+    const saved = await saveSettings({
+      section: 'payments',
+      value: { ...current.payments, online },
+      tenant: admin._id,
+    })
+    return res.json({ online: saved.payments?.online !== false })
+  } catch (error) {
+    console.error('Business online toggle error:', error)
+    return res.status(500).json({ error: 'No se pudo actualizar el negocio' })
   }
 })
 

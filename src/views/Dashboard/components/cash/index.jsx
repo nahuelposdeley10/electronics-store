@@ -4,6 +4,7 @@ import { apiGet, apiPost } from '@/lib/api'
 import { IconPlus } from '@/components/Icons'
 import { CASH_KIND_CHIPS, CASH_KIND_LABELS, fullDate, shortDate } from '../../consts.js'
 import { EmptyNote, KpiTicket, ScreenBlocked, ScreenLoading } from '../common'
+import { useToast } from '@/context/useToast'
 
 import './styles.css'
 
@@ -106,10 +107,10 @@ function CashCurrentScreen({ canManage, onView }) {
 
 
 function CashMovementsScreen({ canManage }) {
+  const { showToast } = useToast()
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
   const [params, setParams] = useState({ kind: 'all', page: 1 })
-  const [note, setNote] = useState('')
   const [formOpen, setFormOpen] = useState(false)
   const [form, setForm] = useState({ flow: 'in', amount: '', description: '' })
   const [saving, setSaving] = useState(false)
@@ -138,11 +139,12 @@ function CashMovementsScreen({ canManage }) {
   if (!data && !error) return <ScreenLoading label="Leyendo los movimientos…" />
   if (error) return <ScreenBlocked message={error} />
 
+  const movementValid = form.amount !== '' && Number.isFinite(Number(form.amount)) && Number(form.amount) > 0
+
   const addMovement = (e) => {
     e.preventDefault()
-    if (saving) return
+    if (saving || !movementValid) return
     setSaving(true)
-    setNote('')
     apiPost('/api/admin/cash/movements', {
       flow: form.flow,
       amount: Number(form.amount),
@@ -153,7 +155,7 @@ function CashMovementsScreen({ canManage }) {
         setFormOpen(false)
         setParams((prev) => ({ ...prev, page: 1 }))
       })
-      .catch((err) => setNote(err.message))
+      .catch((err) => showToast(err.message, 'error'))
       .finally(() => setSaving(false))
   }
 
@@ -189,8 +191,6 @@ function CashMovementsScreen({ canManage }) {
           </button>
         )}
       </div>
-
-      {note && <p className="sale-note">{note}</p>}
 
       {formOpen && canManage && (
         <form className="cash-form dash-card" onSubmit={addMovement}>
@@ -228,7 +228,7 @@ function CashMovementsScreen({ canManage }) {
             </label>
           </div>
           <div className="cash-form-foot">
-            <button type="submit" className="btn cta" disabled={saving}>
+            <button type="submit" className="btn cta" disabled={saving || !movementValid}>
               {saving ? 'Guardando…' : 'Guardar movimiento'}
             </button>
             <button type="button" className="btn" onClick={() => setFormOpen(false)}>
@@ -317,12 +317,12 @@ function CashMovementsScreen({ canManage }) {
 
 
 function CashShiftScreen({ canManage }) {
+  const { showToast } = useToast()
   const [status, setStatus] = useState(null)
   const [shifts, setShifts] = useState(null)
   const [error, setError] = useState('')
   const [openForm, setOpenForm] = useState({ openingBalance: '0', note: '' })
   const [closeForm, setCloseForm] = useState({ countedBalance: '', note: '' })
-  const [note, setNote] = useState('')
   const [busy, setBusy] = useState(false)
 
   const load = () => {
@@ -346,7 +346,6 @@ function CashShiftScreen({ canManage }) {
   const openBox = (e) => {
     e.preventDefault()
     if (busy) return
-    setNote('')
     setBusy(true)
     apiPost('/api/admin/cash/shifts', {
       openingBalance: Number(openForm.openingBalance) || 0,
@@ -354,17 +353,16 @@ function CashShiftScreen({ canManage }) {
     })
       .then(() => {
         setOpenForm({ openingBalance: '0', note: '' })
-        setNote('Caja abierta. Buenas ventas.')
+        showToast('Caja abierta. Buenas ventas.', 'success')
         load()
       })
-      .catch((err) => setNote(err.message))
+      .catch((err) => showToast(err.message, 'error'))
       .finally(() => setBusy(false))
   }
 
   const closeBox = (e) => {
     e.preventDefault()
     if (busy) return
-    setNote('')
     setBusy(true)
     apiPost('/api/admin/cash/shifts/close', {
       countedBalance: Number(closeForm.countedBalance) || 0,
@@ -372,14 +370,15 @@ function CashShiftScreen({ canManage }) {
     })
       .then((res) => {
         const diff = res.shift.difference ?? 0
-        setNote(
+        showToast(
           diff === 0
             ? 'Caja cerrada y cuadrada.'
             : `Caja cerrada. Diferencia de ${formatARS(diff)} ${diff > 0 ? 'a favor' : 'en contra'}.`,
+          'success',
         )
         load()
       })
-      .catch((err) => setNote(err.message))
+      .catch((err) => showToast(err.message, 'error'))
       .finally(() => setBusy(false))
   }
 
@@ -397,8 +396,6 @@ function CashShiftScreen({ canManage }) {
           <em>{status.open ? `turno #${current.number}` : 'esperando apertura'}</em>
         </div>
       </header>
-
-      {note && <p className="sale-note">{note}</p>}
 
       <div className="dash-cols">
         {!status.open ? (
@@ -573,10 +570,10 @@ function CashShiftScreen({ canManage }) {
 
 
 function CashCountScreen({ canManage }) {
+  const { showToast } = useToast()
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
   const [form, setForm] = useState({ countedAmount: '', note: '' })
-  const [note, setNote] = useState('')
   const [busy, setBusy] = useState(false)
 
   const load = () => {
@@ -600,7 +597,6 @@ function CashCountScreen({ canManage }) {
   const doArqueo = (e) => {
     e.preventDefault()
     if (busy) return
-    setNote('')
     setBusy(true)
     apiPost('/api/admin/cash/counts', {
       countedAmount: Number(form.countedAmount) || 0,
@@ -608,15 +604,16 @@ function CashCountScreen({ canManage }) {
     })
       .then((res) => {
         const diff = res.count.difference ?? 0
-        setNote(
+        showToast(
           diff === 0
             ? `Arqueo cuadra: esperado ${formatARS(res.count.expectedAmount)}.`
             : `Arqueo registrado. Diferencia de ${formatARS(diff)} ${diff > 0 ? 'a favor' : 'en contra'}.`,
+          'success',
         )
         setForm({ countedAmount: '', note: '' })
         load()
       })
-      .catch((err) => setNote(err.message))
+      .catch((err) => showToast(err.message, 'error'))
       .finally(() => setBusy(false))
   }
 
@@ -635,8 +632,6 @@ function CashCountScreen({ canManage }) {
           <em>arqueos registrados</em>
         </div>
       </header>
-
-      {note && <p className="sale-note">{note}</p>}
 
       {!status.open ? (
         <div className="dash-card">

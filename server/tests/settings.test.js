@@ -27,6 +27,10 @@ async function main() {
     sA?.payments?.mercadopago?.webhookSecret == null,
     'sin secreto cargado, el webhookSecret queda vacío (no se genera)',
   )
+  check(
+    sA?.payments?.online !== false,
+    'activado por defecto: payments.online es true',
+  )
 
   await saveSettings({
     tenant: tenantA,
@@ -63,6 +67,31 @@ async function main() {
   check(
     sB?.payments?.mercadopago?.webhookSecret == null,
     'otra tienda sigue sin webhookSecret hasta pegarlo',
+  )
+
+  await saveSettings({
+    tenant: tenantB,
+    section: 'payments',
+    value: { online: false },
+  })
+  const sB2 = await getSettings({ fresh: true, tenant: tenantB })
+  check(
+    sB2?.payments?.online === false,
+    'apagar online persiste como payments.online === false',
+  )
+
+  await saveSettings({
+    tenant: tenantB,
+    section: 'payments',
+    value: {
+      methods: { efectivo: true, tarjeta: true, transferencia: true },
+      mercadopago: { accessToken: null, publicKey: null, webhookSecret: null },
+    },
+  })
+  const sB3 = await getSettings({ fresh: true, tenant: tenantB })
+  check(
+    sB3?.payments?.online === true,
+    'guardar la sección sin "online" lo vuelve a true (hay que incluirlo al guardar)',
   )
 
   const sG = await getSettings({ fresh: true })

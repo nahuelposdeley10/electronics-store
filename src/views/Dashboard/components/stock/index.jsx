@@ -6,6 +6,7 @@ import { IconCheck, IconCross, IconPlus, IconSearch } from '@/components/Icons'
 import { CATEGORY_LABELS, MOVEMENT_CHIPS, MOVEMENT_TYPE_LABELS, shortDate, fullDate, itemsSummary } from '../../consts.js'
 import { EmptyNote, ScreenBlocked, ScreenLoading, StockBadge } from '../common'
 import { loadCatalogOptions } from '../common/catalogOptions.js'
+import { useToast } from '@/context/useToast'
 
 import './styles.css'
 
@@ -348,13 +349,13 @@ function MovementsScreen() {
 
 
 function AdjustmentsScreen({ canManage }) {
+  const { showToast } = useToast()
   const [products, setProducts] = useState([])
   const [movements, setMovements] = useState(null)
   const [error, setError] = useState('')
   const [params, setParams] = useState({ type: 'ajuste', q: '', page: 1 })
   const [form, setForm] = useState({ productId: '', delta: '', reason: '' })
   const [saving, setSaving] = useState(false)
-  const [note, setNote] = useState('')
 
   useEffect(() => {
     let alive = true
@@ -390,8 +391,8 @@ function AdjustmentsScreen({ canManage }) {
 
   const submitAdjustment = async (e) => {
     e.preventDefault()
+    if (!adjustmentValid) return
     setSaving(true)
-    setNote('')
     try {
       const res = await apiPost('/api/admin/inventory/adjustments', {
         productId: Number(form.productId),
@@ -399,12 +400,12 @@ function AdjustmentsScreen({ canManage }) {
         reason: form.reason.trim(),
       })
       const product = products.find((p) => p.id === Number(form.productId))
-      setNote(`Ajuste aplicado en "${product?.name || res.movement.productName}" → stock ${res.stock}`)
+      showToast(`Ajuste aplicado en "${product?.name || res.movement.productName}" → stock ${res.stock}`, 'success')
       setForm((f) => ({ ...f, delta: '', reason: '' }))
       setMovements((prev) => (prev ? { ...prev } : prev))
       setParams((prev) => ({ ...prev }))
     } catch (err) {
-      setNote(err.message)
+      showToast(err.message, 'error')
     } finally {
       setSaving(false)
     }
@@ -420,6 +421,12 @@ function AdjustmentsScreen({ canManage }) {
     selectedProduct && form.delta !== ''
       ? selectedProduct.stock + Number(form.delta)
       : null
+  const adjustmentValid =
+    Boolean(form.productId) &&
+    form.delta !== '' &&
+    Number.isFinite(Number(form.delta)) &&
+    Number(form.delta) !== 0 &&
+    (form.reason || '').trim().length > 0
 
   return (
     <div className="dash-screen">
@@ -434,7 +441,6 @@ function AdjustmentsScreen({ canManage }) {
         </div>
       </header>
 
-      {note && <p className="sale-note">{note}</p>}
       {!canManage && (
         <p className="sale-note">Solo el superadmin puede aplicar ajustes.</p>
       )}
@@ -487,7 +493,7 @@ function AdjustmentsScreen({ canManage }) {
               required
             />
           </label>
-          <button type="submit" className="primary-btn" disabled={saving || !canManage}>
+          <button type="submit" className="primary-btn" disabled={saving || !canManage || !adjustmentValid}>
             {saving ? 'Aplicando…' : 'Aplicar ajuste'}
           </button>
         </form>
@@ -520,11 +526,11 @@ function AdjustmentsScreen({ canManage }) {
 
 
 function MinStockScreen({ canManage }) {
+  const { showToast } = useToast()
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
   const [drafts, setDrafts] = useState({})
   const [savingId, setSavingId] = useState(null)
-  const [note, setNote] = useState('')
   const [version, setVersion] = useState(0)
   const [query, setQuery] = useState('')
   const [cats, setCats] = useState([])
@@ -573,16 +579,15 @@ function MinStockScreen({ canManage }) {
 
   const saveMin = async (product) => {
     setSavingId(product.id)
-    setNote('')
     try {
       const res = await apiPut('/api/admin/inventory/min-stock', {
         productId: product.id,
         minStock: Number(drafts[product.id]),
       })
-      setNote(`Mínimo guardado: "${product.name}" ≥ ${res.minStock}`)
+      showToast(`Mínimo guardado: "${product.name}" ≥ ${res.minStock}`, 'success')
       setVersion((v) => v + 1)
     } catch (err) {
-      setNote(err.message)
+      showToast(err.message, 'error')
     } finally {
       setSavingId(null)
     }
@@ -620,7 +625,6 @@ function MinStockScreen({ canManage }) {
         </div>
       </header>
 
-      {note && <p className="sale-note">{note}</p>}
       {!canManage && (
         <p className="sale-note">Solo el administrador puede cambiar los mínimos.</p>
       )}
@@ -743,6 +747,7 @@ function MinStockScreen({ canManage }) {
 
 
 function PurchasesScreen({ canManage }) {
+  const { showToast } = useToast()
   const [products, setProducts] = useState([])
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
@@ -755,7 +760,6 @@ function PurchasesScreen({ canManage }) {
     lines: [{ productId: '', quantity: '1', cost: '' }],
   })
   const [saving, setSaving] = useState(false)
-  const [note, setNote] = useState('')
 
   useEffect(() => {
     let alive = true
@@ -819,7 +823,6 @@ function PurchasesScreen({ canManage }) {
   const submitPurchase = async (e) => {
     e.preventDefault()
     setSaving(true)
-    setNote('')
     try {
       const items = form.lines
         .map((l) => ({
@@ -829,7 +832,7 @@ function PurchasesScreen({ canManage }) {
         }))
         .filter((l) => Number.isFinite(l.productId) && l.quantity > 0 && Number.isFinite(l.cost) && l.cost >= 0)
       if (items.length === 0) {
-        setNote('Elegí un producto y cargá cantidad y costo.')
+        showToast('Elegí un producto y cargá cantidad y costo.', 'warn')
         setSaving(false)
         return
       }
@@ -838,7 +841,7 @@ function PurchasesScreen({ canManage }) {
         invoice: form.invoice.trim(),
         items,
       })
-      setNote(`Compra #${res.purchase.number} registrada — total ${formatARS(res.purchase.total)}. Stock actualizado.`)
+      showToast(`Compra #${res.purchase.number} registrada — total ${formatARS(res.purchase.total)}. Stock actualizado.`, 'success')
       setForm({
         supplier: '',
         invoice: '',
@@ -846,7 +849,7 @@ function PurchasesScreen({ canManage }) {
       })
       setVersion((v) => v + 1)
     } catch (err) {
-      setNote(err.message)
+      showToast(err.message, 'error')
     } finally {
       setSaving(false)
     }
@@ -857,6 +860,10 @@ function PurchasesScreen({ canManage }) {
 
   const lineTotal = (line) => (Number(line.quantity) || 0) * (Number(line.cost) || 0)
   const purchaseTotal = form.lines.reduce((sum, line) => sum + lineTotal(line), 0)
+  const hasValidPurchaseLine = form.lines.some(
+    (l) => Boolean(l.productId) && Math.floor(Number(l.quantity)) > 0 && Number.isFinite(Number(l.cost)) && Number(l.cost) >= 0,
+  )
+  const canSubmitPurchase = hasValidPurchaseLine && (form.supplier || '').trim().length > 0
 
   return (
     <div className="dash-screen">
@@ -871,7 +878,6 @@ function PurchasesScreen({ canManage }) {
         </div>
       </header>
 
-      {note && <p className="sale-note">{note}</p>}
       {!canManage && (
         <p className="sale-note">Solo el superadmin puede cargar compras.</p>
       )}
@@ -963,7 +969,7 @@ function PurchasesScreen({ canManage }) {
             <strong className="mono">{formatARS(purchaseTotal)}</strong>
           </div>
 
-          <button type="submit" className="primary-btn" disabled={saving || !canManage}>
+          <button type="submit" className="primary-btn" disabled={saving || !canManage || !canSubmitPurchase}>
             {saving ? 'Guardando…' : 'Registrar compra'}
           </button>
         </form>
@@ -1029,10 +1035,10 @@ function PurchasesScreen({ canManage }) {
 
 
 function PhysicalInventoryScreen({ canManage }) {
+  const { showToast } = useToast()
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
   const [counts, setCounts] = useState({})
-  const [note, setNote] = useState('')
   const [result, setResult] = useState(null)
   const [saving, setSaving] = useState(false)
   const [version, setVersion] = useState(0)
@@ -1084,23 +1090,22 @@ function PhysicalInventoryScreen({ canManage }) {
   const submitCount = async (e) => {
     e.preventDefault()
     setSaving(true)
-    setNote('')
     setResult(null)
     try {
       const countsBody = (data.items || [])
         .map((p) => ({ productId: p.id, units: Number(counts[p.id]) }))
         .filter((row) => Number.isFinite(row.units) && row.units >= 0)
       if (countsBody.length === 0) {
-        setNote('Cargá al menos un conteo.')
+        showToast('Cargá al menos un conteo.', 'warn')
         setSaving(false)
         return
       }
       const res = await apiPost('/api/admin/inventory/physical', { counts: countsBody })
       setResult(res)
-      setNote(`Inventario guardado: ${res.updated} producto${res.updated === 1 ? '' : 's'} actualizado${res.updated === 1 ? '' : 's'}.`)
+      showToast(`Inventario guardado: ${res.updated} producto${res.updated === 1 ? '' : 's'} actualizado${res.updated === 1 ? '' : 's'}.`, 'success')
       setVersion((v) => v + 1)
     } catch (err) {
-      setNote(err.message)
+      showToast(err.message, 'error')
     } finally {
       setSaving(false)
     }
@@ -1138,7 +1143,6 @@ function PhysicalInventoryScreen({ canManage }) {
         </div>
       </header>
 
-      {note && <p className="sale-note">{note}</p>}
       {!canManage && (
         <p className="sale-note">Solo el administrador puede guardar el conteo.
         </p>
