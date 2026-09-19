@@ -5,7 +5,7 @@ import { getSuperTenant } from '@/lib/tenant'
 import { IconCheck, IconCross, IconEdit, IconPlus, IconSearch, IconTrash } from '@/components/Icons'
 import { useToast } from '@/context/useToast'
 import { PERM_CODES, PERM_LABELS, initials, shortDate } from '../../consts.js'
-import { EmptyNote, ScreenBlocked, ScreenLoading, ToggleRow } from '../common'
+import { EmptyNote, ScreenBlocked, ScreenLoading, SortSelect, ToggleRow, ToggleSwitch } from '../common'
 
 import './styles.css'
 
@@ -397,14 +397,11 @@ function UsersScreen() {
                     <button type="button" className="row-btn" aria-label={`Editar ${u.name}`} onClick={() => openEdit(u)}>
                       <IconEdit />
                     </button>
-                    <button
-                      type="button"
-                      className={`row-btn ${u.active ? 'row-btn-danger' : ''}`}
-                      aria-label={u.active ? `Desactivar ${u.name}` : `Activar ${u.name}`}
-                      onClick={() => toggleActive(u)}
-                    >
-                      {u.active ? <IconCross /> : <IconCheck />}
-                    </button>
+                    <ToggleSwitch
+                      checked={u.active}
+                      label={u.active ? `Desactivar ${u.name}` : `Activar ${u.name}`}
+                      onChange={() => toggleActive(u)}
+                    />
                     {!u.isSelf && (
                       <button
                         type="button"
@@ -436,6 +433,7 @@ function RolesScreen() {
   const [expanded, setExpanded] = useState(null)
   const [query, setQuery] = useState('')
   const [page, setPage] = useState(1)
+  const [sortVal, setSortVal] = useState('recent')
   const [onlinePayments, setOnlinePayments] = useState(true)
   const [savingOnline, setSavingOnline] = useState(false)
   const PAGE_SIZE = 8
@@ -507,9 +505,14 @@ function RolesScreen() {
           u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q),
       )
     : users
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+  const sorted = [...filtered].sort((a, b) => {
+    if (sortVal === 'az') return String(a.name).localeCompare(String(b.name), 'es')
+    if (sortVal === 'za') return String(b.name).localeCompare(String(a.name), 'es')
+    return new Date(b.createdAt || 0) - new Date(a.createdAt || 0)
+  })
+  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE))
   const safePage = Math.min(page, totalPages)
-  const visible = filtered.slice(
+  const visible = sorted.slice(
     (safePage - 1) * PAGE_SIZE,
     safePage * PAGE_SIZE,
   )
@@ -544,35 +547,38 @@ function RolesScreen() {
         </p>
       </div>
 
-      <form
-        className="dash-search"
-        role="search"
-        onSubmit={(e) => e.preventDefault()}
-      >
-        <IconSearch />
-        <input
-          type="text"
-          value={query}
-          onChange={(e) => {
-            setQuery(e.target.value)
-            setPage(1)
-          }}
-          placeholder={isSuper ? 'Buscar por nombre o email…' : 'Buscar operador por nombre o email…'}
-          aria-label="Buscar usuarios"
-        />
-        {query && (
-          <button
-            type="button"
-            className="ghost-btn"
-            onClick={() => {
-              setQuery('')
+      <div className="dash-toolbar">
+        <form
+          className="dash-search"
+          role="search"
+          onSubmit={(e) => e.preventDefault()}
+        >
+          <IconSearch />
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value)
               setPage(1)
             }}
-          >
-            Limpiar
-          </button>
-        )}
-      </form>
+            placeholder={isSuper ? 'Buscar por nombre o email…' : 'Buscar operador por nombre o email…'}
+            aria-label="Buscar usuarios"
+          />
+          {query && (
+            <button
+              type="button"
+              className="ghost-btn"
+              onClick={() => {
+                setQuery('')
+                setPage(1)
+              }}
+            >
+              Limpiar
+            </button>
+          )}
+        </form>
+        <SortSelect id="users-sort" value={sortVal} onChange={setSortVal} />
+      </div>
 
       {isSuper && !superTenantNow && (
         <p className="list-note">

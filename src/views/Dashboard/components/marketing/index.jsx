@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { apiDelete, apiGet, apiPost, apiPut } from '@/lib/api'
-import { IconCheck, IconClock, IconEdit, IconPlus, IconTrash } from '@/components/Icons'
+import { IconEdit, IconPlus, IconTrash } from '@/components/Icons'
 import { shortDate } from '../../consts.js'
-import { EmptyNote, ScreenBlocked, ScreenLoading } from '../common'
+import { EmptyNote, ScreenBlocked, ScreenLoading, ToggleSwitch } from '../common'
 import { useToast } from '@/context/useToast'
 
 import './styles.css'
@@ -226,14 +226,11 @@ function CouponsScreen({ canManage }) {
                 {canManage && (
                   <td>
                     <span className="row-actions">
-                      <button
-                        type="button"
-                        className="row-btn"
-                        title={c.active ? 'Pausar' : 'Activar'}
-                        onClick={() => toggleActive(c)}
-                      >
-                        {c.active ? <IconCheck /> : <IconClock />}
-                      </button>
+                      <ToggleSwitch
+                        checked={c.active}
+                        label={c.active ? 'Pausar cupón' : 'Activar cupón'}
+                        onChange={() => toggleActive(c)}
+                      />
                       <button
                         type="button"
                         className="row-btn"

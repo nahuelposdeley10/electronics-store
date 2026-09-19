@@ -9,6 +9,7 @@ import {
   buildProductSearchFilter,
   escapeRegex,
   parseMulti,
+  buildAdminSort,
 } from '../lib/catalog-query.js'
 import {
   ensureCatalogMeta,
@@ -552,7 +553,7 @@ router.get('/offers', requirePermission('offers.manage'), async (req, res) => {
     const [total, products] = await Promise.all([
       Product.countDocuments(filter),
       Product.find(filter)
-        .sort({ id: 1 })
+        .sort(buildAdminSort(req.query.sort))
         .skip((page - 1) * limit)
         .limit(limit)
         .lean(),

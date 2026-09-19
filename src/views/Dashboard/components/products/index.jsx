@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react'
 import { formatARS } from '@/data/format'
 import SearchSelect from '@/components/SearchSelect'
 import { apiDelete, apiGet, apiPost, apiPut, apiUpdate, apiUpload } from '@/lib/api'
-import { IconCheck, IconClock, IconCross, IconEdit, IconPlus, IconSearch, IconTrash } from '@/components/Icons'
+import { IconCheck, IconClock, IconCross, IconEdit, IconLock, IconPlus, IconSearch, IconTrash } from '@/components/Icons'
 import { CATEGORY_LABELS, IMPORT_EXAMPLE } from '../../consts.js'
-import { EmptyNote, ScreenBlocked, ScreenLoading } from '../common'
+import { EmptyNote, ScreenBlocked, ScreenLoading, SortSelect } from '../common'
 import { loadCatalogOptions } from '../common/catalogOptions.js'
 import { useToast } from '@/context/useToast'
 
@@ -15,7 +15,7 @@ function ProductsScreen({ canManage }) {
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
   const [query, setQuery] = useState('')
-  const [params, setParams] = useState({ q: '', category: '', brand: '', page: 1 })
+  const [params, setParams] = useState({ q: '', category: '', brand: '', sort: '', page: 1 })
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState(null)
   const [cats, setCats] = useState([])
@@ -46,6 +46,7 @@ function ProductsScreen({ canManage }) {
     })
     if (params.category) paramsString.set('category', params.category)
     if (params.brand) paramsString.set('brand', params.brand)
+    if (params.sort) paramsString.set('sort', params.sort)
     apiGet(`/api/admin/products?${paramsString}`)
       .then((res) => {
         if (!alive) return
@@ -73,6 +74,9 @@ function ProductsScreen({ canManage }) {
 
   const onBrand = (value) =>
     setParams((prev) => ({ ...prev, brand: value, page: 1 }))
+
+  const onSort = (value) =>
+    setParams((prev) => ({ ...prev, sort: value, page: 1 }))
 
   const openForm = (product = null) => {
     setEditing(product)
@@ -161,20 +165,25 @@ function ProductsScreen({ canManage }) {
           />
         </form>
         <div className="dash-filters">
-          <SearchSelect
-            id="products-category-filter"
-            label="Categoría"
-            value={params.category}
-            onChange={onCategory}
-            options={cats.map((c) => ({ value: c.key, label: c.name }))}
-          />
-          <SearchSelect
-            id="products-brand-filter"
-            label="Marca"
-            value={params.brand}
-            onChange={onBrand}
-            options={brands.map((b) => ({ value: b, label: b }))}
-          />
+          <label className="sort-field">
+            <span>Categoría</span>
+            <SearchSelect
+              id="products-category-filter"
+              value={params.category}
+              onChange={onCategory}
+              options={cats.map((c) => ({ value: c.key, label: c.name }))}
+            />
+          </label>
+          <label className="sort-field">
+            <span>Marca</span>
+            <SearchSelect
+              id="products-brand-filter"
+              value={params.brand}
+              onChange={onBrand}
+              options={brands.map((b) => ({ value: b, label: b }))}
+            />
+          </label>
+          <SortSelect id="products-sort" value={params.sort} onChange={onSort} />
         </div>
         <span className="count-tag mono">
           {data.items.length} de {data.total}
@@ -370,6 +379,22 @@ function ProductForm({ product, onClose, onSaved }) {
   const [image, setImage] = useState(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [brandOptions, setBrandOptions] = useState([])
+  const [categoryOptions, setCategoryOptions] = useState([])
+
+  useEffect(() => {
+    let alive = true
+    loadCatalogOptions()
+      .then(({ categories, brands }) => {
+        if (!alive) return
+        setBrandOptions(brands)
+        setCategoryOptions(categories)
+      })
+      .catch((err) => console.warn('No se pudieron cargar categorías o marcas', err))
+    return () => {
+      alive = false
+    }
+  }, [])
 
   const formDirty = JSON.stringify(form) !== JSON.stringify(initial) || Boolean(image)
   const valid =
@@ -405,6 +430,19 @@ function ProductForm({ product, onClose, onSaved }) {
       setSaving(false)
     }
   }
+
+  const brandList =
+    form.brand && !brandOptions.includes(form.brand)
+      ? [...brandOptions, form.brand]
+      : brandOptions
+  const baseCatList =
+    categoryOptions.length > 0
+      ? categoryOptions
+      : Object.entries(CATEGORY_LABELS).map(([key, name]) => ({ key, name }))
+  const catList =
+    form.category && !baseCatList.some((c) => c.key === form.category)
+      ? [...baseCatList, { key: form.category, name: form.category }]
+      : baseCatList
 
   return (
     <div className="product-overlay" onMouseDown={saving ? undefined : onClose}>
@@ -445,28 +483,24 @@ function ProductForm({ product, onClose, onSaved }) {
 
             <label className="pf-field">
               <span>Marca</span>
-              <input
-                type="text"
+              <SearchSelect
+                id="pf-brand"
+                allLabel="Seleccioná una marca…"
                 value={form.brand}
-                onChange={set('brand')}
-                placeholder="Ej. Logitech"
-                required
+                onChange={(v) => setForm((f) => ({ ...f, brand: v }))}
+                options={brandList.map((b) => ({ value: b, label: b }))}
               />
             </label>
 
             <label className="pf-field">
               <span>Categoría</span>
-              <select
+              <SearchSelect
+                id="pf-category"
+                allLabel="Seleccioná una categoría…"
                 value={form.category}
-                onChange={set('category')}
-                required
-              >
-                {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
+                onChange={(v) => setForm((f) => ({ ...f, category: v }))}
+                options={catList.map((c) => ({ value: c.key, label: c.name }))}
+              />
             </label>
 
             <label className="pf-field">
@@ -488,9 +522,10 @@ function ProductForm({ product, onClose, onSaved }) {
                 type="number"
                 min="0"
                 step="1"
-                value={form.costPrice}
-                onChange={set('costPrice')}
-                placeholder="Opcional"
+                value={form.costPrice || 0}
+                disabled
+                className="pf-locked"
+                title="Se carga desde Inventario"
               />
             </label>
 
@@ -500,11 +535,17 @@ function ProductForm({ product, onClose, onSaved }) {
                 type="number"
                 min="0"
                 step="1"
-                value={form.stock}
-                onChange={set('stock')}
-                placeholder="Opcional"
+                value={form.stock || 0}
+                disabled
+                className="pf-locked"
+                title="Se carga desde Inventario"
               />
             </label>
+
+            <p className="pf-lock-note pf-full">
+              <IconLock />
+              Costo y stock se cargan desde Inventario (compras y movimientos).
+            </p>
 
             <label className="pf-field">
               <span>Rating (0–5)</span>
@@ -884,7 +925,7 @@ function OffersScreen({ canManage }) {
   const [query, setQuery] = useState('')
   const [cats, setCats] = useState([])
   const [brands, setBrands] = useState([])
-  const [params, setParams] = useState({ q: '', category: '', brand: '', page: 1 })
+  const [params, setParams] = useState({ q: '', category: '', brand: '', sort: '', page: 1 })
   const [savingId, setSavingId] = useState(null)
   const [edits, setEdits] = useState({})
   const [formOpen, setFormOpen] = useState(false)
@@ -912,6 +953,7 @@ function OffersScreen({ canManage }) {
     })
     if (params.category) qs.set('category', params.category)
     if (params.brand) qs.set('brand', params.brand)
+    if (params.sort) qs.set('sort', params.sort)
     apiGet(`/api/admin/offers?${qs}`)
       .then((res) => {
         if (!alive) return
@@ -939,6 +981,9 @@ function OffersScreen({ canManage }) {
 
   const onBrand = (value) =>
     setParams((prev) => ({ ...prev, brand: value, page: 1 }))
+
+  const onSort = (value) =>
+    setParams((prev) => ({ ...prev, sort: value, page: 1 }))
 
   const oldPriceOf = (p) => edits[p.id]?.oldPrice ?? p.oldPrice ?? ''
 
@@ -1037,6 +1082,7 @@ function OffersScreen({ canManage }) {
             onChange={onBrand}
             options={brands.map((b) => ({ value: b, label: b }))}
           />
+          <SortSelect id="offers-sort" value={params.sort} onChange={onSort} />
         </div>
         <span className="count-tag mono">
           {data.items.length} de {data.total}

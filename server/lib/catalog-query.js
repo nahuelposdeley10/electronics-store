@@ -35,3 +35,9 @@ export function buildCatalogSort(value) {
   if (value === 'price_asc') return { price: 1, id: 1 }
   return { id: 1 }
 }
+
+export function buildAdminSort(value) {
+  if (value === 'az') return { name: 1, id: 1 }
+  if (value === 'za') return { name: -1, id: -1 }
+  return { id: -1 }
+}

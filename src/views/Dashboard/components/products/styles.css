@@ -122,6 +122,24 @@
   width: 16px;
   height: 16px;
 }
+.pf-field input.pf-locked {
+  cursor: not-allowed;
+  color: var(--gal-ink-soft);
+  background: var(--gal-panel);
+}
+.pf-lock-note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 12px;
+  color: var(--gal-ink-faint);
+}
+.pf-lock-note svg {
+  width: 13px;
+  height: 13px;
+  flex: none;
+}
 .t-margin {
   color: var(--gal-ink-soft);
 }

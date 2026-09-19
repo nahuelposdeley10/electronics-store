@@ -5,7 +5,7 @@ import { Product } from '../models/Product.js'
 import { Quote } from '../models/Quote.js'
 import { requireAuth, requirePermission } from '../middleware/auth.js'
 import { uploadToCloudinary } from '../services/cloudinary.js'
-import { parsePagination, buildProductSearchFilter, escapeRegex, parseMulti } from '../lib/catalog-query.js'
+import { parsePagination, buildProductSearchFilter, escapeRegex, parseMulti, buildAdminSort } from '../lib/catalog-query.js'
 import { getValidCategoryKeys } from '../lib/catalog-meta.js'
 import { changeStock } from '../lib/stock.js'
 import { currentShift } from '../lib/cash.js'
@@ -238,7 +238,7 @@ router.get('/products', async (req, res) => {
       Order.find({ status: 'approved', ...scope }).lean(),
       Product.countDocuments(filter),
       Product.find(filter)
-        .sort({ id: 1 })
+        .sort(buildAdminSort(req.query.sort))
         .skip((page - 1) * limit)
         .limit(limit)
         .lean(),
@@ -313,10 +313,10 @@ router.post('/products', requirePermission('catalog.manage'), upload.single('ima
       category,
       price: roundMoney(price),
       oldPrice: oldPrice ? roundMoney(oldPrice) : null,
-      costPrice: costPrice !== '' ? roundMoney(costPrice) : 0,
-      stock: stock !== '' ? Number(stock) : 0,
-      minStock: minStock !== '' ? Number(minStock) : 0,
-      rating: rating !== '' ? Number(rating) : 0,
+      costPrice: costPrice !== undefined && costPrice !== '' ? roundMoney(costPrice) : 0,
+      stock: stock !== undefined && stock !== '' ? Number(stock) : 0,
+      minStock: minStock !== undefined && minStock !== '' ? Number(minStock) : 0,
+      rating: rating !== undefined && rating !== '' ? Number(rating) : 0,
       freeShipping: freeShipping === 'true' || freeShipping === true,
       badge: badge ? String(badge).trim() : null,
       image,
@@ -642,9 +642,15 @@ router.get('/quotes', async (req, res) => {
       }
     }
 
+    const quotesSort =
+      req.query.sort === 'az'
+        ? { 'customer.name': 1, number: -1 }
+        : req.query.sort === 'za'
+          ? { 'customer.name': -1, number: -1 }
+          : { number: -1 }
     const [total, quotes] = await Promise.all([
       Quote.countDocuments(filter),
-      Quote.find(filter).sort({ number: -1 }).skip((page - 1) * limit).limit(limit).lean(),
+      Quote.find(filter).sort(quotesSort).skip((page - 1) * limit).limit(limit).lean(),
     ])
 
     return res.json({

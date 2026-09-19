@@ -4,7 +4,7 @@ import SearchSelect from '@/components/SearchSelect'
 import { apiGet, apiPost, apiPut } from '@/lib/api'
 import { IconCheck, IconCross, IconPlus, IconSearch } from '@/components/Icons'
 import { CATEGORY_LABELS, MOVEMENT_CHIPS, MOVEMENT_TYPE_LABELS, shortDate, fullDate, itemsSummary } from '../../consts.js'
-import { EmptyNote, ScreenBlocked, ScreenLoading, StockBadge } from '../common'
+import { EmptyNote, ScreenBlocked, ScreenLoading, SortSelect, StockBadge } from '../common'
 import { loadCatalogOptions } from '../common/catalogOptions.js'
 import { useToast } from '@/context/useToast'
 
@@ -16,7 +16,7 @@ function StockScreen() {
   const [query, setQuery] = useState('')
   const [cats, setCats] = useState([])
   const [brands, setBrands] = useState([])
-  const [params, setParams] = useState({ q: '', low: '', category: '', brand: '', page: 1 })
+  const [params, setParams] = useState({ q: '', low: '', category: '', brand: '', sort: '', page: 1 })
 
   useEffect(() => {
     let alive = true
@@ -42,6 +42,7 @@ function StockScreen() {
     })
     if (params.category) paramsString.set('category', params.category)
     if (params.brand) paramsString.set('brand', params.brand)
+    if (params.sort) paramsString.set('sort', params.sort)
     apiGet(`/api/admin/inventory/stock?${paramsString}`)
       .then((res) => {
         if (!alive) return
@@ -69,6 +70,9 @@ function StockScreen() {
 
   const onBrand = (value) =>
     setParams((prev) => ({ ...prev, brand: value, page: 1 }))
+
+  const onSort = (value) =>
+    setParams((prev) => ({ ...prev, sort: value, page: 1 }))
 
   const toggleLow = () => {
     setParams((prev) => ({ ...prev, low: prev.low ? '' : '1', page: 1 }))
@@ -118,6 +122,7 @@ function StockScreen() {
             onChange={onBrand}
             options={brands.map((b) => ({ value: b, label: b }))}
           />
+          <SortSelect id="stock-sort" value={params.sort} onChange={onSort} />
         </div>
         <span className="count-tag mono">
           {data.items.length} de {data.total}

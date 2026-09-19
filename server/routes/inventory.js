@@ -8,6 +8,7 @@ import {
   buildProductSearchFilter,
   escapeRegex,
   parseMulti,
+  buildAdminSort,
 } from '../lib/catalog-query.js'
 import { changeStock } from '../lib/stock.js'
 import { requireTenantIdOf } from '../lib/tenant.js'
@@ -60,7 +61,7 @@ router.get('/stock', async (req, res) => {
     const [total, products] = await Promise.all([
       Product.countDocuments(filter),
       Product.find(filter)
-        .sort({ category: 1, brand: 1, name: 1 })
+        .sort(buildAdminSort(req.query.sort))
         .skip((page - 1) * limit)
         .limit(limit)
         .lean(),

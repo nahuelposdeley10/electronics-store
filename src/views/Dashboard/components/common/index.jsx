@@ -5,6 +5,32 @@ import { IconChart, IconClock, IconSearchOff } from '@/components/Icons'
 
 import './styles.css'
 
+const SORT_OPTIONS = [
+  { value: 'recent', label: 'Últimos agregados' },
+  { value: 'az', label: 'A → Z' },
+  { value: 'za', label: 'Z → A' },
+]
+
+function SortSelect({ value, onChange, id = 'sort', label = 'Orden' }) {
+  return (
+    <label className="sort-field">
+      <span>{label}</span>
+      <select
+        id={id}
+        value={value || 'recent'}
+        onChange={(e) => onChange(e.target.value)}
+      >
+        {SORT_OPTIONS.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+    </label>
+  )
+}
+
+
 function StatusTag({ status }) {
   const meta = STATUS_META[status] || { label: status, Icon: IconClock }
   const { Icon } = meta
@@ -144,6 +170,21 @@ function ToggleRow({ label, hint, checked, onChange, disabled = false }) {
 }
 
 
+function ToggleSwitch({ checked, onChange, label, disabled = false }) {
+  return (
+    <label className="toggle-switch" title={label}>
+      <input
+        type="checkbox"
+        checked={checked}
+        disabled={disabled}
+        aria-label={label}
+        onChange={(e) => onChange(e.target.checked)}
+      />
+    </label>
+  )
+}
+
+
 function isErrorNote(text) {
   return /(No se pudo|No pod|No tenés|Ya existe|requeridos|inválido|vencida|incorrectas)/i.test(
     text || '',
@@ -242,4 +283,4 @@ function SettingsFetcher({ render }) {
 }
 
 
-export { StatusTag, EmptyNote, ScreenLoading, KpiTicket, StockBadge, ChartTip, ChartLegend, ReportPeriodBar, ScreenBlocked, ToggleRow, SettingsNote, SetImageField, SettingsFetcher }
+export { StatusTag, EmptyNote, ScreenLoading, KpiTicket, StockBadge, ChartTip, ChartLegend, ReportPeriodBar, ScreenBlocked, ToggleRow, ToggleSwitch, SettingsNote, SetImageField, SettingsFetcher, SortSelect }

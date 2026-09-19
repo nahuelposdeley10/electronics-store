@@ -4,7 +4,7 @@ import { apiConfirmOrder, apiDelete, apiGet, apiPost, apiPut } from '@/lib/api'
 import { useOrderEvents } from '@/lib/useOrderEvents'
 import { IconCross, IconPlus, IconRefresh, IconSearch, IconTrash } from '@/components/Icons'
 import { PENDING_GROUP, PAYMENT_LABELS, PAYMENT_OPTIONS, QUOTE_STATUS_LABELS, fullDate, idDoc, itemsSummary, salePaymentLabel, shortDate, shortId } from '../../consts.js'
-import { EmptyNote, ScreenBlocked, ScreenLoading, StatusTag } from '../common'
+import { EmptyNote, ScreenBlocked, ScreenLoading, SortSelect, StatusTag } from '../common'
 import { useToast } from '@/context/useToast'
 
 import './styles.css'
@@ -564,7 +564,7 @@ function QuotesScreen({ canManage }) {
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
   const [formOpen, setFormOpen] = useState(false)
-  const [params, setParams] = useState({ status: 'all', q: '', page: 1 })
+  const [params, setParams] = useState({ status: 'all', q: '', sort: '', page: 1 })
   const [query, setQuery] = useState('')
 
   useEffect(() => {
@@ -572,6 +572,7 @@ function QuotesScreen({ canManage }) {
     const qs = new URLSearchParams({ page: String(params.page), limit: '10' })
     if (params.status !== 'all') qs.set('status', params.status)
     if (params.q) qs.set('q', params.q)
+    if (params.sort) qs.set('sort', params.sort)
     apiGet(`/api/admin/quotes?${qs}`)
       .then((res) => {
         if (alive) setData(res)
@@ -588,6 +589,9 @@ function QuotesScreen({ canManage }) {
     e.preventDefault()
     setParams((prev) => ({ ...prev, q: query.trim(), page: 1 }))
   }
+
+  const onSort = (value) =>
+    setParams((prev) => ({ ...prev, sort: value, page: 1 }))
 
   const updateStatus = (quote, status) => {
     apiPut(`/api/admin/quotes/${quote._id}`, { status })
@@ -641,6 +645,7 @@ function QuotesScreen({ canManage }) {
             aria-label="Buscar presupuestos"
           />
         </form>
+        <SortSelect id="quotes-sort" value={params.sort} onChange={onSort} label="Cliente" />
         <span className="dash-count mono">{data.total} presupuestos</span>
       </div>
 
