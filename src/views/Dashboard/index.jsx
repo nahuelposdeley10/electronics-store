@@ -87,6 +87,8 @@ export default function Dashboard({ onExit }) {
   const [mpWarningClosed, setMpWarningClosed] = useState(false)
   const userIsSuper = user?.role === 'superadmin'
   const needsBusiness = userIsSuper && !superTenant
+  const tenantFreeScreens = ['settings-users', 'settings-roles']
+  const businessBlock = needsBusiness && !tenantFreeScreens.includes(screen)
 
   const storeUrl = () =>
     user?.businessSlug ? `${window.location.origin}/u/${user.businessSlug}` : ''
@@ -120,7 +122,8 @@ export default function Dashboard({ onExit }) {
 
   useEffect(() => {
     let alive = true
-    if (!getSession().token || needsBusiness) return undefined
+    if (!getSession().token) return undefined
+    if (needsBusiness) return undefined
     apiGet('/api/admin/overview')
       .then((data) => {
         if (!alive) return
@@ -453,9 +456,10 @@ export default function Dashboard({ onExit }) {
       </aside>
 
       <main className="dash-main">
-        {userIsSuper && (needsBusiness || screen === 'businesses') && (
+        {userIsSuper && (screen === 'businesses' || businessBlock) && (
           <BusinessesScreen
             current={superTenant}
+            onCreateAdmin={() => changeScreen('settings-users')}
             onPick={(id) => {
               setSuperTenant(id)
               setSuperTenantState(id)
@@ -564,8 +568,8 @@ export default function Dashboard({ onExit }) {
         {gate === 'ready' && screen === 'report-profit' && <ProfitReportScreen />}
         {gate === 'ready' && screen === 'report-stock' && <StockReportScreen />}
         {gate === 'ready' && screen === 'report-customers' && <CustomersReportScreen />}
-        {gate === 'ready' && screen === 'settings-users' && <UsersScreen />}
-        {gate === 'ready' && screen === 'settings-roles' && <RolesScreen />}
+        {(gate === 'ready' || needsBusiness) && screen === 'settings-users' && <UsersScreen />}
+        {(gate === 'ready' || needsBusiness) && screen === 'settings-roles' && <RolesScreen />}
         {gate === 'ready' && screen === 'settings-payments' && <PaymentsScreen />}
         {gate === 'ready' && screen === 'settings-store' && <StoreScreen />}
         {gate === 'ready' && screen === 'settings-general' && <GeneralScreen />}

@@ -9,7 +9,7 @@ import { EmptyNote, ScreenBlocked, ScreenLoading, SortSelect, ToggleRow, ToggleS
 
 import './styles.css'
 
-function BusinessesScreen({ current, onPick }) {
+function BusinessesScreen({ current, onPick, onCreateAdmin }) {
   const [items, setItems] = useState(null)
   const [error, setError] = useState('')
 
@@ -44,6 +44,14 @@ function BusinessesScreen({ current, onPick }) {
           Como super admin ves todos los negocios. Elegí uno para operar su panel:
           ventas, inventario, caja, reportes y configuración.
         </p>
+        <button
+          type="button"
+          className="primary-btn dash-add"
+          onClick={onCreateAdmin}
+        >
+          <IconPlus />
+          Crear admin de negocio
+        </button>
       </div>
 
       {items.length === 0 && (
