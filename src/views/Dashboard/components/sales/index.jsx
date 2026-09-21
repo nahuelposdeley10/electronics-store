@@ -80,6 +80,22 @@ function SaleDetail({ order, onClose }) {
               <span className="detail-k">Cupón</span>
               <strong>{order.coupon || '—'}</strong>
             </div>
+            {order.cashReceived != null && (
+              <>
+                <div>
+                  <span className="detail-k">Recibido</span>
+                  <strong className="mono">{formatARS(order.cashReceived)}</strong>
+                </div>
+                <div>
+                  <span className="detail-k">Vuelto</span>
+                  <strong className="mono">{formatARS(order.change)}</strong>
+                </div>
+              </>
+            )}
+            <div>
+              <span className="detail-k">Vendedor</span>
+              <strong>{order.soldBy || 'No registrado'}</strong>
+            </div>
             {order.paymentId && (
               <div>
                 <span className="detail-k">ID de pago (MP)</span>

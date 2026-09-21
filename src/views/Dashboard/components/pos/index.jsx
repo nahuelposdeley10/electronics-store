@@ -26,6 +26,7 @@ function PosScreen({ canManage }) {
   const [discount, setDiscount] = useState('')
   const [customer, setCustomer] = useState('')
   const [payment, setPayment] = useState('efectivo')
+  const [cashReceived, setCashReceived] = useState('')
   const [saving, setSaving] = useState(false)
   const [lastSale, setLastSale] = useState(null)
 
@@ -112,14 +113,32 @@ function PosScreen({ canManage }) {
   const discountNum = Math.min(Math.max(Number(discount) || 0, 0), subtotal)
   const total = subtotal - discountNum
 
+  const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100
+
+  const posPayment = payment === 'efectivo' || payment === 'tarjeta' || payment === 'transferencia' ? payment : 'efectivo'
+  const isCashSale = posPayment === 'efectivo'
+
+  const cashReceivedNum = isCashSale ? round2(Number(cashReceived) || 0) : null
+  const validReceived = isCashSale && Number.isFinite(cashReceivedNum) && round2(cashReceivedNum) >= total
+  const change = isCashSale && validReceived ? round2(cashReceivedNum - total) : 0
+
+  const canPay =
+    lines.length > 0 &&
+    (isCashSale ? validReceived && !saving : !saving)
+
   const checkout = () => {
     if (lines.length === 0 || saving) return
+    if (isCashSale && !validReceived) {
+      showToast('El efectivo recibido no cubre el total', 'error')
+      return
+    }
     setSaving(true)
     apiPost('/api/admin/pos', {
       items: lines.map((l) => ({ id: l.product.id, quantity: l.quantity })),
       discount: discountNum,
       customer: customer.trim() ? { name: customer.trim() } : {},
-      payment,
+      payment: posPayment,
+      ...(isCashSale ? { cashReceived: cashReceivedNum } : {}),
     })
       .then((sale) => {
         setProducts((list) =>
@@ -132,6 +151,7 @@ function PosScreen({ canManage }) {
         setLines([])
         setDiscount('')
         setCustomer('')
+        setCashReceived('')
       })
       .catch((err) => showToast(err.message, 'error'))
       .finally(() => setSaving(false))
@@ -301,10 +321,30 @@ function PosScreen({ canManage }) {
                 <option value="transferencia">Transferencia</option>
               </select>
             </label>
+            {payment === 'efectivo' && (
+              <>
+                <label className="pf-field">
+                  <span>Efectivo recibido</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={cashReceived}
+                    onChange={(e) => setCashReceived(e.target.value)}
+                    aria-label="Efectivo recibido"
+                    placeholder="$ 0"
+                  />
+                </label>
+                <div className="vuelto-row">
+                  <span>Vuelto</span>
+                  <strong className={`mono${validReceived ? '' : ' muted'}`}>{validReceived ? formatARS(change) : '—'}</strong>
+                </div>
+              </>
+            )}
             <button
               type="button"
               className="primary-btn pay-btn"
-              disabled={!canManage || lines.length === 0 || saving}
+              disabled={!canPay}
               onClick={checkout}
             >
               {saving ? 'Cobrando…' : `Cobrar ${formatARS(total)}`}

@@ -199,6 +199,9 @@ router.get('/orders', async (req, res) => {
         createdAt: o.createdAt,
         source: o.source,
         payment: o.payment,
+        cashReceived: o.cashReceived,
+        change: o.change,
+        soldBy: o.soldBy,
         returnedAt: o.returnedAt,
         payer: {
           email: o.payerEmail,
@@ -497,6 +500,23 @@ router.post('/pos', requirePermission('pos.manage'), async (req, res) => {
     const parsedDiscount = Math.max(0, Math.min(Number(discount) || 0, subtotal))
     const total = roundMoney(subtotal - roundMoney(parsedDiscount))
 
+    const posPayment = POS_PAYMENTS.has(payment) ? payment : 'efectivo'
+    const isCash = posPayment === 'efectivo'
+
+    let receivedCash = null
+    let change = null
+
+    if (isCash) {
+      const raw = Number(req.body?.cashReceived)
+      receivedCash = Number.isFinite(raw) ? roundMoney(raw) : NaN
+      if (!Number.isFinite(receivedCash) || receivedCash < total) {
+        return res.status(400).json({
+          error: `El efectivo recibido (${receivedCash}) no cubre el total (${total})`,
+        })
+      }
+      change = roundMoney(receivedCash - total)
+    }
+
     const order = await Order.create({
       adminId: tenant,
       items: lines.map((line) => ({
@@ -507,13 +527,16 @@ router.post('/pos', requirePermission('pos.manage'), async (req, res) => {
       })),
       status: 'approved',
       source: 'pos',
-      payment: POS_PAYMENTS.has(payment) ? payment : 'efectivo',
-      subtotal,
-      discount: parsedDiscount,
-      shippingCost: 0,
-      total,
-      payerName: customer?.name || null,
-    })
+    payment: posPayment,
+    subtotal,
+    discount: parsedDiscount,
+    shippingCost: 0,
+    total,
+    payerName: customer?.name || null,
+    cashReceived: isCash ? receivedCash : null,
+    change: isCash ? change : null,
+    soldBy: req.user?.email || req.user?.name || null,
+  })
 
     for (const line of lines) {
       await changeStock({
@@ -553,6 +576,9 @@ router.post('/pos', requirePermission('pos.manage'), async (req, res) => {
       source: order.source,
       payment: order.payment,
       total: order.total,
+      cashReceived: order.cashReceived,
+      change: order.change,
+      soldBy: order.soldBy,
       createdAt: order.createdAt,
     })
   } catch (error) {
