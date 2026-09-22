@@ -143,6 +143,9 @@ router.get('/orders', async (req, res) => {
     }
 
     const contextFilter = {}
+    if (req.query.operator) {
+      contextFilter.soldBy = req.query.operator
+    }
     if (req.query.payment && req.query.payment !== 'all') {
       if (req.query.payment === 'web') contextFilter.source = 'web'
       else contextFilter.payment = req.query.payment

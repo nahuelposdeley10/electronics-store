@@ -188,6 +188,9 @@ router.get('/movements', async (req, res) => {
     if (req.query.kind === 'venta' || req.query.kind === 'ingreso' || req.query.kind === 'egreso' || req.query.kind === 'devolucion') {
       filter.kind = req.query.kind
     }
+    if (req.query.operator) {
+      filter.by = req.query.operator
+    }
     if (ownedShift) {
       filter.shiftId = ownedShift._id
     } else if (active) {
@@ -273,8 +276,12 @@ router.get('/counts', async (req, res) => {
     }
     const id = shiftId || active._id
     const status = active ? active.status : 'closed'
+    const countFilter = { shiftId: id, adminId: tenant }
+    if (req.query.operator) {
+      countFilter.by = req.query.operator
+    }
     const [items, shift] = await Promise.all([
-      CashCount.find({ shiftId: id, adminId: tenant }).sort({ createdAt: -1 }).limit(100).lean(),
+      CashCount.find(countFilter).sort({ createdAt: -1 }).limit(100).lean(),
       shiftId ? ownedShift : active,
     ])
     return res.json({ shift: { ...shift, status }, items })

@@ -103,6 +103,10 @@ router.get('/movements', async (req, res) => {
       filter.type = req.query.type
     }
 
+    if (req.query.operator) {
+      filter.createdBy = req.query.operator
+    }
+
     const term = String(req.query.q || '').trim()
     if (term) {
       filter.productName = new RegExp(escapeRegex(term), 'i')
@@ -307,6 +311,9 @@ router.get('/purchases', async (req, res) => {
     const term = String(req.query.q || '').trim()
     if (term) {
       filter.supplier = new RegExp(escapeRegex(term), 'i')
+    }
+    if (req.query.operator) {
+      filter.createdBy = req.query.operator
     }
 
     const [total, purchases] = await Promise.all([
