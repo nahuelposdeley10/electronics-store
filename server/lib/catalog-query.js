@@ -1,6 +1,8 @@
 export const DEFAULT_CATALOG_LIMIT = 12
 export const MAX_CATALOG_LIMIT = 100
 
+export const META_NONE = ':none:'
+
 export function escapeRegex(value) {
   return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
@@ -28,6 +30,20 @@ export function parseMulti(value) {
     .map((s) => s.trim())
     .filter(Boolean)
   return list.length ? [...new Set(list)] : null
+}
+
+export function parseMetaFilter(value) {
+  const list = parseMulti(value)
+  if (!list) return null
+  return list.map((v) => (v === META_NONE ? '' : v))
+}
+
+export function buildPublicCatalogFilter(q) {
+  const base = buildProductSearchFilter(q)
+  return {
+    ...base,
+    $and: [{ brand: { $ne: '' } }, { category: { $ne: '' } }],
+  }
 }
 
 export function buildCatalogSort(value) {

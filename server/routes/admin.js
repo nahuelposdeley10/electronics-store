@@ -5,7 +5,7 @@ import { Product } from '../models/Product.js'
 import { Quote } from '../models/Quote.js'
 import { requireAuth, requirePermission } from '../middleware/auth.js'
 import { uploadToCloudinary } from '../services/cloudinary.js'
-import { parsePagination, buildProductSearchFilter, escapeRegex, parseMulti, buildAdminSort } from '../lib/catalog-query.js'
+import { parsePagination, buildProductSearchFilter, escapeRegex, parseMetaFilter, buildAdminSort } from '../lib/catalog-query.js'
 import { getValidCategoryKeys } from '../lib/catalog-meta.js'
 import { changeStock } from '../lib/stock.js'
 import { currentShift } from '../lib/cash.js'
@@ -231,10 +231,10 @@ router.get('/products', async (req, res) => {
     if (!scope) return
     const filter = { ...buildProductSearchFilter(req.query.q), ...scope }
 
-    const categories = parseMulti(req.query.category)
+    const categories = parseMetaFilter(req.query.category)
     if (categories) filter.category = { $in: categories }
 
-    const brands = parseMulti(req.query.brand)
+    const brands = parseMetaFilter(req.query.brand)
     if (brands) filter.brand = { $in: brands }
 
     const [approved, total, dbProducts] = await Promise.all([

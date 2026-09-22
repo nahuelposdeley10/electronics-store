@@ -15,6 +15,7 @@ import {
   ensureCatalogMeta,
   getValidCategoryKeys,
   slugify,
+  deleteCatalogMeta,
 } from '../lib/catalog-meta.js'
 import { requireTenantIdOf } from '../lib/tenant.js'
 import { roundMoney } from '../lib/money.js'
@@ -156,14 +157,21 @@ router.delete('/categories/:key', requirePermission('catalog.manage'), async (re
     return res.status(404).json({ error: 'Categoría no encontrada' })
   }
   try {
-    const used = await Product.countDocuments({ category: category.key, adminId: tenant })
-    if (used > 0) {
+    const reassign = req.query.reassign === '1' || req.query.reassign === 'true'
+    const result = await deleteCatalogMeta({
+      Model: Category,
+      doc: category,
+      tenant,
+      productField: 'category',
+      reassign,
+    })
+    if (result.blocked) {
       return res.status(409).json({
-        error: `No se puede eliminar: ${used} producto(s) la usan`,
+        error: `No se puede eliminar: ${result.used} producto(s) la usan`,
+        used: result.used,
       })
     }
-    await category.deleteOne()
-    return res.json({ ok: true, key: category.key })
+    return res.json({ ok: true, key: category.key, reassigned: result.reassigned })
   } catch (error) {
     console.error('Categories delete error:', error)
     return res.status(500).json({ error: 'No se pudo eliminar la categoría' })
@@ -256,14 +264,21 @@ router.delete('/brands/:name', requirePermission('catalog.manage'), async (req, 
     return res.status(404).json({ error: 'Marca no encontrada' })
   }
   try {
-    const used = await Product.countDocuments({ brand: brand.name, adminId: tenant })
-    if (used > 0) {
+    const reassign = req.query.reassign === '1' || req.query.reassign === 'true'
+    const result = await deleteCatalogMeta({
+      Model: Brand,
+      doc: brand,
+      tenant,
+      productField: 'brand',
+      reassign,
+    })
+    if (result.blocked) {
       return res.status(409).json({
-        error: `No se puede eliminar: ${used} producto(s) la usan`,
+        error: `No se puede eliminar: ${result.used} producto(s) la usan`,
+        used: result.used,
       })
     }
-    await brand.deleteOne()
-    return res.json({ ok: true, name: brand.name })
+    return res.json({ ok: true, name: brand.name, reassigned: result.reassigned })
   } catch (error) {
     console.error('Brands delete error:', error)
     return res.status(500).json({ error: 'No se pudo eliminar la marca' })
@@ -569,6 +584,7 @@ router.get('/offers', requirePermission('offers.manage'), async (req, res) => {
         onSale: !!p.onSale,
         image: p.image,
         stock: p.stock,
+        minStock: p.minStock || 0,
       })),
       page,
       limit,

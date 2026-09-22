@@ -7,7 +7,7 @@ import {
   parsePagination,
   buildProductSearchFilter,
   escapeRegex,
-  parseMulti,
+  parseMetaFilter,
   buildAdminSort,
 } from '../lib/catalog-query.js'
 import { changeStock } from '../lib/stock.js'
@@ -48,10 +48,10 @@ router.get('/stock', async (req, res) => {
     const { page, limit } = parsePagination(req.query)
     const filter = { ...buildProductSearchFilter(req.query.q), adminId: tenant }
 
-    const categories = parseMulti(req.query.category)
+    const categories = parseMetaFilter(req.query.category)
     if (categories) filter.category = { $in: categories }
 
-    const brands = parseMulti(req.query.brand)
+    const brands = parseMetaFilter(req.query.brand)
     if (brands) filter.brand = { $in: brands }
 
     if (req.query.low === '1' || req.query.low === 'true') {

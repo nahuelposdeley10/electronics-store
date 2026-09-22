@@ -6,9 +6,9 @@ import { Coupon } from '../models/Coupon.js'
 import { ensureCatalogMeta } from '../lib/catalog-meta.js'
 import {
   parsePagination,
-  buildProductSearchFilter,
   parseMulti,
   buildCatalogSort,
+  buildPublicCatalogFilter,
 } from '../lib/catalog-query.js'
 import { publicTenantId } from '../lib/tenant.js'
 
@@ -37,13 +37,13 @@ router.get('/products', async (req, res) => {
   try {
     const tenant = await publicTenantId(req)
     const { page, limit } = parsePagination(req.query)
-    const filter = { ...buildProductSearchFilter(req.query.q), adminId: tenant }
+    const filter = { ...buildPublicCatalogFilter(req.query.q), adminId: tenant }
 
     const categories = parseMulti(req.query.category)
-    if (categories) filter.category = { $in: categories }
+    if (categories) filter.$and.push({ category: { $in: categories } })
 
     const brands = parseMulti(req.query.brand)
-    if (brands) filter.brand = { $in: brands }
+    if (brands) filter.$and.push({ brand: { $in: brands } })
 
     const sort = buildCatalogSort(req.query.sort)
 
@@ -78,6 +78,9 @@ router.get('/products/:id', async (req, res) => {
     const tenant = await publicTenantId(req)
     const product = await Product.findOne({ id, adminId: tenant }).lean()
     if (!product) {
+      return res.status(404).json({ error: 'Producto no encontrado' })
+    }
+    if (!product.brand || !product.category) {
       return res.status(404).json({ error: 'Producto no encontrado' })
     }
     return res.json(toPublicProduct(product))

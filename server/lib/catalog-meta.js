@@ -69,3 +69,17 @@ export async function ensureCatalogMeta({ tenant } = {}) {
     if (brandDocs.length) await Brand.insertMany(brandDocs)
   }
 }
+
+export async function deleteCatalogMeta({ Model, doc, tenant, productField, reassign }) {
+  const metaField = productField === 'category' ? 'key' : 'name'
+  const productMatch = { adminId: tenant, [productField]: doc[metaField] }
+  const used = await Product.countDocuments(productMatch)
+  if (used > 0 && !reassign) {
+    return { blocked: true, used }
+  }
+  if (used > 0) {
+    await Product.updateMany(productMatch, { $set: { [productField]: '' } })
+  }
+  await Model.deleteOne({ _id: doc._id, adminId: tenant })
+  return { ok: true, reassigned: used }
+}
