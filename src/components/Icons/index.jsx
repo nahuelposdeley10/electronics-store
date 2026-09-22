@@ -290,6 +290,24 @@ export function IconRefresh(props) {
   )
 }
 
+export function IconEye(props) {
+  return (
+    <svg {...S} {...props}>
+      <path d="M2.5 12s3.6-6.5 9.5-6.5 9.5 6.5 9.5 6.5-3.6 6.5-9.5 6.5S2.5 12 2.5 12Z" />
+      <circle cx="12" cy="12" r="2.6" />
+    </svg>
+  )
+}
+
+export function IconReturn(props) {
+  return (
+    <svg {...S} {...props}>
+      <path d="M21 12H6.5" />
+      <path d="m11 7-4.5 5 4.5 5" />
+    </svg>
+  )
+}
+
 export function IconInventory(props) {
   return (
     <svg {...S} {...props}>

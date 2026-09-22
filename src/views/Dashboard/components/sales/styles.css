@@ -127,6 +127,38 @@
   border-color: var(--gal-facade);
   color: var(--gal-ink);
 }
+[data-tip] {
+  position: relative;
+}
+[data-tip]:hover::after {
+  content: attr(data-tip);
+  position: absolute;
+  right: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%);
+  background: #23252b;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: var(--font-base);
+  white-space: nowrap;
+  padding: 5px 8px;
+  border-radius: 4px;
+  pointer-events: none;
+  z-index: 50;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+}
+[data-tip]:hover::before {
+  content: '';
+  position: absolute;
+  right: calc(100% + 3px);
+  top: 50%;
+  transform: translateY(-50%);
+  border: 5px solid transparent;
+  border-left-color: #23252b;
+  pointer-events: none;
+  z-index: 50;
+}
 .sale-detail-panel {
   max-width: 480px;
 }
