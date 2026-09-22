@@ -39,7 +39,8 @@
     "react-is": "^19.3.0",
     "recharts": "^3.10.1",
     "socket.io": "^4.8.3",
-    "socket.io-client": "^4.8.3"
+    "socket.io-client": "^4.8.3",
+    "yarn": "^1.22.22"
   },
   "devDependencies": {
     "@babel/core": "^7.29.7",
