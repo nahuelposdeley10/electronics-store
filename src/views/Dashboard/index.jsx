@@ -54,6 +54,31 @@ import { PaymentsScreen, StoreScreen, GeneralScreen } from './components/setting
 
 import './styles.css'
 
+const SCREEN_PERMS = {
+  products: 'catalog.manage',
+  'product-categories': 'catalog.manage',
+  'product-brands': 'catalog.manage',
+  'product-import': 'catalog.manage',
+  'promo-coupons': 'coupons.manage',
+  'promo-offers': 'offers.manage',
+  'sales-pos': 'pos.manage',
+  'sales-returns': 'sales.return',
+  'sales-quotes': 'quotes.delete',
+  'stock-adjustments': 'inventory.write',
+  'stock-purchases': 'inventory.write',
+  'stock-min': 'inventory.write',
+  'stock-physical': 'inventory.write',
+  'cash-current': 'cash.manage',
+  'cash-movements': 'cash.manage',
+  'cash-openclose': 'cash.manage',
+  'cash-counts': 'cash.manage',
+  'settings-users': 'users.manage',
+  'settings-roles': 'settings.manage',
+  'settings-payments': 'settings.manage',
+  'settings-store': 'settings.manage',
+  'settings-general': 'settings.manage',
+}
+
 export default function Dashboard({ onExit }) {
   const [screen, setScreen] = useState(
     () => sessionStorage.getItem('ts-admin-screen') || 'overview',
@@ -88,7 +113,10 @@ export default function Dashboard({ onExit }) {
   const userIsSuper = user?.role === 'superadmin'
   const needsBusiness = userIsSuper && !superTenant
   const tenantFreeScreens = ['settings-users', 'settings-roles']
-  const businessBlock = needsBusiness && !tenantFreeScreens.includes(screen)
+  const canView = (id) =>
+    userIsSuper || !SCREEN_PERMS[id] || (perms || []).includes(SCREEN_PERMS[id])
+  const activeScreen = canView(screen) ? screen : 'overview'
+  const businessBlock = needsBusiness && !tenantFreeScreens.includes(activeScreen)
 
   const storeUrl = () =>
     user?.businessSlug ? `${window.location.origin}/u/${user.businessSlug}` : ''
@@ -169,6 +197,7 @@ export default function Dashboard({ onExit }) {
   }, [attempt])
 
   const changeScreen = (id) => {
+    if (!canView(id)) return
     setScreen(id)
     sessionStorage.setItem('ts-admin-screen', id)
   }
@@ -222,7 +251,7 @@ export default function Dashboard({ onExit }) {
     () => {
       setAttempt((n) => n + 1)
     },
-    gate === 'ready' && !needsBusiness && screen === 'overview',
+    gate === 'ready' && !needsBusiness && activeScreen === 'overview',
   )
 
   const NAV = [
@@ -249,14 +278,10 @@ export default function Dashboard({ onExit }) {
       icon: IconBox,
       prefix: 'product-',
       children: [
-        { id: 'products', label: 'Productos' },
-        ...(can('catalog.manage')
-          ? [
-              { id: 'product-categories', label: 'Categorías' },
-              { id: 'product-brands', label: 'Marcas' },
-              { id: 'product-import', label: 'Importar productos' },
-            ]
-          : []),
+        { id: 'products', label: 'Productos', require: 'catalog.manage' },
+        { id: 'product-categories', label: 'Categorías', require: 'catalog.manage' },
+        { id: 'product-brands', label: 'Marcas', require: 'catalog.manage' },
+        { id: 'product-import', label: 'Importar productos', require: 'catalog.manage' },
       ],
     },
     {
@@ -265,12 +290,8 @@ export default function Dashboard({ onExit }) {
       icon: IconTicket,
       prefix: 'promo-',
       children: [
-        ...(can('coupons.manage')
-          ? [{ id: 'promo-coupons', label: 'Cupones' }]
-          : []),
-        ...(can('offers.manage')
-          ? [{ id: 'promo-offers', label: 'Ofertas' }]
-          : []),
+        { id: 'promo-coupons', label: 'Cupones', require: 'coupons.manage' },
+        { id: 'promo-offers', label: 'Ofertas', require: 'offers.manage' },
       ],
     },
     {
@@ -279,10 +300,10 @@ export default function Dashboard({ onExit }) {
       icon: IconCard,
       prefix: 'sales-',
       children: [
-        { id: 'sales-pos', label: 'Nueva venta / POS' },
+        { id: 'sales-pos', label: 'Nueva venta / POS', require: 'pos.manage' },
         { id: 'sales-history', label: 'Historial de ventas' },
-        { id: 'sales-returns', label: 'Devoluciones' },
-        { id: 'sales-quotes', label: 'Presupuestos' },
+        { id: 'sales-returns', label: 'Devoluciones', require: 'sales.return' },
+        { id: 'sales-quotes', label: 'Presupuestos', require: 'quotes.delete' },
       ],
     },
     {
@@ -293,10 +314,10 @@ export default function Dashboard({ onExit }) {
       children: [
         { id: 'stock-overview', label: 'Stock' },
         { id: 'stock-movements', label: 'Movimientos' },
-        { id: 'stock-adjustments', label: 'Ajustes' },
-        { id: 'stock-purchases', label: 'Compras' },
-        { id: 'stock-min', label: 'Stock mínimo' },
-        { id: 'stock-physical', label: 'Inventario físico' },
+        { id: 'stock-adjustments', label: 'Ajustes', require: 'inventory.write' },
+        { id: 'stock-purchases', label: 'Compras', require: 'inventory.write' },
+        { id: 'stock-min', label: 'Stock mínimo', require: 'inventory.write' },
+        { id: 'stock-physical', label: 'Inventario físico', require: 'inventory.write' },
       ],
     },
     {
@@ -304,14 +325,12 @@ export default function Dashboard({ onExit }) {
       label: 'Caja',
       icon: IconCash,
       prefix: 'cash-',
-      children: can('cash.manage')
-        ? [
-            { id: 'cash-current', label: 'Caja actual' },
-            { id: 'cash-movements', label: 'Movimientos' },
-            { id: 'cash-openclose', label: 'Apertura / cierre' },
-            { id: 'cash-counts', label: 'Arqueos' },
-          ]
-        : [],
+      children: [
+        { id: 'cash-current', label: 'Caja actual', require: 'cash.manage' },
+        { id: 'cash-movements', label: 'Movimientos', require: 'cash.manage' },
+        { id: 'cash-openclose', label: 'Apertura / cierre', require: 'cash.manage' },
+        { id: 'cash-counts', label: 'Arqueos', require: 'cash.manage' },
+      ],
     },
     {
       id: 'reports',
@@ -332,20 +351,19 @@ export default function Dashboard({ onExit }) {
       icon: IconWrench,
       prefix: 'settings-',
       children: [
-        ...(can('users.manage')
-          ? [{ id: 'settings-users', label: 'Usuarios' }]
-          : []),
-        ...(can('settings.manage')
-          ? [
-              { id: 'settings-roles', label: 'Roles y permisos' },
-              { id: 'settings-payments', label: 'Métodos de pago' },
-              { id: 'settings-store', label: 'Datos del negocio' },
-              { id: 'settings-general', label: 'Configuración general' },
-            ]
-          : []),
+        { id: 'settings-users', label: 'Usuarios', require: 'users.manage' },
+        { id: 'settings-roles', label: 'Roles y permisos', require: 'settings.manage' },
+        { id: 'settings-payments', label: 'Métodos de pago', require: 'settings.manage' },
+        { id: 'settings-store', label: 'Datos del negocio', require: 'settings.manage' },
+        { id: 'settings-general', label: 'Configuración general', require: 'settings.manage' },
       ],
     },
   ].filter((item) => !item.children || item.children.length > 0)
+
+  const visibleNav = NAV.map((item) => ({
+    ...item,
+    children: item.children ? item.children.filter((child) => canView(child.id)) : undefined,
+  })).filter((item) => !item.children || item.children.length > 0)
 
   if (gate === 'loading' && !needsBusiness) return <DashboardLoading />
 
@@ -363,10 +381,10 @@ export default function Dashboard({ onExit }) {
         </div>
 
         <nav className="dash-nav" aria-label="Panel de administración">
-          {NAV.map((item) => {
+          {visibleNav.map((item) => {
             const active = item.children
-              ? screen === item.id || screen.startsWith(item.prefix || '')
-              : screen === item.id
+              ? activeScreen === item.id || activeScreen.startsWith(item.prefix || '')
+              : activeScreen === item.id
             return (
               <div key={item.id} className="dash-nav-group">
                 <button
@@ -383,7 +401,7 @@ export default function Dashboard({ onExit }) {
                       <button
                         key={child.id}
                         type="button"
-                        className={`dash-nav-sub-item${screen === child.id ? ' active' : ''}`}
+                        className={`dash-nav-sub-item${activeScreen === child.id ? ' active' : ''}`}
                         onClick={() => changeScreen(child.id)}
                       >
                         {child.label}
@@ -456,7 +474,7 @@ export default function Dashboard({ onExit }) {
       </aside>
 
       <main className="dash-main">
-        {userIsSuper && (screen === 'businesses' || businessBlock) && (
+        {userIsSuper && (activeScreen === 'businesses' || businessBlock) && (
           <BusinessesScreen
             current={superTenant}
             onCreateAdmin={() => changeScreen('settings-users')}
@@ -492,13 +510,13 @@ export default function Dashboard({ onExit }) {
           </div>
         )}
 
-        {gate === 'ready' && !needsBusiness && overview && screen === 'overview' && (
+        {gate === 'ready' && !needsBusiness && overview && activeScreen === 'overview' && (
           <OverviewScreen data={overview} onView={changeScreen} />
         )}
-        {gate === 'ready' && screen === 'products' && (
+        {gate === 'ready' && activeScreen === 'products' && (
           <ProductsScreen canManage={can('catalog.manage')} />
         )}
-        {gate === 'ready' && screen === 'product-categories' && (
+        {gate === 'ready' && activeScreen === 'product-categories' && (
           <MetaScreen
             kind="categories"
             title="Categorías"
@@ -507,7 +525,7 @@ export default function Dashboard({ onExit }) {
             canManage={can('catalog.manage')}
           />
         )}
-        {gate === 'ready' && screen === 'product-brands' && (
+        {gate === 'ready' && activeScreen === 'product-brands' && (
           <MetaScreen
             kind="brands"
             title="Marcas"
@@ -516,63 +534,63 @@ export default function Dashboard({ onExit }) {
             canManage={can('catalog.manage')}
           />
         )}
-        {gate === 'ready' && screen === 'product-import' && (
+        {gate === 'ready' && activeScreen === 'product-import' && (
           <ImportScreen canManage={can('catalog.manage')} />
         )}
-        {gate === 'ready' && screen === 'promo-coupons' && (
+        {gate === 'ready' && activeScreen === 'promo-coupons' && (
           <CouponsScreen canManage={can('coupons.manage')} />
         )}
-        {gate === 'ready' && screen === 'promo-offers' && (
+        {gate === 'ready' && activeScreen === 'promo-offers' && (
           <OffersScreen canManage={can('offers.manage')} />
         )}
-        {gate === 'ready' && screen === 'sales-pos' && (
+        {gate === 'ready' && activeScreen === 'sales-pos' && (
           <PosScreen canManage={can('pos.manage')} />
         )}
-        {gate === 'ready' && screen === 'sales-history' && <SalesScreen />}
-        {gate === 'ready' && screen === 'sales-returns' && (
+        {gate === 'ready' && activeScreen === 'sales-history' && <SalesScreen />}
+        {gate === 'ready' && activeScreen === 'sales-returns' && (
           <ReturnsScreen canManage={can('sales.return')} />
         )}
-        {gate === 'ready' && screen === 'sales-quotes' && (
+        {gate === 'ready' && activeScreen === 'sales-quotes' && (
           <QuotesScreen canManage={can('quotes.delete')} />
         )}
-        {gate === 'ready' && screen === 'stock-overview' && (
+        {gate === 'ready' && activeScreen === 'stock-overview' && (
           <StockScreen canManage={can('inventory.write')} />
         )}
-        {gate === 'ready' && screen === 'stock-movements' && <MovementsScreen />}
-        {gate === 'ready' && screen === 'stock-adjustments' && (
+        {gate === 'ready' && activeScreen === 'stock-movements' && <MovementsScreen />}
+        {gate === 'ready' && activeScreen === 'stock-adjustments' && (
           <AdjustmentsScreen canManage={can('inventory.write')} />
         )}
-        {gate === 'ready' && screen === 'stock-purchases' && (
+        {gate === 'ready' && activeScreen === 'stock-purchases' && (
           <PurchasesScreen canManage={can('inventory.write')} />
         )}
-        {gate === 'ready' && screen === 'stock-min' && (
+        {gate === 'ready' && activeScreen === 'stock-min' && (
           <MinStockScreen canManage={can('inventory.write')} />
         )}
-        {gate === 'ready' && screen === 'stock-physical' && (
+        {gate === 'ready' && activeScreen === 'stock-physical' && (
           <PhysicalInventoryScreen canManage={can('inventory.write')} />
         )}
-        {gate === 'ready' && screen === 'cash-current' && (
+        {gate === 'ready' && activeScreen === 'cash-current' && (
           <CashCurrentScreen canManage={can('cash.manage')} onView={changeScreen} />
         )}
-        {gate === 'ready' && screen === 'cash-movements' && (
+        {gate === 'ready' && activeScreen === 'cash-movements' && (
           <CashMovementsScreen canManage={can('cash.manage')} />
         )}
-        {gate === 'ready' && screen === 'cash-openclose' && (
+        {gate === 'ready' && activeScreen === 'cash-openclose' && (
           <CashShiftScreen canManage={can('cash.manage')} />
         )}
-        {gate === 'ready' && screen === 'cash-counts' && (
+        {gate === 'ready' && activeScreen === 'cash-counts' && (
           <CashCountScreen canManage={can('cash.manage')} />
         )}
-        {gate === 'ready' && screen === 'report-sales' && <SalesReportScreen />}
-        {gate === 'ready' && screen === 'report-products' && <ProductsReportScreen />}
-        {gate === 'ready' && screen === 'report-profit' && <ProfitReportScreen />}
-        {gate === 'ready' && screen === 'report-stock' && <StockReportScreen />}
-        {gate === 'ready' && screen === 'report-customers' && <CustomersReportScreen />}
-        {(gate === 'ready' || needsBusiness) && screen === 'settings-users' && <UsersScreen />}
-        {(gate === 'ready' || needsBusiness) && screen === 'settings-roles' && <RolesScreen />}
-        {gate === 'ready' && screen === 'settings-payments' && <PaymentsScreen />}
-        {gate === 'ready' && screen === 'settings-store' && <StoreScreen />}
-        {gate === 'ready' && screen === 'settings-general' && <GeneralScreen />}
+        {gate === 'ready' && activeScreen === 'report-sales' && <SalesReportScreen />}
+        {gate === 'ready' && activeScreen === 'report-products' && <ProductsReportScreen />}
+        {gate === 'ready' && activeScreen === 'report-profit' && <ProfitReportScreen />}
+        {gate === 'ready' && activeScreen === 'report-stock' && <StockReportScreen />}
+        {gate === 'ready' && activeScreen === 'report-customers' && <CustomersReportScreen />}
+        {(gate === 'ready' || needsBusiness) && activeScreen === 'settings-users' && <UsersScreen />}
+        {(gate === 'ready' || needsBusiness) && activeScreen === 'settings-roles' && <RolesScreen />}
+        {gate === 'ready' && activeScreen === 'settings-payments' && <PaymentsScreen />}
+        {gate === 'ready' && activeScreen === 'settings-store' && <StoreScreen />}
+        {gate === 'ready' && activeScreen === 'settings-general' && <GeneralScreen />}
       </main>
 
       {gate === 'ready' && !needsBusiness && mpNeedSetup && !mpWarningClosed && (
