@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react'
 import { formatARS } from '@/data/format'
 import { apiConfirmOrder, apiDelete, apiGet, apiPost, apiPut } from '@/lib/api'
 import { useOrderEvents } from '@/lib/useOrderEvents'
-import { IconCross, IconPlus, IconRefresh, IconSearch, IconTrash } from '@/components/Icons'
+import { IconCross, IconEye, IconPlus, IconRefresh, IconReturn, IconSearch, IconTrash } from '@/components/Icons'
 import { PENDING_GROUP, PAYMENT_LABELS, PAYMENT_OPTIONS, QUOTE_STATUS_LABELS, fullDate, idDoc, itemsSummary, salePaymentLabel, shortDate, shortId } from '../../consts.js'
-import { EmptyNote, ScreenBlocked, ScreenLoading, SortSelect, StatusTag } from '../common'
+import { EmptyNote, OperatorSelect, ScreenBlocked, ScreenLoading, SortSelect, StatusTag } from '../common'
 import { useToast } from '@/context/useToast'
 import { useConfirm } from '@/context/useConfirm'
 
@@ -148,7 +148,7 @@ function SalesScreen() {
   const { showToast } = useToast()
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
-  const [params, setParams] = useState({ group: 'all', payment: 'all', from: '', to: '', q: '', page: 1 })
+  const [params, setParams] = useState({ group: 'all', payment: 'all', operator: '', from: '', to: '', q: '', page: 1 })
   const [query, setQuery] = useState('')
   const [rechecking, setRechecking] = useState({})
   const [detail, setDetail] = useState(null)
@@ -158,6 +158,7 @@ function SalesScreen() {
     const qs = new URLSearchParams({ page: String(params.page), limit: '11' })
     if (params.group !== 'all') qs.set('group', params.group)
     if (params.payment !== 'all') qs.set('payment', params.payment)
+    if (params.operator) qs.set('operator', params.operator)
     if (params.from) qs.set('from', params.from)
     if (params.to) qs.set('to', params.to)
     if (params.q) qs.set('q', params.q)
@@ -290,6 +291,11 @@ function SalesScreen() {
               ))}
             </select>
           </div>
+          <OperatorSelect
+            id="sales-operator"
+            value={params.operator}
+            onChange={(value) => setParams((prev) => ({ ...prev, operator: value, page: 1 }))}
+          />
         </div>
         <span className="dash-count mono">{data.total} ventas</span>
       </div>
@@ -314,6 +320,7 @@ function SalesScreen() {
               <th>Pedido</th>
               <th>Fecha</th>
               <th>Cliente</th>
+              <th>Vendedor</th>
               <th>Detalle</th>
               <th>Pago</th>
               <th>Cupón</th>
@@ -344,6 +351,7 @@ function SalesScreen() {
                     <span className="t-dim">—</span>
                   )}
                 </td>
+                <td className="t-dim">{order.soldBy || '—'}</td>
                 <td className="t-detail">{itemsSummary(order.items)}</td>
                 <td>
                   <span className={`payment-tag${order.source === 'web' && !order.payment ? ' web' : ''}`}>
@@ -369,8 +377,8 @@ function SalesScreen() {
                   )}
                 </td>
                 <td>
-                  <button type="button" className="view-btn" onClick={() => setDetail(order)}>
-                    Ver
+                  <button type="button" className="row-btn" data-tip="Ver detalle" aria-label="Ver detalle" onClick={() => setDetail(order)}>
+                    <IconEye />
                   </button>
                 </td>
               </tr>
@@ -415,7 +423,7 @@ function ReturnsScreen({ canManage }) {
   const { confirm } = useConfirm()
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
-  const [params, setParams] = useState({ filter: 'all', page: 1 })
+  const [params, setParams] = useState({ filter: 'all', operator: '', page: 1 })
   const [processing, setProcessing] = useState({})
   const [detail, setDetail] = useState(null)
   const [version, setVersion] = useState(0)
@@ -424,6 +432,7 @@ function ReturnsScreen({ canManage }) {
     let alive = true
     const qs = new URLSearchParams({ page: String(params.page), limit: '10' })
     if (params.filter !== 'all') qs.set('status', params.filter)
+    if (params.operator) qs.set('operator', params.operator)
     apiGet(`/api/admin/orders?${qs}`)
       .then((res) => {
         if (!alive) return
@@ -489,6 +498,14 @@ function ReturnsScreen({ canManage }) {
         </div>
       </header>
 
+      <div className="dash-toolbar">
+        <OperatorSelect
+          id="returns-operator"
+          value={params.operator}
+          onChange={(value) => setParams((prev) => ({ ...prev, operator: value, page: 1 }))}
+        />
+      </div>
+
       <div className="sale-chips" role="group" aria-label="Filtrar devoluciones">
         {chips.map((chip) => (
           <button
@@ -509,6 +526,7 @@ function ReturnsScreen({ canManage }) {
               <th>Venta</th>
               <th>Fecha</th>
               <th>Cliente</th>
+              <th>Vendedor</th>
               <th>Detalle</th>
               <th>Total</th>
               <th>Estado</th>
@@ -530,6 +548,7 @@ function ReturnsScreen({ canManage }) {
                     <span className="t-dim">—</span>
                   )}
                 </td>
+                <td className="t-dim">{order.soldBy || '—'}</td>
                 <td className="t-detail">{itemsSummary(order.items)}</td>
                 <td className="mono t-num t-money">{formatARS(order.total)}</td>
                 <td>
@@ -537,17 +556,19 @@ function ReturnsScreen({ canManage }) {
                 </td>
                 <td>
                   <span className="row-actions">
-                    <button type="button" className="view-btn" onClick={() => setDetail(order)}>
-                      Ver
+                    <button type="button" className="row-btn" data-tip="Ver detalle" aria-label="Ver detalle" onClick={() => setDetail(order)}>
+                      <IconEye />
                     </button>
                     {canManage && order.status === 'approved' && (
                       <button
                         type="button"
-                        className="row-btn"
+                        className="row-btn row-btn-danger"
+                        data-tip="Registrar devolución"
+                        aria-label="Registrar devolución"
                         onClick={() => doReturn(order)}
                         disabled={processing[order.id]}
                       >
-                        {processing[order.id] ? 'Devolviendo…' : 'Devolver'}
+                        <IconReturn />
                       </button>
                     )}
                   </span>

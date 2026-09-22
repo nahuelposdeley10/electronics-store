@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { apiGet } from '@/lib/api'
 import { REPORT_PERIODS, STATUS_META, STOCK_STATUS_LABELS, stockStatusOf } from '../../consts.js'
 import { IconChart, IconClock, IconSearchOff } from '@/components/Icons'
+import SearchSelect from '@/components/SearchSelect'
+import { loadOperators } from './catalogOptions'
 
 import './styles.css'
 
@@ -27,6 +29,34 @@ function SortSelect({ value, onChange, id = 'sort', label = 'Orden' }) {
         ))}
       </select>
     </label>
+  )
+}
+
+
+function OperatorSelect({ id, value, onChange }) {
+  const [options, setOptions] = useState([])
+
+  useEffect(() => {
+    let alive = true
+    loadOperators()
+      .then((list) => {
+        if (alive) setOptions(list)
+      })
+      .catch(() => undefined)
+    return () => {
+      alive = false
+    }
+  }, [])
+
+  return (
+    <SearchSelect
+      id={id}
+      label="Operador"
+      allLabel="Todos"
+      value={value}
+      onChange={onChange}
+      options={options}
+    />
   )
 }
 
@@ -288,4 +318,4 @@ function SettingsFetcher({ render }) {
 }
 
 
-export { StatusTag, EmptyNote, ScreenLoading, KpiTicket, StockBadge, StockValue, ChartTip, ChartLegend, ReportPeriodBar, ScreenBlocked, ToggleRow, ToggleSwitch, SettingsNote, SetImageField, SettingsFetcher, SortSelect }
+export { StatusTag, EmptyNote, ScreenLoading, KpiTicket, StockBadge, StockValue, ChartTip, ChartLegend, ReportPeriodBar, ScreenBlocked, ToggleRow, ToggleSwitch, SettingsNote, SetImageField, SettingsFetcher, SortSelect, OperatorSelect }

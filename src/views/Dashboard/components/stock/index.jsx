@@ -4,7 +4,7 @@ import SearchSelect from '@/components/SearchSelect'
 import { apiGet, apiPost, apiPut } from '@/lib/api'
 import { IconCheck, IconCross, IconPlus, IconSearch } from '@/components/Icons'
 import { CATEGORY_LABELS, MOVEMENT_CHIPS, MOVEMENT_TYPE_LABELS, shortDate, fullDate, itemsSummary, stockStatusOf } from '../../consts.js'
-import { EmptyNote, ScreenBlocked, ScreenLoading, SortSelect, StockBadge, StockValue } from '../common'
+import { EmptyNote, OperatorSelect, ScreenBlocked, ScreenLoading, SortSelect, StockBadge, StockValue } from '../common'
 import { loadCatalogOptions } from '../common/catalogOptions.js'
 import { useToast } from '@/context/useToast'
 import { useConfirm } from '@/context/useConfirm'
@@ -214,7 +214,7 @@ function MovementsScreen() {
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
   const [query, setQuery] = useState('')
-  const [params, setParams] = useState({ type: '', q: '', page: 1 })
+  const [params, setParams] = useState({ type: '', operator: '', q: '', page: 1 })
 
   useEffect(() => {
     let alive = true
@@ -224,6 +224,7 @@ function MovementsScreen() {
       page: String(params.page),
       limit: '20',
     })
+    if (params.operator) paramsString.set('operator', params.operator)
     apiGet(`/api/admin/inventory/movements?${paramsString}`)
       .then((res) => {
         if (!alive) return
@@ -273,6 +274,11 @@ function MovementsScreen() {
             aria-label="Buscar movimientos"
           />
         </form>
+        <OperatorSelect
+          id="stock-movements-operator"
+          value={params.operator}
+          onChange={(value) => setParams((prev) => ({ ...prev, operator: value, page: 1 }))}
+        />
         <span className="count-tag mono">
           {data.items.length} de {data.total}
         </span>
@@ -301,6 +307,7 @@ function MovementsScreen() {
               <th>Variación</th>
               <th>Antes → Después</th>
               <th>Motivo</th>
+              <th>Operador</th>
             </tr>
           </thead>
           <tbody>
@@ -327,6 +334,7 @@ function MovementsScreen() {
                   {m.stockBefore} → {m.stockAfter}
                 </td>
                 <td className="t-dim">{m.reason || '—'}</td>
+                <td className="t-dim">{m.createdBy || '—'}</td>
               </tr>
             ))}
           </tbody>
@@ -773,7 +781,7 @@ function PurchasesScreen({ canManage }) {
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
   const [query, setQuery] = useState('')
-  const [params, setParams] = useState({ q: '', page: 1 })
+  const [params, setParams] = useState({ q: '', operator: '', page: 1 })
   const [version, setVersion] = useState(0)
   const [form, setForm] = useState({
     supplier: '',
@@ -801,6 +809,7 @@ function PurchasesScreen({ canManage }) {
       page: String(params.page),
       limit: '10',
     })
+    if (params.operator) paramsString.set('operator', params.operator)
     apiGet(`/api/admin/inventory/purchases?${paramsString}`)
       .then((res) => {
         if (!alive) return
@@ -1022,6 +1031,11 @@ function PurchasesScreen({ canManage }) {
                 aria-label="Buscar compras"
               />
             </form>
+            <OperatorSelect
+              id="purchases-operator"
+              value={params.operator}
+              onChange={(value) => setParams((prev) => ({ ...prev, operator: value, page: 1 }))}
+            />
           </div>
           {data.items.length === 0 && <p className="inv-empty">Todavía no hay compras.</p>}
           <div className="inv-mov-list">
@@ -1037,6 +1051,7 @@ function PurchasesScreen({ canManage }) {
                   <span>{itemsSummary(p.items)}</span>
                   <em>{shortDate(p.createdAt)}</em>
                 </div>
+                {p.createdBy && <div className="inv-mov-stock">Cargado por {p.createdBy}</div>}
                 {p.invoice && <div className="inv-mov-stock">Fact. {p.invoice}</div>}
               </div>
             ))}

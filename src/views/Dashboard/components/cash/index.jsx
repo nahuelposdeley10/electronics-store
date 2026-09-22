@@ -3,7 +3,8 @@ import { formatARS } from '@/data/format'
 import { apiGet, apiPost } from '@/lib/api'
 import { IconCross, IconPlus } from '@/components/Icons'
 import { CASH_KIND_CHIPS, CASH_KIND_LABELS, fullDate, shortDate } from '../../consts.js'
-import { EmptyNote, KpiTicket, ScreenBlocked, ScreenLoading } from '../common'
+import { EmptyNote, KpiTicket, OperatorSelect, ScreenBlocked, ScreenLoading } from '../common'
+import SearchSelect from '@/components/SearchSelect'
 import { useToast } from '@/context/useToast'
 
 import './styles.css'
@@ -110,7 +111,7 @@ function CashMovementsScreen({ canManage }) {
   const { showToast } = useToast()
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
-  const [params, setParams] = useState({ kind: 'all', page: 1 })
+  const [params, setParams] = useState({ kind: 'all', operator: '', page: 1 })
   const [formOpen, setFormOpen] = useState(false)
   const [form, setForm] = useState({ flow: 'in', amount: '', description: '' })
   const [saving, setSaving] = useState(false)
@@ -119,6 +120,7 @@ function CashMovementsScreen({ canManage }) {
     let alive = true
     const qs = new URLSearchParams({ page: String(params.page), limit: '20' })
     if (params.kind !== 'all') qs.set('kind', params.kind)
+    if (params.operator) qs.set('operator', params.operator)
     apiGet(`/api/admin/cash/movements?${qs}`)
       .then((res) => {
         if (!alive) return
@@ -180,6 +182,11 @@ function CashMovementsScreen({ canManage }) {
       </header>
 
       <div className="dash-toolbar">
+        <OperatorSelect
+          id="movements-operator"
+          value={params.operator}
+          onChange={(value) => setParams((prev) => ({ ...prev, operator: value, page: 1 }))}
+        />
         <div className="cash-summary">
           <strong className="mono">{formatARS(data.balance.net)}</strong>
           <em>
@@ -599,19 +606,58 @@ function CashCountScreen({ canManage }) {
   const [error, setError] = useState('')
   const [form, setForm] = useState({ countedAmount: '', note: '' })
   const [busy, setBusy] = useState(false)
+  const [shifts, setShifts] = useState([])
+  const [shiftId, setShiftId] = useState('')
+  const [operator, setOperator] = useState('')
 
-  const load = () => {
-    apiGet('/api/admin/cash/status')
-      .then((status) =>
-        Promise.all([Promise.resolve(status), apiGet('/api/admin/cash/counts')]),
-      )
-      .then(([status, counts]) => setData({ status, counts }))
-      .catch((err) => setError(err.message))
+  const loadCounts = () => {
+    const qs = new URLSearchParams()
+    if (shiftId) qs.set('shiftId', shiftId)
+    if (operator) qs.set('operator', operator)
+    return apiGet(`/api/admin/cash/counts?${qs}`)
   }
 
+  const applyCounts = (counts) => setData((d) => (d ? { ...d, counts } : d))
+
   useEffect(() => {
-    load()
+    let alive = true
+    apiGet('/api/admin/cash/status')
+      .then((status) =>
+        Promise.all([
+          Promise.resolve(status),
+          apiGet('/api/admin/cash/counts'),
+          apiGet('/api/admin/cash/shifts?limit=100'),
+        ]),
+      )
+      .then(([status, counts, shiftsRes]) => {
+        if (!alive) return
+        setData({ status, counts })
+        setShifts(shiftsRes.items || [])
+      })
+      .catch((err) => {
+        if (alive) setError(err.message)
+      })
+    return () => {
+      alive = false
+    }
   }, [])
+
+  useEffect(() => {
+    let alive = true
+    const qs = new URLSearchParams()
+    if (shiftId) qs.set('shiftId', shiftId)
+    if (operator) qs.set('operator', operator)
+    apiGet(`/api/admin/cash/counts?${qs}`)
+      .then((counts) => {
+        if (alive) setData((d) => (d ? { ...d, counts } : d))
+      })
+      .catch((err) => {
+        if (alive) setError(err.message)
+      })
+    return () => {
+      alive = false
+    }
+  }, [shiftId, operator])
 
   if (!data) {
     if (error) return <ScreenBlocked message={error} />
@@ -635,7 +681,7 @@ function CashCountScreen({ canManage }) {
           'success',
         )
         setForm({ countedAmount: '', note: '' })
-        load()
+        return loadCounts().then(applyCounts)
       })
       .catch((err) => showToast(err.message, 'error'))
       .finally(() => setBusy(false))
@@ -643,6 +689,15 @@ function CashCountScreen({ canManage }) {
 
   const { status, counts } = data
   const expected = status.open ? status.shift.expected : 0
+  const viewingClosed = Boolean(shiftId)
+
+  const shiftOptions = shifts
+    .filter((s) => s.status === 'closed' || (status.open && String(s._id) !== String(status.shift._id)))
+    .sort((a, b) => new Date(b.openedAt) - new Date(a.openedAt))
+    .map((s) => ({
+      value: String(s._id),
+      label: `Turno #${s.number} · ${shortDate(s.openedAt)}`,
+    }))
 
   return (
     <div className="dash-screen">
@@ -653,15 +708,28 @@ function CashCountScreen({ canManage }) {
         </div>
         <div className="dash-head-today">
           <strong className="mono">{counts.items.length}</strong>
-          <em>arqueos registrados</em>
+          <em>{viewingClosed ? 'arqueos del turno seleccionado' : 'arqueos del turno actual'}</em>
         </div>
       </header>
 
-      {!status.open ? (
-        <div className="dash-card">
-          <EmptyNote text="No hay caja abierta. Arqueá después de abrir el turno." />
-        </div>
-      ) : (
+      <div className="dash-toolbar">
+        <OperatorSelect
+          id="counts-operator"
+          value={operator}
+          onChange={setOperator}
+        />
+        <SearchSelect
+          id="counts-shift"
+          label="Turno"
+          allLabel={status.open ? `Turno actual · #${status.shift.number}` : 'Sin turno abierto'}
+          allValue=""
+          value={shiftId}
+          onChange={setShiftId}
+          options={shiftOptions}
+        />
+      </div>
+
+      {status.open && !viewingClosed && (
         <section className="dash-card">
           <div className="dash-card-head">
             <h2>Nuevo arqueo · turno #{counts.shift ? counts.shift.number : status.shift.number}</h2>
@@ -708,6 +776,7 @@ function CashCountScreen({ canManage }) {
           <thead>
             <tr>
               <th>Fecha</th>
+              <th>Turno</th>
               <th>Esperado</th>
               <th>Contado</th>
               <th>Diferencia</th>
@@ -722,6 +791,9 @@ function CashCountScreen({ canManage }) {
                 <tr key={c._id}>
                   <td className="t-date" title={fullDate(c.createdAt)}>
                     {shortDate(c.createdAt)}
+                  </td>
+                  <td className="mono t-dim">
+                    {counts.shift ? `#${counts.shift.number}` : '—'}
                   </td>
                   <td className="mono t-num">{formatARS(c.expectedAmount)}</td>
                   <td className="mono t-num">{formatARS(c.countedAmount)}</td>
@@ -738,7 +810,9 @@ function CashCountScreen({ canManage }) {
             })}
           </tbody>
         </table>
-        {counts.items.length === 0 && <EmptyNote text="Todavía no hay arqueos en el turno actual." />}
+        {counts.items.length === 0 && (
+          <EmptyNote text={viewingClosed ? 'No hay arqueos en el turno seleccionado.' : 'Todavía no hay arqueos en el turno actual.'} />
+        )}
       </div>
     </div>
   )

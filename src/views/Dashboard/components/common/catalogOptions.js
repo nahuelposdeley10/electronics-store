@@ -1,5 +1,13 @@
 import { apiGet } from '@/lib/api'
 
+export async function loadOperators() {
+  const users = await apiGet('/api/admin/users')
+  return (Array.isArray(users) ? users : [])
+    .filter((u) => u.role !== 'superadmin')
+    .sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'es'))
+    .map((u) => ({ value: u.email, label: u.name || u.email }))
+}
+
 export async function loadCatalogOptions() {
   const [cats, brands] = await Promise.all([
     apiGet('/api/admin/categories'),
