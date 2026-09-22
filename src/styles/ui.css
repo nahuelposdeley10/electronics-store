@@ -754,6 +754,36 @@
   padding: 24px;
   box-shadow: var(--shadow-float);
 }
+.product-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.product-head h2 {
+  font-family: var(--font-sign);
+  font-size: 24px;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+}
+.product-close {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--gal-line-strong);
+  border-radius: 4px;
+  color: var(--gal-ink-faint);
+}
+.product-close svg {
+  width: 15px;
+  height: 15px;
+}
+.product-close:hover {
+  color: var(--gal-facade);
+  border-color: var(--gal-facade);
+}
 .pf-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;

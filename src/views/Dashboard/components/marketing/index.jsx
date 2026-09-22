@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
 import { apiDelete, apiGet, apiPost, apiPut } from '@/lib/api'
-import { IconEdit, IconPlus, IconTrash } from '@/components/Icons'
+import { IconCross, IconEdit, IconPlus, IconTrash } from '@/components/Icons'
 import { shortDate } from '../../consts.js'
 import { EmptyNote, ScreenBlocked, ScreenLoading, ToggleSwitch } from '../common'
 import { useToast } from '@/context/useToast'
+import { useConfirm } from '@/context/useConfirm'
 
 import './styles.css'
 
@@ -17,6 +18,7 @@ function promoStateChip(active, onLabel, offLabel) {
 
 function CouponsScreen({ canManage }) {
   const { showToast } = useToast()
+  const { confirm } = useConfirm()
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
   const [formOpen, setFormOpen] = useState(false)
@@ -59,6 +61,11 @@ function CouponsScreen({ canManage }) {
   const set = (key) => (e) =>
     setForm((f) => ({ ...f, [key]: key === 'active' ? e.target.checked : e.target.value }))
 
+  const closeForm = () => {
+    if (saving) return
+    setFormOpen(false)
+  }
+
   const formDirty = form !== null && JSON.stringify(form) !== JSON.stringify(formInitial || {})
   const percentNum = Number(form?.percent)
   const canSave =
@@ -100,7 +107,16 @@ function CouponsScreen({ canManage }) {
   }
 
   const remove = async (c) => {
-    if (!window.confirm(`¿Eliminar el cupón ${c.code}?`)) return
+    const ok = await confirm({
+      title: 'Eliminar cupón',
+      message: (
+        <>
+          ¿Eliminar el cupón <strong>{c.code}</strong>?
+        </>
+      ),
+      confirmLabel: 'Eliminar',
+    })
+    if (!ok) return
     try {
       await apiDelete(`/api/admin/coupons/${c.id}`)
       showToast('Cupón eliminado.', 'success')
@@ -141,63 +157,77 @@ function CouponsScreen({ canManage }) {
       </div>
 
       {formOpen && (
-        <section className="dash-card promo-form">
-          <div className="dash-card-head">
-            <h2>{editing ? `Editar ${form.code}` : 'Nuevo cupón'}</h2>
-            <button type="button" className="ghost-btn" onClick={() => setFormOpen(false)}>
-              Cancelar
-            </button>
-          </div>
-          <form onSubmit={submit}>
-            <div className="pf-grid">
-              <label className="pf-field">
-                <span>Código</span>
-                <input
-                  type="text"
-                  value={form.code}
-                  onChange={set('code')}
-                  placeholder="Ej.: BIENVENIDA10"
-                  style={{ textTransform: 'uppercase' }}
-                  required
-                />
-              </label>
-
-              <label className="pf-field">
-                <span>Descuento (%)</span>
-                <input
-                  type="number"
-                  min="1"
-                  max="100"
-                  step="1"
-                  value={form.percent}
-                  onChange={set('percent')}
-                  required
-                />
-              </label>
-
-              <label className="pf-field pf-full">
-                <span>Descripción (opcional)</span>
-                <input
-                  type="text"
-                  value={form.description}
-                  onChange={set('description')}
-                  placeholder="Ej.: Bienvenida para clientes nuevos"
-                />
-              </label>
-
-              <label className="pf-field pf-full promo-check">
-                <input type="checkbox" checked={form.active} onChange={set('active')} />
-                <span>Cupón activo</span>
-              </label>
-            </div>
-
-            <div className="pf-actions">
-              <button type="submit" className="primary-btn" disabled={saving || !canSave}>
-                {saving ? 'Guardando…' : editing ? 'Guardar cambios' : 'Crear cupón'}
+        <div className="product-overlay" onMouseDown={saving ? undefined : closeForm}>
+          <div
+            className="product-panel"
+            role="dialog"
+            aria-modal="true"
+            aria-label={editing ? 'Editar cupón' : 'Nuevo cupón'}
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <header className="product-head">
+              <div>
+                <span className="dash-eyebrow">Promociones</span>
+                <h2>{editing ? `Editar ${form.code}` : 'Nuevo cupón'}</h2>
+              </div>
+              <button type="button" className="product-close" onClick={closeForm} aria-label="Cerrar">
+                <IconCross />
               </button>
-            </div>
-          </form>
-        </section>
+            </header>
+            <form onSubmit={submit}>
+              <div className="pf-grid">
+                <label className="pf-field">
+                  <span>Código</span>
+                  <input
+                    type="text"
+                    value={form.code}
+                    onChange={set('code')}
+                    placeholder="Ej.: BIENVENIDA10"
+                    style={{ textTransform: 'uppercase' }}
+                    required
+                  />
+                </label>
+
+                <label className="pf-field">
+                  <span>Descuento (%)</span>
+                  <input
+                    type="number"
+                    min="1"
+                    max="100"
+                    step="1"
+                    value={form.percent}
+                    onChange={set('percent')}
+                    required
+                  />
+                </label>
+
+                <label className="pf-field pf-full">
+                  <span>Descripción (opcional)</span>
+                  <input
+                    type="text"
+                    value={form.description}
+                    onChange={set('description')}
+                    placeholder="Ej.: Bienvenida para clientes nuevos"
+                  />
+                </label>
+
+                <label className="pf-field pf-full promo-check">
+                  <input type="checkbox" checked={form.active} onChange={set('active')} />
+                  <span>Cupón activo</span>
+                </label>
+              </div>
+
+              <div className="pf-actions">
+                <button type="button" className="ghost-btn" onClick={closeForm} disabled={saving}>
+                  Cancelar
+                </button>
+                <button type="submit" className="primary-btn" disabled={saving || !canSave}>
+                  {saving ? 'Guardando…' : editing ? 'Guardar cambios' : 'Crear cupón'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
 
       <div className="table-wrap">

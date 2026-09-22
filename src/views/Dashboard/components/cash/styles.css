@@ -98,13 +98,6 @@
   gap: 14px;
   padding: 16px;
 }
-.cash-form .btn,
-.cash-form-cols select,
-.cash-form-cols input,
-.cash-form input:not([type='number']),
-.cash-form input[type='number'] {
-  align-self: flex-start;
-}
 .cash-form-cols {
   display: grid;
   grid-template-columns: 1fr 1fr 1.6fr;
@@ -114,6 +107,7 @@
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+  margin-top: 16px;
 }
 .cash-kind {
   display: inline-block;
@@ -179,10 +173,43 @@
   font-weight: 700;
   color: var(--gal-ink-soft);
 }
+.set-field > span {
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--gal-ink-faint);
+}
 .set-field input,
 .set-field select {
   width: 100%;
-  font-weight: 600;
+  font-weight: 500;
+  border: 1px solid var(--gal-line-strong);
+  border-radius: 3px;
+  background: var(--gal-white);
+  color: var(--gal-ink);
+  padding: 9px 11px;
+  font-size: 14px;
+}
+.set-field input::placeholder {
+  color: var(--gal-ink-faint);
+}
+.set-field input:focus,
+.set-field select:focus {
+  outline: 0;
+  border-color: var(--gal-facade);
+  box-shadow: 0 0 0 3px rgba(215, 38, 29, 0.1);
+}
+.set-field input:disabled,
+.set-field select:disabled {
+  background: var(--gal-panel);
+  color: var(--gal-ink-faint);
+  border-color: var(--gal-line);
+  opacity: 0.8;
+  cursor: not-allowed;
+}
+.set-field input[type='number'] {
+  font-family: var(--font-mono);
 }
 @media (max-width: 900px) {
   .cash-form-cols {

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { formatARS } from '@/data/format'
 import { apiGet, apiPost } from '@/lib/api'
-import { IconPlus } from '@/components/Icons'
+import { IconCross, IconPlus } from '@/components/Icons'
 import { CASH_KIND_CHIPS, CASH_KIND_LABELS, fullDate, shortDate } from '../../consts.js'
 import { EmptyNote, KpiTicket, ScreenBlocked, ScreenLoading } from '../common'
 import { useToast } from '@/context/useToast'
@@ -141,6 +141,11 @@ function CashMovementsScreen({ canManage }) {
 
   const movementValid = form.amount !== '' && Number.isFinite(Number(form.amount)) && Number(form.amount) > 0
 
+  const closeForm = () => {
+    if (saving) return
+    setFormOpen(false)
+  }
+
   const addMovement = (e) => {
     e.preventDefault()
     if (saving || !movementValid) return
@@ -185,7 +190,7 @@ function CashMovementsScreen({ canManage }) {
           <button
             type="button"
             className="btn"
-            onClick={() => setFormOpen((v) => !v)}
+            onClick={() => setFormOpen(true)}
           >
             <IconPlus /> Nuevo movimiento
           </button>
@@ -193,49 +198,68 @@ function CashMovementsScreen({ canManage }) {
       </div>
 
       {formOpen && canManage && (
-        <form className="cash-form dash-card" onSubmit={addMovement}>
-          <div className="cash-form-cols">
-            <label className="set-field">
-              <span>Tipo</span>
-              <select
-                value={form.flow}
-                onChange={(e) => setForm((f) => ({ ...f, flow: e.target.value }))}
-              >
-                <option value="in">Ingreso (entra plata)</option>
-                <option value="out">Egreso (sale plata)</option>
-              </select>
-            </label>
-            <label className="set-field">
-              <span>Monto ($)</span>
-              <input
-                type="number"
-                min="1"
-                step="0.01"
-                value={form.amount}
-                onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}
-                placeholder="0"
-                required
-              />
-            </label>
-            <label className="set-field">
-              <span>Concepto</span>
-              <input
-                type="text"
-                value={form.description}
-                onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-                placeholder="Ej: pago colilla, gastos, vueltos…"
-              />
-            </label>
+        <div className="product-overlay" onMouseDown={saving ? undefined : closeForm}>
+          <div
+            className="product-panel"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Nuevo movimiento"
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <header className="product-head">
+              <div>
+                <span className="dash-eyebrow">Libro de caja</span>
+                <h2>Nuevo movimiento</h2>
+              </div>
+              <button type="button" className="product-close" onClick={closeForm} aria-label="Cerrar">
+                <IconCross />
+              </button>
+            </header>
+            <form onSubmit={addMovement}>
+              <div className="cash-form-cols">
+                <label className="set-field">
+                  <span>Tipo</span>
+                  <select
+                    value={form.flow}
+                    onChange={(e) => setForm((f) => ({ ...f, flow: e.target.value }))}
+                  >
+                    <option value="in">Ingreso (entra plata)</option>
+                    <option value="out">Egreso (sale plata)</option>
+                  </select>
+                </label>
+                <label className="set-field">
+                  <span>Monto ($)</span>
+                  <input
+                    type="number"
+                    min="1"
+                    step="0.01"
+                    value={form.amount}
+                    onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))}
+                    placeholder="0"
+                    required
+                  />
+                </label>
+                <label className="set-field">
+                  <span>Concepto</span>
+                  <input
+                    type="text"
+                    value={form.description}
+                    onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+                    placeholder="Ej: pago colilla, gastos, vueltos…"
+                  />
+                </label>
+              </div>
+              <div className="cash-form-foot">
+                <button type="submit" className="btn cta" disabled={saving || !movementValid}>
+                  {saving ? 'Guardando…' : 'Guardar movimiento'}
+                </button>
+                <button type="button" className="btn" onClick={closeForm} disabled={saving}>
+                  Cancelar
+                </button>
+              </div>
+            </form>
           </div>
-          <div className="cash-form-foot">
-            <button type="submit" className="btn cta" disabled={saving || !movementValid}>
-              {saving ? 'Guardando…' : 'Guardar movimiento'}
-            </button>
-            <button type="button" className="btn" onClick={() => setFormOpen(false)}>
-              Cancelar
-            </button>
-          </div>
-        </form>
+        </div>
       )}
 
       <div className="sale-chips" role="group" aria-label="Filtrar movimientos">

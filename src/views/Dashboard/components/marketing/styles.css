@@ -15,9 +15,6 @@
   border: 1px solid var(--gal-ink-soft);
   background: var(--gal-fluo);
 }
-.promo-form {
-  margin-bottom: 14px;
-}
 .promo-check {
   flex-direction: row;
   align-items: center;
