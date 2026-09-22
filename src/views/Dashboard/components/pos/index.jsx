@@ -4,14 +4,17 @@ import SearchSelect from '@/components/SearchSelect'
 import { apiGet, apiPost } from '@/lib/api'
 import { IconCheck, IconMinus, IconPlus, IconSearch, IconTrash } from '@/components/Icons'
 import { shortId } from '../../consts.js'
-import { EmptyNote } from '../common'
+import { stockStatusOf } from '../../consts.js'
+import { EmptyNote, StockValue } from '../common'
 import { loadCatalogOptions } from '../common/catalogOptions.js'
 import { useToast } from '@/context/useToast'
+import { useConfirm } from '@/context/useConfirm'
 
 import './styles.css'
 
 function PosScreen({ canManage }) {
   const { showToast } = useToast()
+  const { confirm } = useConfirm()
   const [products, setProducts] = useState([])
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState('')
@@ -107,7 +110,19 @@ function PosScreen({ canManage }) {
     )
   }
 
-  const removeLine = (id) => setLines((prev) => prev.filter((l) => l.product.id !== id))
+  const removeLine = async (product) => {
+    const id = product.id
+    const ok = await confirm({
+      title: 'Quitar del ticket',
+      message: (
+        <>
+          ¿Quitar <strong>{product.name}</strong> del ticket?
+        </>
+      ),
+      confirmLabel: 'Quitar',
+    })
+    if (ok) setLines((prev) => prev.filter((l) => l.product.id !== id))
+  }
 
   const subtotal = lines.reduce((sum, l) => sum + l.product.price * l.quantity, 0)
   const discountNum = Math.min(Math.max(Number(discount) || 0, 0), subtotal)
@@ -194,14 +209,20 @@ function PosScreen({ canManage }) {
               label="Categoría"
               value={category}
               onChange={onCategory}
-              options={catOptions.map((c) => ({ value: c.key, label: c.name }))}
+              options={[
+                ...catOptions.map((c) => ({ value: c.key, label: c.name })),
+                { value: ':none:', label: 'Sin categoría' },
+              ]}
             />
             <SearchSelect
               id="pos-brand-filter"
               label="Marca"
               value={brand}
               onChange={onBrand}
-              options={brandOptions.map((b) => ({ value: b, label: b }))}
+              options={[
+                ...brandOptions.map((b) => ({ value: b, label: b })),
+                { value: ':none:', label: 'Sin marca' },
+              ]}
             />
             <span className="dash-count mono">{totalItems} productos</span>
           </div>
@@ -210,7 +231,7 @@ function PosScreen({ canManage }) {
               <button
                 key={p.id}
                 type="button"
-                className="pos-item"
+                className={`pos-item stock-item-${stockStatusOf(p.stock, p.minStock)}`}
                 disabled={!canManage || p.stock <= 0}
                 onClick={() => add(p)}
               >
@@ -220,8 +241,8 @@ function PosScreen({ canManage }) {
                   <em>{p.brand}</em>
                 </span>
                 <span className="pos-item-price mono">{formatARS(p.price)}</span>
-                <span className={`pos-item-stock mono${p.stock <= 0 ? ' out' : ''}`}>
-                  {p.stock <= 0 ? 'agotado' : `${p.stock} u.`}
+                <span className={`pos-item-stock${p.stock <= 0 ? ' out' : ''}`}>
+                  {p.stock <= 0 ? 'agotado' : <StockValue stock={p.stock} min={p.minStock} />}
                 </span>
                 <IconPlus />
               </button>
@@ -271,7 +292,7 @@ function PosScreen({ canManage }) {
                   </button>
                 </span>
                 <span className="ticket-line-total mono">{formatARS(l.product.price * l.quantity)}</span>
-                <button type="button" className="row-btn row-btn-danger" onClick={() => removeLine(l.product.id)} aria-label="Quitar línea">
+                <button type="button" className="row-btn row-btn-danger" onClick={() => removeLine(l.product)} aria-label="Quitar línea">
                   <IconTrash />
                 </button>
               </li>

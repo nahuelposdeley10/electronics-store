@@ -117,7 +117,18 @@ const MOVEMENT_TYPE_LABELS = {
 const STOCK_STATUS_LABELS = {
   ok: 'OK',
   bajo: 'Bajo',
+  justo: 'Mínimo',
   sin: 'Sin stock',
+}
+
+
+function stockStatusOf(stock, min) {
+  const s = Number(stock) || 0
+  const m = Number(min) || 0
+  if (s <= 0) return 'sin'
+  if (s < m) return 'bajo'
+  if (s === m) return 'justo'
+  return 'ok'
 }
 
 
@@ -213,4 +224,4 @@ const PERM_LABELS = {
 }
 
 
-export { STATUS_META, CATEGORY_LABELS, PENDING_GROUP, shortDate, shortId, initials, CASH_KIND_LABELS, CASH_KIND_CHIPS, PAYMENT_LABELS, PAYMENT_OPTIONS, salePaymentLabel, fullDate, idDoc, itemsSummary, QUOTE_STATUS_LABELS, MOVEMENT_TYPE_LABELS, STOCK_STATUS_LABELS, MOVEMENT_CHIPS, CHART_COLORS, CHART_TICK, CHART_GRID, compactARS, chartDayShort, REPORT_PERIODS, reportPaymentLabel, IMPORT_EXAMPLE, PERM_CODES, PERM_LABELS }
+export { STATUS_META, CATEGORY_LABELS, PENDING_GROUP, shortDate, shortId, initials, CASH_KIND_LABELS, CASH_KIND_CHIPS, PAYMENT_LABELS, PAYMENT_OPTIONS, salePaymentLabel, fullDate, idDoc, itemsSummary, QUOTE_STATUS_LABELS, MOVEMENT_TYPE_LABELS, STOCK_STATUS_LABELS, stockStatusOf, MOVEMENT_CHIPS, CHART_COLORS, CHART_TICK, CHART_GRID, compactARS, chartDayShort, REPORT_PERIODS, reportPaymentLabel, IMPORT_EXAMPLE, PERM_CODES, PERM_LABELS }

@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react'
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { formatARS } from '@/data/format'
 import { apiGet } from '@/lib/api'
-import { CHART_COLORS, CHART_GRID, CHART_TICK, chartDayShort, compactARS, reportPaymentLabel, shortDate, shortId } from '../../consts.js'
-import { ChartLegend, ChartTip, EmptyNote, KpiTicket, ReportPeriodBar, ScreenBlocked, ScreenLoading, StatusTag, StockBadge } from '../common'
+import { CHART_COLORS, CHART_GRID, CHART_TICK, chartDayShort, compactARS, reportPaymentLabel, shortDate, shortId, stockStatusOf } from '../../consts.js'
+import { ChartLegend, ChartTip, EmptyNote, KpiTicket, ReportPeriodBar, ScreenBlocked, ScreenLoading, StatusTag, StockBadge, StockValue } from '../common'
 
 import './styles.css'
 
@@ -299,7 +299,7 @@ function ProductsReportScreen() {
           </thead>
           <tbody>
             {data.items.map((p) => (
-              <tr key={p.productId}>
+              <tr key={p.productId} className={`stock-row-${stockStatusOf(p.stock, p.minStock)}`}>
                 <td>
                   <span className="t-cell-name">
                     <strong>{p.name}</strong>
@@ -311,8 +311,8 @@ function ProductsReportScreen() {
                 <td className="mono t-num t-money">{formatARS(p.revenue)}</td>
                 <td>
                   <span className="stock-cell">
-                    <strong className="mono">{p.stock}</strong>
-                    <StockBadge status={p.stock <= 0 ? 'sin' : p.stock <= (p.minStock || 0) ? 'bajo' : 'ok'} />
+                    <StockValue stock={p.stock} min={p.minStock} />
+                    <StockBadge status={stockStatusOf(p.stock, p.minStock)} />
                   </span>
                 </td>
               </tr>
@@ -630,16 +630,16 @@ function StockReportScreen() {
               </thead>
               <tbody>
                 {data.low.map((p) => (
-                  <tr key={p.id} className="inv-alert-row">
+                  <tr key={p.id} className={`stock-row-${stockStatusOf(p.stock, p.minStock)}`}>
                     <td>
                       <span className="t-cell-name">
                         <strong>{p.name}</strong>
                         <em>{p.brand}</em>
                       </span>
                     </td>
-                    <td className="mono t-num">{p.stock}</td>
+                    <td className="mono t-num"><StockValue stock={p.stock} min={p.minStock} /></td>
                     <td className="mono t-num">{p.minStock}</td>
-                    <td><StockBadge status={p.status} /></td>
+                    <td><StockBadge status={stockStatusOf(p.stock, p.minStock)} /></td>
                   </tr>
                 ))}
               </tbody>

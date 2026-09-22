@@ -3,10 +3,11 @@ import { formatARS } from '@/data/format'
 import SearchSelect from '@/components/SearchSelect'
 import { apiGet, apiPost, apiPut } from '@/lib/api'
 import { IconCheck, IconCross, IconPlus, IconSearch } from '@/components/Icons'
-import { CATEGORY_LABELS, MOVEMENT_CHIPS, MOVEMENT_TYPE_LABELS, shortDate, fullDate, itemsSummary } from '../../consts.js'
-import { EmptyNote, ScreenBlocked, ScreenLoading, SortSelect, StockBadge } from '../common'
+import { CATEGORY_LABELS, MOVEMENT_CHIPS, MOVEMENT_TYPE_LABELS, shortDate, fullDate, itemsSummary, stockStatusOf } from '../../consts.js'
+import { EmptyNote, ScreenBlocked, ScreenLoading, SortSelect, StockBadge, StockValue } from '../common'
 import { loadCatalogOptions } from '../common/catalogOptions.js'
 import { useToast } from '@/context/useToast'
+import { useConfirm } from '@/context/useConfirm'
 
 import './styles.css'
 
@@ -113,14 +114,20 @@ function StockScreen() {
             label="Categoría"
             value={params.category}
             onChange={onCategory}
-            options={cats.map((c) => ({ value: c.key, label: c.name }))}
+            options={[
+              ...cats.map((c) => ({ value: c.key, label: c.name })),
+              { value: ':none:', label: 'Sin categoría' },
+            ]}
           />
           <SearchSelect
             id="stock-brand-filter"
             label="Marca"
             value={params.brand}
             onChange={onBrand}
-            options={brands.map((b) => ({ value: b, label: b }))}
+            options={[
+              ...brands.map((b) => ({ value: b, label: b })),
+              { value: ':none:', label: 'Sin marca' },
+            ]}
           />
           <SortSelect id="stock-sort" value={params.sort} onChange={onSort} />
         </div>
@@ -150,11 +157,11 @@ function StockScreen() {
             </tr>
           </thead>
           <tbody>
-            {data.items.map((p) => (
-              <tr key={p.id}>
+{data.items.map((p) => (
+              <tr key={p.id} className={`stock-row-${stockStatusOf(p.stock, p.minStock)}`}>
                 <td>
                   <span className="t-cell-product">
-                    {p.image ? <img className="prod-thumb" src={p.image} alt="" loading="lazy" /> : <span className="prod-thumb empty" />}
+                    <img className="prod-thumb" src={p.image} alt="" loading="lazy" />
                     <span>
                       <strong>{p.name}</strong>
                       <em>{p.brand}</em>
@@ -165,8 +172,8 @@ function StockScreen() {
                 <td className="mono t-num t-money">{formatARS(p.price)}</td>
                 <td>
                   <span className="stock-cell">
-                    <strong className="mono">{p.stock}</strong>
-                    <StockBadge status={p.status} />
+                    <StockValue stock={p.stock} min={p.minStock} />
+                    <StockBadge status={stockStatusOf(p.stock, p.minStock)} />
                   </span>
                 </td>
                 <td className="mono t-num">{p.minStock}</td>
@@ -470,7 +477,9 @@ function AdjustmentsScreen({ canManage }) {
           </label>
           {selectedProduct && (
             <div className="inv-stock-hint mono">
-              <span>Stock actual: <strong>{selectedProduct.stock}</strong></span>
+              <span>
+                Stock actual: <StockValue stock={selectedProduct.stock} min={selectedProduct.minStock} />
+              </span>
               {resultingStock !== null && !Number.isNaN(resultingStock) && (
                 <span className={resultingStock < 0 ? 'inv-stock-neg' : ''}>
                   después: <strong>{resultingStock}</strong>
@@ -651,14 +660,20 @@ function MinStockScreen({ canManage }) {
             label="Categoría"
             value={params.category}
             onChange={onCategory}
-            options={cats.map((c) => ({ value: c.key, label: c.name }))}
+            options={[
+              ...cats.map((c) => ({ value: c.key, label: c.name })),
+              { value: ':none:', label: 'Sin categoría' },
+            ]}
           />
           <SearchSelect
             id="stock-brand-filter"
             label="Marca"
             value={params.brand}
             onChange={onBrand}
-            options={brands.map((b) => ({ value: b, label: b }))}
+            options={[
+              ...brands.map((b) => ({ value: b, label: b })),
+              { value: ':none:', label: 'Sin marca' },
+            ]}
           />
         </div>
         <span className="count-tag mono">
@@ -678,7 +693,7 @@ function MinStockScreen({ canManage }) {
           </thead>
           <tbody>
             {data.items.map((p) => (
-              <tr key={p.id} className={p.status !== 'ok' ? 'inv-alert-row' : ''}>
+              <tr key={p.id} className={`stock-row-${stockStatusOf(p.stock, p.minStock)}`}>
                 <td>
                   <span className="t-cell-name">
                     <strong>{p.name}</strong>
@@ -687,8 +702,8 @@ function MinStockScreen({ canManage }) {
                 </td>
                 <td>
                   <span className="stock-cell">
-                    <strong className="mono">{p.stock}</strong>
-                    <StockBadge status={p.status} />
+                    <StockValue stock={p.stock} min={p.minStock} />
+                    <StockBadge status={stockStatusOf(p.stock, p.minStock)} />
                   </span>
                 </td>
                 <td>
@@ -753,6 +768,7 @@ function MinStockScreen({ canManage }) {
 
 function PurchasesScreen({ canManage }) {
   const { showToast } = useToast()
+  const { confirm } = useConfirm()
   const [products, setProducts] = useState([])
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
@@ -818,7 +834,21 @@ function PurchasesScreen({ canManage }) {
     setForm((f) => ({ ...f, lines: [...f.lines, { productId: '', quantity: '1', cost: '' }] }))
   }
 
-  const removeLine = (index) => {
+  const removeLine = async (index) => {
+    const line = form.lines[index]
+    const product = products.find((p) => String(p.id) === String(line?.productId))
+    const ok = await confirm({
+      title: 'Quitar línea',
+      message: product
+        ? (
+            <>
+              ¿Quitar <strong>{product.name}</strong> de la compra?
+            </>
+          )
+        : '¿Quitar esta línea de la compra?',
+      confirmLabel: 'Quitar',
+    })
+    if (!ok) return
     setForm((f) => ({
       ...f,
       lines: f.lines.length > 1 ? f.lines.filter((_, i) => i !== index) : f.lines,
@@ -1170,14 +1200,20 @@ function PhysicalInventoryScreen({ canManage }) {
             label="Categoría"
             value={params.category}
             onChange={onCategory}
-            options={cats.map((c) => ({ value: c.key, label: c.name }))}
+            options={[
+              ...cats.map((c) => ({ value: c.key, label: c.name })),
+              { value: ':none:', label: 'Sin categoría' },
+            ]}
           />
           <SearchSelect
             id="stock-brand-filter"
             label="Marca"
             value={params.brand}
             onChange={onBrand}
-            options={brands.map((b) => ({ value: b, label: b }))}
+            options={[
+              ...brands.map((b) => ({ value: b, label: b })),
+              { value: ':none:', label: 'Sin marca' },
+            ]}
           />
         </div>
         <span className="count-tag mono">
@@ -1207,7 +1243,7 @@ function PhysicalInventoryScreen({ canManage }) {
                         <em>{p.brand || ''}</em>
                       </span>
                     </td>
-                    <td className="mono t-num">{p.stock}</td>
+                    <td className="mono t-num"><StockValue stock={p.stock} min={p.minStock} /></td>
                     <td>
                       <input
                         className="inv-count-input mono"

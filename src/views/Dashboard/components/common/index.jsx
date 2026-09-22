@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { apiGet } from '@/lib/api'
-import { REPORT_PERIODS, STATUS_META, STOCK_STATUS_LABELS } from '../../consts.js'
+import { REPORT_PERIODS, STATUS_META, STOCK_STATUS_LABELS, stockStatusOf } from '../../consts.js'
 import { IconChart, IconClock, IconSearchOff } from '@/components/Icons'
 
 import './styles.css'
@@ -78,6 +78,11 @@ function StockBadge({ status }) {
   return (
     <span className={`stock-badge ${status}`}>{STOCK_STATUS_LABELS[status] || status}</span>
   )
+}
+
+
+function StockValue({ stock, min }) {
+  return <span className={`stock-value ${stockStatusOf(stock, min)}`}>{stock}</span>
 }
 
 
@@ -283,4 +288,4 @@ function SettingsFetcher({ render }) {
 }
 
 
-export { StatusTag, EmptyNote, ScreenLoading, KpiTicket, StockBadge, ChartTip, ChartLegend, ReportPeriodBar, ScreenBlocked, ToggleRow, ToggleSwitch, SettingsNote, SetImageField, SettingsFetcher, SortSelect }
+export { StatusTag, EmptyNote, ScreenLoading, KpiTicket, StockBadge, StockValue, ChartTip, ChartLegend, ReportPeriodBar, ScreenBlocked, ToggleRow, ToggleSwitch, SettingsNote, SetImageField, SettingsFetcher, SortSelect }

@@ -44,6 +44,16 @@
   opacity: 0.5;
   cursor: not-allowed;
 }
+.pos-item.stock-item-ok {
+  background: #e5f2e8;
+}
+.pos-item.stock-item-justo {
+  background: #fdf3d7;
+}
+.pos-item.stock-item-bajo,
+.pos-item.stock-item-sin {
+  background: #fbe9e6;
+}
 .pos-item-meta {
   display: flex;
   flex-direction: column;

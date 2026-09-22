@@ -3,15 +3,17 @@ import { formatARS } from '@/data/format'
 import SearchSelect from '@/components/SearchSelect'
 import { apiDelete, apiGet, apiPost, apiPut, apiUpdate, apiUpload } from '@/lib/api'
 import { IconCheck, IconClock, IconCross, IconEdit, IconLock, IconPlus, IconSearch, IconTrash } from '@/components/Icons'
-import { CATEGORY_LABELS, IMPORT_EXAMPLE } from '../../consts.js'
-import { EmptyNote, ScreenBlocked, ScreenLoading, SortSelect } from '../common'
+import { CATEGORY_LABELS, IMPORT_EXAMPLE, stockStatusOf } from '../../consts.js'
+import { EmptyNote, ScreenBlocked, ScreenLoading, SortSelect, StockValue } from '../common'
 import { loadCatalogOptions } from '../common/catalogOptions.js'
 import { useToast } from '@/context/useToast'
+import { useConfirm } from '@/context/useConfirm'
 
 import './styles.css'
 
 function ProductsScreen({ canManage }) {
   const { showToast } = useToast()
+  const { confirm } = useConfirm()
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
   const [query, setQuery] = useState('')
@@ -100,9 +102,16 @@ function ProductsScreen({ canManage }) {
   }
 
   const handleDelete = async (product) => {
-    if (!window.confirm(`¿Eliminar "${product.name}" ${product.brand} de la galería?`)) {
-      return
-    }
+    const ok = await confirm({
+      title: 'Eliminar producto',
+      message: (
+        <>
+          ¿Eliminar <strong>"{product.name}" {product.brand}</strong> de la galería?
+        </>
+      ),
+      confirmLabel: 'Eliminar',
+    })
+    if (!ok) return
     try {
       await apiDelete(`/api/admin/products/${product.id}`)
       showToast(`Producto eliminado: ${product.name}`, 'success')
@@ -171,7 +180,10 @@ function ProductsScreen({ canManage }) {
               id="products-category-filter"
               value={params.category}
               onChange={onCategory}
-              options={cats.map((c) => ({ value: c.key, label: c.name }))}
+              options={[
+                ...cats.map((c) => ({ value: c.key, label: c.name })),
+                { value: ':none:', label: 'Sin categoría' },
+              ]}
             />
           </label>
           <label className="sort-field">
@@ -180,7 +192,10 @@ function ProductsScreen({ canManage }) {
               id="products-brand-filter"
               value={params.brand}
               onChange={onBrand}
-              options={brands.map((b) => ({ value: b, label: b }))}
+              options={[
+                ...brands.map((b) => ({ value: b, label: b })),
+                { value: ':none:', label: 'Sin marca' },
+              ]}
             />
           </label>
           <SortSelect id="products-sort" value={params.sort} onChange={onSort} />
@@ -276,7 +291,7 @@ function ProductsScreen({ canManage }) {
           </thead>
           <tbody>
             {data.items.map((p) => (
-              <tr key={p.id}>
+              <tr key={p.id} className={`stock-row-${stockStatusOf(p.stock, p.minStock)}`}>
                 <td>
                   <span className="t-cell-product">
                     <img className="prod-thumb" src={p.image} alt="" loading="lazy" />
@@ -300,7 +315,7 @@ function ProductsScreen({ canManage }) {
                     '—'
                   )}
                 </td>
-                <td className="mono t-num">{p.stock}</td>
+                <td className="mono t-num"><StockValue stock={p.stock} min={p.minStock} /></td>
                 <td className="mono t-num">{p.soldUnits}</td>
                 <td className="mono t-num t-money">{formatARS(p.revenue)}</td>
                 {canManage && (
@@ -651,6 +666,7 @@ function ProductForm({ product, onClose, onSaved }) {
 
 function MetaScreen({ kind, title, eyebrow, empty, canManage }) {
   const { showToast } = useToast()
+  const { confirm } = useConfirm()
   const [items, setItems] = useState(null)
   const [error, setError] = useState('')
   const [editing, setEditing] = useState(null)
@@ -698,11 +714,37 @@ function MetaScreen({ kind, title, eyebrow, empty, canManage }) {
   }
 
   const handleDelete = async (item) => {
-    if (!window.confirm(`¿Eliminar ${singular} "${item.name}"?`)) return
+    const used = item.productCount || 0
+    const options =
+      used > 0
+        ? {
+            title: `Eliminar ${singular}`,
+            message: (
+              <>
+                {used === 1 ? '1 producto usa' : `${used} productos usan`} esta {singular} y{' '}
+                quedará{used === 1 ? '' : 'n'} <strong>sin {singular}</strong>. No se verá en la
+                web hasta que le asignes una {singular}. ¿Eliminar de todos modos?
+              </>
+            ),
+            confirmLabel: 'Eliminar igual',
+          }
+        : {
+            title: `Eliminar ${singular}`,
+            message: <>¿Eliminar {singular.toLowerCase()} <strong>"{item.name}"</strong>?</>,
+            confirmLabel: 'Eliminar',
+          }
+    const ok = await confirm(options)
+    if (!ok) return
     try {
       const target = hasKey ? item.key : encodeURIComponent(item.name)
-      await apiDelete(`/api/admin/${kind}/${target}`)
-      showToast(`${singular} eliminada: ${item.name}`, 'success')
+      const reassign = used > 0 ? '?reassign=1' : ''
+      await apiDelete(`/api/admin/${kind}/${target}${reassign}`)
+      showToast(
+        used > 0
+          ? `${singular} eliminada: ${item.name} · ${used} producto${used === 1 ? '' : 's'} quedaron sin ${singular}`
+          : `${singular} eliminada: ${item.name}`,
+        'success',
+      )
       setRefresh((n) => n + 1)
     } catch (err) {
       showToast(err.message, 'error')
@@ -920,6 +962,7 @@ function MetaForm({ hasKey, item, noun, path, onClose, onSaved }) {
 
 function OffersScreen({ canManage }) {
   const { showToast } = useToast()
+  const { confirm } = useConfirm()
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
   const [query, setQuery] = useState('')
@@ -1020,7 +1063,16 @@ function OffersScreen({ canManage }) {
   }
 
   const removeOffer = async (p) => {
-    if (!window.confirm(`¿Quitar "${p.name}" de las ofertas?`)) return
+    const ok = await confirm({
+      title: 'Quitar de ofertas',
+      message: (
+        <>
+          ¿Quitar <strong>"{p.name}"</strong> de las ofertas?
+        </>
+      ),
+      confirmLabel: 'Quitar',
+    })
+    if (!ok) return
     try {
       await apiDelete(`/api/admin/offers/${p.id}`)
       showToast(`Oferta removida: ${p.name}`, 'success')
@@ -1123,7 +1175,7 @@ function OffersScreen({ canManage }) {
               const discount =
                 old > cur && cur > 0 ? Math.round((1 - cur / old) * 100) : 0
               return (
-                <tr key={p.id}>
+                <tr key={p.id} className={`stock-row-${stockStatusOf(p.stock, p.minStock)}`}>
                   <td>
                     <span className="t-cell-product">
                       <img className="prod-thumb" src={p.image} alt="" loading="lazy" />
@@ -1161,7 +1213,7 @@ function OffersScreen({ canManage }) {
                   <td className="mono t-num t-money">
                     {discount > 0 ? `${discount}% OFF` : '—'}
                   </td>
-                  <td className="mono t-num">{p.stock}</td>
+                  <td className="mono t-num"><StockValue stock={p.stock} min={p.minStock} /></td>
                   {canManage && (
                     <td>
                       <span className="row-actions">

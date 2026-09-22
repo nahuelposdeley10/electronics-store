@@ -110,6 +110,11 @@
   border-color: #c3e2c9;
 }
 .stock-badge.bajo {
+  color: var(--gal-facade-deep);
+  background: #fbe9e6;
+  border-color: #f2cabf;
+}
+.stock-badge.justo {
   color: #8a6d1a;
   background: #fdf3d7;
   border-color: #ecd9a0;
@@ -118,6 +123,39 @@
   color: var(--gal-facade-deep);
   background: #fbe9e6;
   border-color: #f2cabf;
+}
+.stock-value {
+  display: inline-block;
+  min-width: 36px;
+  text-align: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-weight: 800;
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+.stock-value.ok {
+  color: #1f6b33;
+  background: #e5f2e8;
+}
+.stock-value.bajo,
+.stock-value.sin {
+  color: var(--gal-facade-deep);
+  background: #fbe9e6;
+}
+.stock-value.justo {
+  color: #8a6d1a;
+  background: #fdf3d7;
+}
+.stock-row-ok td {
+  background: #e5f2e8 !important;
+}
+.stock-row-justo td {
+  background: #fdf3d7 !important;
+}
+.stock-row-bajo td,
+.stock-row-sin td {
+  background: #fbe9e6 !important;
 }
 .chart-tip {
   background: var(--gal-white);
