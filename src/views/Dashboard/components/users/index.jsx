@@ -4,6 +4,7 @@ import { apiDelete, apiGet, apiPost, apiPut, getSession } from '@/lib/api'
 import { getSuperTenant } from '@/lib/tenant'
 import { IconCheck, IconCross, IconEdit, IconPlus, IconSearch, IconTrash } from '@/components/Icons'
 import { useToast } from '@/context/useToast'
+import { useConfirm } from '@/context/useConfirm'
 import { PERM_CODES, PERM_LABELS, initials, shortDate } from '../../consts.js'
 import { EmptyNote, ScreenBlocked, ScreenLoading, SortSelect, ToggleRow, ToggleSwitch } from '../common'
 
@@ -99,6 +100,7 @@ function BusinessesScreen({ current, onPick, onCreateAdmin }) {
 
 function UsersScreen() {
   const { showToast } = useToast()
+  const { confirm } = useConfirm()
   const [users, setUsers] = useState(null)
   const [error, setError] = useState('')
   const [formOpen, setFormOpen] = useState(false)
@@ -220,7 +222,16 @@ function UsersScreen() {
   }
 
   const deleteUser = async (u) => {
-    if (!window.confirm(`¿Eliminar a ${u.name} (${u.email})? Esta acción no se puede deshacer.`)) return
+    const ok = await confirm({
+      title: 'Eliminar usuario',
+      message: (
+        <>
+          ¿Eliminar a <strong>{u.name}</strong> ({u.email})? Esta acción no se puede deshacer.
+        </>
+      ),
+      confirmLabel: 'Eliminar',
+    })
+    if (!ok) return
     try {
       await apiDelete(`/api/admin/users/${u.id}`)
       showToast('Usuario eliminado.', 'success')

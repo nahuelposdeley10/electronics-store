@@ -6,6 +6,7 @@ import { IconCross, IconPlus, IconRefresh, IconSearch, IconTrash } from '@/compo
 import { PENDING_GROUP, PAYMENT_LABELS, PAYMENT_OPTIONS, QUOTE_STATUS_LABELS, fullDate, idDoc, itemsSummary, salePaymentLabel, shortDate, shortId } from '../../consts.js'
 import { EmptyNote, ScreenBlocked, ScreenLoading, SortSelect, StatusTag } from '../common'
 import { useToast } from '@/context/useToast'
+import { useConfirm } from '@/context/useConfirm'
 
 import './styles.css'
 
@@ -411,6 +412,7 @@ function SalesScreen() {
 
 function ReturnsScreen({ canManage }) {
   const { showToast } = useToast()
+  const { confirm } = useConfirm()
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
   const [params, setParams] = useState({ filter: 'all', page: 1 })
@@ -441,8 +443,18 @@ function ReturnsScreen({ canManage }) {
 
   const setFilter = (id) => setParams((prev) => ({ ...prev, filter: id, page: 1 }))
 
-  const doReturn = (order) => {
-    if (!window.confirm(`¿Registrar la devolución de "#${shortId(order.id)}"? Saldrá ${formatARS(order.total)} del stock de caja.`)) return
+  const doReturn = async (order) => {
+    const ok = await confirm({
+      title: 'Registrar devolución',
+      message: (
+        <>
+          ¿Registrar la devolución de <strong>#{shortId(order.id)}</strong>? Saldrán{' '}
+          <strong>{formatARS(order.total)}</strong> del stock de caja.
+        </>
+      ),
+      confirmLabel: 'Registrar devolución',
+    })
+    if (!ok) return
     setProcessing((m) => ({ ...m, [order.id]: true }))
     apiPost(`/api/admin/orders/${order.id}/return`, {})
       .then((res) => {
@@ -577,6 +589,7 @@ function ReturnsScreen({ canManage }) {
 
 function QuotesScreen({ canManage }) {
   const { showToast } = useToast()
+  const { confirm } = useConfirm()
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
   const [formOpen, setFormOpen] = useState(false)
@@ -618,14 +631,37 @@ function QuotesScreen({ canManage }) {
       .catch((err) => showToast(err.message, 'error'))
   }
 
-  const deleteQuote = (quote) => {
-    if (!window.confirm(`¿Eliminar el presupuesto #${quote.number}?`)) return
-    apiDelete(`/api/admin/quotes/${quote._id}`)
-      .then(() => {
-        setData((d) => ({ ...d, items: d.items.filter((q) => q._id !== quote._id), total: d.total - 1 }))
-        showToast(`Presupuesto #${quote.number} eliminado.`, 'success')
-      })
-      .catch((err) => showToast(err.message, 'error'))
+  const cancelQuote = async (quote) => {
+    const ok = await confirm({
+      title: 'Cancelar presupuesto',
+      message: (
+        <>
+          ¿Marcar el presupuesto <strong>#{quote.number}</strong> como cancelado?
+        </>
+      ),
+      confirmLabel: 'Cancelar',
+    })
+    if (ok) updateStatus(quote, 'cancelled')
+  }
+
+  const deleteQuote = async (quote) => {
+    const ok = await confirm({
+      title: 'Eliminar presupuesto',
+      message: (
+        <>
+          ¿Eliminar el presupuesto <strong>#{quote.number}</strong>?
+        </>
+      ),
+      confirmLabel: 'Eliminar',
+    })
+    if (!ok) return
+    try {
+      await apiDelete(`/api/admin/quotes/${quote._id}`)
+      setData((db) => ({ ...db, items: db.items.filter((q) => q._id !== quote._id), total: db.total - 1 }))
+      showToast(`Presupuesto #${quote.number} eliminado.`, 'success')
+    } catch (err) {
+      showToast(err.message, 'error')
+    }
   }
 
   if (!data && !error) return <ScreenLoading label="Leyendo presupuestos…" />
@@ -722,7 +758,7 @@ function QuotesScreen({ canManage }) {
                           <button type="button" className="row-btn" onClick={() => updateStatus(quote, 'confirmed')}>
                             Confirmar
                           </button>
-                          <button type="button" className="row-btn" onClick={() => updateStatus(quote, 'cancelled')}>
+                          <button type="button" className="row-btn" onClick={() => cancelQuote(quote)}>
                             Cancelar
                           </button>
                         </>
@@ -774,6 +810,7 @@ function QuotesScreen({ canManage }) {
 
 
 function QuoteForm({ onClose, onSaved }) {
+  const { confirm } = useConfirm()
   const [products, setProducts] = useState([])
   const [form, setForm] = useState({
     productId: '',
@@ -815,7 +852,18 @@ function QuoteForm({ onClose, onSaved }) {
     })
   }
 
-  const removeLine = (id) => setLines((prev) => prev.filter((l) => l.product.id !== id))
+  const removeLine = async (product) => {
+    const ok = await confirm({
+      title: 'Quitar del presupuesto',
+      message: (
+        <>
+          ¿Quitar <strong>{product.name}</strong> del presupuesto?
+        </>
+      ),
+      confirmLabel: 'Quitar',
+    })
+    if (ok) setLines((prev) => prev.filter((l) => l.product.id !== product.id))
+  }
 
   const subtotal = lines.reduce((sum, l) => sum + l.product.price * l.quantity, 0)
   const discountNum = Math.min(Math.max(Number(form.discount) || 0, 0), subtotal)
@@ -891,7 +939,7 @@ function QuoteForm({ onClose, onSaved }) {
                   </em>
                 </span>
                 <span className="ticket-line-total mono">{formatARS(l.product.price * l.quantity)}</span>
-                <button type="button" className="row-btn row-btn-danger" onClick={() => removeLine(l.product.id)} aria-label="Quitar línea">
+                <button type="button" className="row-btn row-btn-danger" onClick={() => removeLine(l.product)} aria-label="Quitar línea">
                   <IconTrash />
                 </button>
               </li>

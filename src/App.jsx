@@ -2,10 +2,12 @@ import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import CatalogProvider from './context/CatalogProvider'
 import CartProvider from './context/CartProvider'
 import { ToastProvider } from './context/ToastContext'
+import { ConfirmProvider } from './context/ConfirmProvider'
 import { useCatalog } from './context/useCatalog'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import Toast from '@/components/Toast'
+import ConfirmDialog from '@/components/ConfirmDialog'
 import WhatsAppButton from '@/components/WhatsAppButton'
 import ProductCard from '@/components/ProductCard'
 import DashboardLoading from '@/components/DashboardLoading'
@@ -288,6 +290,7 @@ function AppContent() {
   return (
     <CartProvider>
       <Toast />
+      <ConfirmDialog />
       {view.name === 'dashboard' ? (
         <Suspense fallback={<DashboardLoading />}>
           <Dashboard onExit={() => navigate('home')} />
@@ -309,7 +312,9 @@ function App() {
   return (
     <CatalogProvider>
       <ToastProvider>
-        <AppContent />
+        <ConfirmProvider>
+          <AppContent />
+        </ConfirmProvider>
       </ToastProvider>
     </CatalogProvider>
   )

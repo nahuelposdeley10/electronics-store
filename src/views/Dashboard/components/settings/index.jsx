@@ -3,6 +3,7 @@ import { apiPut, apiUpload, getSession } from '@/lib/api'
 import { getSuperTenant } from '@/lib/tenant'
 import { IconCross, IconEdit, IconPlus } from '@/components/Icons'
 import { useToast } from '@/context/useToast'
+import { useConfirm } from '@/context/useConfirm'
 import { SetImageField, SettingsFetcher, ToggleRow } from '../common'
 
 import './styles.css'
@@ -478,6 +479,7 @@ function GeneralScreen() {
 
 
 function GeneralScreenBody({ settings, saving, onSave }) {
+  const { confirm } = useConfirm()
   const shipping = settings.shipping || {}
   const general = settings.general || {}
   const [form, setForm] = useState({
@@ -513,8 +515,13 @@ function GeneralScreenBody({ settings, saving, onSave }) {
     setMarqueeInput('')
   }
 
-  const removeMarquee = (index) => {
-    setMarquee((prev) => prev.filter((_, i) => i !== index))
+  const removeMarquee = async (index) => {
+    const ok = await confirm({
+      title: 'Quitar mensaje',
+      message: '¿Eliminar este mensaje de la cinta superior?',
+      confirmLabel: 'Quitar',
+    })
+    if (ok) setMarquee((prev) => prev.filter((_, i) => i !== index))
   }
 
   const startEdit = (index) => {
@@ -531,11 +538,14 @@ function GeneralScreenBody({ settings, saving, onSave }) {
     setDraft('')
   }
 
-  const clearMarquee = () => {
+  const clearMarquee = async () => {
     if (marquee.length === 0) return
-    if (window.confirm('¿Quitar todos los mensajes de la cinta superior?')) {
-      setMarquee([])
-    }
+    const ok = await confirm({
+      title: 'Vaciar cinta',
+      message: '¿Quitar todos los mensajes de la cinta superior?',
+      confirmLabel: 'Vaciar cinta',
+    })
+    if (ok) setMarquee([])
   }
 
   const submit = (e) => {

@@ -1,0 +1,80 @@
+/*============================================================
+   CONFIRM DIALOG
+   ============================================================*/
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(16, 18, 10, 0.6);
+  backdrop-filter: blur(3px);
+}
+.confirm-panel {
+  width: 100%;
+  max-width: 400px;
+  background: var(--gal-white);
+  border: 1px solid var(--gal-line-strong);
+  border-radius: 12px;
+  padding: 26px 24px 20px;
+  box-shadow: 0 24px 60px -20px rgba(16, 18, 10, 0.5);
+  display: flex;
+  flex-direction: column;
+  animation: confirm-pop 0.22s var(--ease-out);
+}
+.confirm-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  margin-bottom: 16px;
+}
+.confirm-icon-warn {
+  background: rgba(215, 38, 29, 0.12);
+  color: var(--gal-facade-deep);
+}
+.confirm-icon svg {
+  width: 24px;
+  height: 24px;
+}
+.confirm-panel h2 {
+  font-size: 20px;
+  line-height: 1.15;
+  color: var(--gal-ink);
+  margin-bottom: 8px;
+}
+.confirm-message {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--gal-ink-soft);
+  max-width: 46ch;
+}
+.confirm-message strong {
+  color: var(--gal-ink);
+}
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 22px;
+  border-top: 1px solid var(--gal-line);
+  padding-top: 16px;
+}
+.confirm-actions .ghost-btn,
+.confirm-actions .primary-btn {
+  padding: 10px 16px;
+  font-size: 13px;
+  border-radius: 4px;
+}
+@keyframes confirm-pop {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useCart } from '@/context/useCart'
+import { useConfirm } from '@/context/useConfirm'
 import { formatARS } from '@/data/format'
 import { getTenantHeaders } from '@/lib/tenant'
 import {
@@ -34,6 +35,7 @@ export default function CartView({ onNavigate }) {
     storeWhatsapp,
     total,
   } = useCart()
+  const { confirm } = useConfirm()
 
   const [couponInput, setCouponInput] = useState('')
   const [buyerName, setBuyerName] = useState('')
@@ -46,6 +48,28 @@ export default function CartView({ onNavigate }) {
     if (!couponInput.trim()) return
     const ok = applyCoupon(couponInput)
     if (ok) setCouponInput('')
+  }
+
+  const emptyCart = async () => {
+    const ok = await confirm({
+      title: 'Vaciar carrito',
+      message: '¿Quitar todos los productos de tu carrito?',
+      confirmLabel: 'Vaciar carrito',
+    })
+    if (ok) clearCart()
+  }
+
+  const removeOne = async (item) => {
+    const ok = await confirm({
+      title: 'Quitar del carrito',
+      message: (
+        <>
+          ¿Quitar <strong>{item.name}</strong> del carrito?
+        </>
+      ),
+      confirmLabel: 'Quitar',
+    })
+    if (ok) removeItem(item.id)
   }
 
   const checkout = async () => {
@@ -126,7 +150,7 @@ export default function CartView({ onNavigate }) {
     <main className="cart">
       <div className="cart-header">
         <h1>Tu carrito ({items.length})</h1>
-        <button type="button" className="link-btn" onClick={clearCart}>
+        <button type="button" className="link-btn" onClick={emptyCart}>
           <IconTrash />
           Vaciar carrito
         </button>
@@ -164,7 +188,7 @@ export default function CartView({ onNavigate }) {
               <button
                 type="button"
                 className="remove-btn"
-                onClick={() => removeItem(item.id)}
+                onClick={() => removeOne(item)}
                 aria-label={`Eliminar ${item.name}`}
               >
                 <IconClose />
