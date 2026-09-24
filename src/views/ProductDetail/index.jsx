@@ -3,6 +3,7 @@ import { useCart } from '@/context/useCart'
 import { useCatalog } from '@/context/useCatalog'
 import { formatARS, installmentsFor } from '@/data/format'
 import { useSiteSettings, mergeSettings } from '@/lib/siteSettings'
+import { productImage } from '@/lib/productImage'
 import {
   IconBack,
   IconBolt,
@@ -46,7 +47,7 @@ export default function ProductDetail({ product, onBack, onHome }) {
 
       <div className="detail-bay">
         <div className="detail-media">
-          <img className="detail-img" src={product.image} alt={product.name} />
+          <img className="detail-img" src={productImage(product.image)} alt={product.name} />
         </div>
 
         <div className="detail-info">

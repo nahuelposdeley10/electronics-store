@@ -1,4 +1,5 @@
 import { homeUrl, productUrl, cartUrl, infoUrl } from './urls.js'
+import { productImage } from './productImage.js'
 
 const INFO_TITLES = {
   'como-comprar': 'Cómo comprar',
@@ -30,7 +31,7 @@ export function seoMeta({ view, product, settings }) {
       title: `${product.name} — ${name}`,
       description: product.description || `${product.name} de ${product.brand} en ${name}.`,
       canonical: absolute(productUrl(product.id)),
-      image: product.image || null,
+      image: absolute(productImage(product.image)),
       type: 'product',
       siteName: name,
       noIndex: false,

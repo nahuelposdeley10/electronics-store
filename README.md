@@ -1,23 +1,94 @@
+<!--
+  README orientado a reclutadores: comunica el valor primero (quién/para qué),
+  destaca los diferenciales técnicos y deja el setup al final.
+  Screenshots: agregá capturas en docs/screenshots/ y referencialas abajo.
+-->
+
 # Electronics Store
 
-Tienda online multi-tenant (una base de datos, muchas tiendas) con panel de
-administración, carrito y pago con Mercado Pago. Frontend React (Vite) + API
-Express + MongoDB (Mongoose), compartiendo el mismo deploy.
+Plataforma web de e-commerce **multi-tenant**: una sola base de datos, muchas
+tiendas completamente aisladas, y cada tienda con su **tienda online pública** y
+un **panel de administración completo** (ventas, stock, caja, reportes, pagos).
+
+Construida como sistema monolítico full-stack que sirve frontend + API en un
+solo deploy: React 19 + Express 5 + MongoDB, con pagos reales de Mercado Pago,
+estado en vivo por Socket.IO y una suite de tests que corre en CI.
+
+Ya no es "una tienda": es la plataforma sobre la que corren muchas — cada
+negocio con su propia URL, marca, productos, precios y cuenta de Mercado Pago
+que cobra directo a su caja.
+
+## Capturas
+
+> Falta agregar pantallazos: `docs/screenshots/tienda.png`, `.panel.png`,
+> `.pagos.png`. Sin imágenes, un reclutador no abre un repo por más bueno que
+> sea el código.
+
+## Lo que más vale la pena mirar
+
+- **Multi-tenancy de verdad**: cada tienda vive en su URL (`/u/<slug>`) y toda
+  su data queda escopeada por `adminId`. Una tienda jamás ve ni muta datos de
+  otra; el aislamiento está garantizado por una suite de tests dedicada
+  (`server/tests/tenancy.test.js`), no por confianza.
+- **Seguridad en pagos reales**: webhooks de Mercado Pago validados por firma
+  **HMAC-SHA256**, refresh tokens **anti-IDOR** por orden (imposible consultar
+  una orden ajena), credenciales de pago por tienda guardadas en la base,
+  verificación de monto y tenant en cada notificación, y stock que se descuenta
+  **una sola vez** con rollback si algo falla a mitad de camino.
+- **Estado en vivo**: las ventas y pagos aprobados aparecen en el panel al
+  instante (Socket.IO + change streams de Mongo), sin recargar.
+- **Panel de negocio completo, no solo CRUDs**: POS con caja, stock con
+  inventario físico, compras a proveedores, reportes de ganancia, presupuestos,
+  cupones, roles y permisos granulares.
+- **Testeado y con CI**: suites de webhooks, tenancy, checkout, stock, caja,
+  cupones, settings y secuencias atómicas; GitHub Actions levanta MongoDB y
+  corre lint + tests sin credenciales.
+
+## Features
+
+### Tienda online (lo que ve el cliente)
+
+- Home con hero, ofertas, recién llegados, galería filtrable por categoría /
+  marca / precio, marcas y newsletter.
+- Detalle de producto con cuotas, stock, rating, especificaciones y
+  relacionados.
+- Carrito con cupones, control de stock real y barra de envío gratis; persiste
+  en `localStorage`.
+- Checkout con **Mercado Pago** (pago online) o **pedido por WhatsApp** si la
+  tienda no cobra online.
+- Seguimiento del pedido con el estado del pago en vivo.
+- Páginas de info: cómo comprar, medios de pago, envíos, garantía, devoluciones.
+
+### Panel de administración (`/admin`)
+
+- **POS**: venta presencial con descuento por ticket y métodos efectivo /
+  tarjeta / transferencia; descuenta stock y anota la caja.
+- **Ventas**: historial con filtros, captura de datos del pagador y
+  re-verificación del pago contra Mercado Pago.
+- **Devoluciones**: restaura stock y registra el egreso de caja.
+- **Presupuestos**: numeración secuencial, estados, búsqueda y paginación.
+- **Productos / Categorías / Marcas / Ofertas**: CRUD completo, ajuste de
+  precios masivo por categoría e importación desde JSON.
+- **Stock**: movimientos, ajustes con motivo, inventario físico con
+  sobras/faltas, stock mínimo y compras a proveedores.
+- **Caja**: apertura de turno, arqueos y cierre con diferencia (sobra/falta).
+- **Reportes**: ventas, productos, ganancias, stock y clientes.
+- **Marketing**: cupones de descuento porcentual.
+- **Configuración**: datos del negocio, envío, métodos de pago (credenciales de
+  Mercado Pago por tienda) y tramos de cuotas.
+- **Usuarios**: roles superadmin / admin / operator con permisos por código.
 
 ## Stack
 
-- **Frontend**: React 19 + Vite, React Compiler, socket.io-client (estado de pagos en vivo)
-- **Backend**: Node.js ≥ 22, Express 5, Socket.IO
-- **Datos**: MongoDB (Mongoose), multi-tenant por `adminId`
-- **Pagos**: Mercado Pago (preferencias, webhooks firmados, refresh de órdenes)
-- **CRM/media**: Cloudinary (imágenes de producto), JWT para el panel
-
-## Requisitos
-
-- Node.js ≥ 22.12
-- MongoDB (local, Docker o Atlas)
-- Cuenta de desarrollador de Mercado Pago (Access Token + Webhook secret)
-- Cuenta de Cloudinary (solo para subir imágenes de productos)
+- **Frontend**: React 19 + Vite, React Compiler, socket.io-client, SVG propios.
+- **Backend**: Node.js >= 22, Express 5, Socket.IO.
+- **Datos**: MongoDB + Mongoose, multi-tenant por `adminId`, indices TTL para
+  retención de movimientos.
+- **Pagos**: Mercado Pago (preferencias, webhooks firmados, refresh de órdenes
+  anti-IDOR).
+- **Media**: Cloudinary (productos, logo, portada).
+- **Auth**: JWT + bcrypt, roles y permisos evaluados por request.
+- **Deploy**: Render (proceso único) y Vercel (serverless) desde el mismo repo.
 
 ## Setup
 
@@ -31,7 +102,8 @@ Express + MongoDB (Mongoose), compartiendo el mismo deploy.
    cp .env.example .env
    ```
    Completá al menos `MONGODB_URI`, `MP_ACCESS_TOKEN`, `JWT_SECRET` y las
-   credenciales de Cloudinary. Detalle de cada variable en [Variables de entorno](#variables-de-entorno).
+   credenciales de Cloudinary. Detalle de cada variable en
+   [Variables de entorno](#variables-de-entorno).
 
 3. Crear/sincronizar los usuarios del panel:
    ```bash

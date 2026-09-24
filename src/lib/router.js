@@ -18,7 +18,7 @@ export function parseLocation() {
   if (path === '/admin') return { name: 'dashboard' }
 
   const prefix = storePathPrefix()
-  if (!prefix) return { name: 'home' }
+  if (!prefix) return { name: 'dashboard' }
 
   const parts = path.slice(prefix.length).replace(/^\/+/, '').split('/').filter(Boolean)
 

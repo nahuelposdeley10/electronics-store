@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { formatARS } from '@/data/format'
 import SearchSelect from '@/components/SearchSelect'
 import { apiGet, apiPost } from '@/lib/api'
+import { productImage } from '@/lib/productImage'
 import { IconCheck, IconMinus, IconPlus, IconSearch, IconTrash } from '@/components/Icons'
 import { shortId } from '../../consts.js'
 import { stockStatusOf } from '../../consts.js'
@@ -235,7 +236,7 @@ function PosScreen({ canManage }) {
                 disabled={!canManage || p.stock <= 0}
                 onClick={() => add(p)}
               >
-                <img className="prod-thumb" src={p.image} alt="" loading="lazy" />
+                <img className="prod-thumb" src={productImage(p.image)} alt="" loading="lazy" />
                 <span className="pos-item-meta">
                   <strong>{p.name}</strong>
                   <em>{p.brand}</em>

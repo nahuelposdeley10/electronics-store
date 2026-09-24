@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { formatARS } from '@/data/format'
 import SearchSelect from '@/components/SearchSelect'
 import { apiDelete, apiGet, apiPost, apiPut, apiUpdate, apiUpload } from '@/lib/api'
+import { productImage } from '@/lib/productImage'
 import { IconCheck, IconClock, IconCross, IconEdit, IconLock, IconPlus, IconSearch, IconTrash } from '@/components/Icons'
 import { CATEGORY_LABELS, IMPORT_EXAMPLE, stockStatusOf } from '../../consts.js'
 import { EmptyNote, ScreenBlocked, ScreenLoading, SortSelect, StockValue } from '../common'
@@ -294,7 +295,7 @@ function ProductsScreen({ canManage }) {
               <tr key={p.id} className={`stock-row-${stockStatusOf(p.stock, p.minStock)}`}>
                 <td>
                   <span className="t-cell-product">
-                    <img className="prod-thumb" src={p.image} alt="" loading="lazy" />
+                    <img className="prod-thumb" src={productImage(p.image)} alt="" loading="lazy" />
                     <span>
                       <strong>{p.name}</strong>
                       <em>{p.brand}</em>
@@ -611,8 +612,8 @@ function ProductForm({ product, onClose, onSaved }) {
                   ? 'Imagen nueva (dejá vacío para conservar la actual)'
                   : 'Imagen (PNG, JPG o WEBP)'}
               </span>
-              {product && product.image && !image && (
-                <img className="pf-preview" src={product.image} alt="" />
+              {product && !image && (
+                <img className="pf-preview" src={productImage(product.image)} alt="" />
               )}
               <input
                 type="file"
@@ -1178,7 +1179,7 @@ function OffersScreen({ canManage }) {
                 <tr key={p.id} className={`stock-row-${stockStatusOf(p.stock, p.minStock)}`}>
                   <td>
                     <span className="t-cell-product">
-                      <img className="prod-thumb" src={p.image} alt="" loading="lazy" />
+                      <img className="prod-thumb" src={productImage(p.image)} alt="" loading="lazy" />
                       <span>
                         <strong>{p.name}</strong>
                         <em>{p.brand}</em>

@@ -369,7 +369,8 @@ export default function Dashboard({ onExit }) {
 
   return (
     <div className="dash">
-      <aside className="dash-side">
+      {gate !== 'login' && (
+        <aside className="dash-side">
         <div className="dash-brand">
           <span className="brand-chip">
             <IconBolt />
@@ -460,10 +461,12 @@ export default function Dashboard({ onExit }) {
         )}
 
         <div className="dash-side-foot">
-          <button type="button" className="dash-exit" onClick={onExit}>
-            <IconBack />
-            Volver a la tienda
-          </button>
+          {user?.role === 'admin' && user?.businessSlug && (
+            <button type="button" className="dash-exit" onClick={onExit}>
+              <IconBack />
+              Volver a la tienda
+            </button>
+          )}
           {user && (
             <button type="button" className="dash-logout" onClick={handleLogout}>
               <IconLogout />
@@ -472,6 +475,7 @@ export default function Dashboard({ onExit }) {
           )}
         </div>
       </aside>
+      )}
 
       <main className="dash-main">
         {userIsSuper && (activeScreen === 'businesses' || businessBlock) && (

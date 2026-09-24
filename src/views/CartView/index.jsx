@@ -3,6 +3,7 @@ import { useCart } from '@/context/useCart'
 import { useConfirm } from '@/context/useConfirm'
 import { formatARS } from '@/data/format'
 import { getTenantHeaders } from '@/lib/tenant'
+import { productImage } from '@/lib/productImage'
 import {
   IconCart,
   IconClose,
@@ -161,7 +162,7 @@ export default function CartView({ onNavigate }) {
           {items.map((item) => (
             <li key={item.id} className="cart-item">
               <div className="cart-item-media">
-                <img className="cart-item-img" src={item.image} alt={item.name} />
+                <img className="cart-item-img" src={productImage(item.image)} alt={item.name} />
               </div>
               <div className="cart-item-info">
                 <span className="cart-item-name">{item.name}</span>

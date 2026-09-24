@@ -16,6 +16,7 @@
     "server:dev": "node --watch server/index.js",
     "seed": "node server/seed.js",
     "seed:users": "node server/seed-users.js",
+    "seed:cesar": "node server/seed-cesar.js",
     "set-passwords": "node server/seed-users.js --ask",
     "test": "node --test \"server/tests/*.test.js\"",
     "test:webhooks": "node server/tests/webhooks.test.js",

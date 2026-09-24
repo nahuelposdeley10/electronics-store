@@ -1,5 +1,6 @@
 import { productUrl } from '@/lib/urls'
 import { formatARS } from '@/data/format'
+import { productImage } from '@/lib/productImage'
 
 import './styles.css'
 
@@ -22,7 +23,7 @@ export default function RelatedProducts({ related, onHome }) {
               onHome(p.id)
             }}
           >
-            <img className="related-img" src={p.image} alt={p.name} loading="lazy" />
+            <img className="related-img" src={productImage(p.image)} alt={p.name} loading="lazy" />
             <span className="related-name">{p.name}</span>
             <span className="related-price mono">{formatARS(p.price)}</span>
           </a>

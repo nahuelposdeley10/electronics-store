@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { formatARS } from '@/data/format'
 import SearchSelect from '@/components/SearchSelect'
 import { apiGet, apiPost, apiPut } from '@/lib/api'
+import { productImage } from '@/lib/productImage'
 import { IconCheck, IconCross, IconPlus, IconSearch } from '@/components/Icons'
 import { CATEGORY_LABELS, MOVEMENT_CHIPS, MOVEMENT_TYPE_LABELS, shortDate, fullDate, itemsSummary, stockStatusOf } from '../../consts.js'
 import { EmptyNote, OperatorSelect, ScreenBlocked, ScreenLoading, SortSelect, StockBadge, StockValue } from '../common'
@@ -161,7 +162,7 @@ function StockScreen() {
               <tr key={p.id} className={`stock-row-${stockStatusOf(p.stock, p.minStock)}`}>
                 <td>
                   <span className="t-cell-product">
-                    <img className="prod-thumb" src={p.image} alt="" loading="lazy" />
+                    <img className="prod-thumb" src={productImage(p.image)} alt="" loading="lazy" />
                     <span>
                       <strong>{p.name}</strong>
                       <em>{p.brand}</em>

@@ -17,7 +17,8 @@ import CartView from '@/views/CartView'
 import ProductDetail from '@/views/ProductDetail'
 import OrderStatus from '@/views/OrderStatus'
 import InfoPage from '@/views/InfoPage'
-import { getTenantHeaders } from '@/lib/tenant'
+import { getTenantHeaders, storePathPrefix } from '@/lib/tenant'
+import { getSession } from '@/lib/api'
 import { parseLocation, urlForView } from '@/lib/router'
 import { applySEO, seoMeta } from '@/lib/seo'
 import { useSiteSettings, mergeSettings } from '@/lib/siteSettings'
@@ -92,7 +93,14 @@ function AppContent() {
     applySEO(seoMeta({ view, product: view.name === 'product' ? product : null, settings }))
   }, [view, product, settings])
 
+  useEffect(() => {
+    if (view.name === 'dashboard' && window.location.pathname !== '/admin') {
+      window.history.replaceState({}, '', '/admin')
+    }
+  }, [view.name])
+
   const navigate = (name, payload) => {
+    if (name === 'home' && !storePathPrefix()) name = 'dashboard'
     const url = urlForView(name, payload)
     setView({ name, payload })
     if (name === 'product') {
@@ -293,7 +301,16 @@ function AppContent() {
       <ConfirmDialog />
       {view.name === 'dashboard' ? (
         <Suspense fallback={<DashboardLoading />}>
-          <Dashboard onExit={() => navigate('home')} />
+          <Dashboard
+            onExit={() => {
+              const { user } = getSession()
+              if (user?.role === 'admin' && user?.businessSlug) {
+                window.location.assign(`/u/${user.businessSlug}`)
+                return
+              }
+              navigate('dashboard')
+            }}
+          />
         </Suspense>
       ) : (
         <>

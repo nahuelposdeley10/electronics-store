@@ -111,7 +111,8 @@ export default function SearchSelect({
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={() => selectOption(o)}
                 >
-                  {o.label}
+{o.label}
+                  {o.tag && <span className="filter-combo-tag">{o.tag}</span>}
                 </button>
               </li>
             ))}

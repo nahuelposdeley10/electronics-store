@@ -18,7 +18,7 @@ import { CashCount } from '../models/CashCount.js'
 import { requireAuth, requirePermission } from '../middleware/auth.js'
 import { generatePassword } from '../lib/passwords.js'
 import { getSettings, saveSettings, ALL_PERMISSIONS, permissionsForRole } from '../lib/settings.js'
-import { requireTenantIdOf } from '../lib/tenant.js'
+import { requireTenantIdOf, tenantIdOf } from '../lib/tenant.js'
 
 const router = express.Router()
 
@@ -112,10 +112,8 @@ router.put('/businesses/:id/online', async (req, res) => {
 
 router.get('/', async (req, res) => {
   try {
-    const filter =
-      req.user.role === 'superadmin'
-        ? {}
-        : { adminId: requireTenantIdOf(req) }
+    const tenant = tenantIdOf(req)
+    const filter = tenant ? { $or: [{ _id: tenant }, { adminId: tenant }] } : {}
     const users = await User.find(filter).sort({ role: 1, createdAt: 1 }).lean()
     const self = String(req.user.sub)
     const mapped = await Promise.all(

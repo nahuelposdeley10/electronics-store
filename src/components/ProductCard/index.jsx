@@ -2,6 +2,7 @@ import { useCart } from '@/context/useCart'
 import { formatARS, installmentsFor } from '@/data/format'
 import { useSiteSettings, mergeSettings } from '@/lib/siteSettings'
 import { productUrl } from '@/lib/urls'
+import { productImage } from '@/lib/productImage'
 import Stars from '@/components/Stars'
 import { IconPlus, IconCross } from '@/components/Icons'
 
@@ -42,7 +43,7 @@ export default function ProductCard({ product, onView, offer = false, revealDela
           }
         }}
       >
-        <img className="box-img" src={product.image} alt={product.name} loading="lazy" />
+        <img className="box-img" src={productImage(product.image)} alt={product.name} loading="lazy" />
         {offer && discount > 0 && (
           <span className="tag-discount">{discount}% OFF</span>
         )}
