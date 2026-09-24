@@ -183,6 +183,7 @@ export default function Dashboard({ onExit }) {
         setStoreInfo({
           name: data?.store?.name || null,
           address: data?.store?.addressShort || null,
+          logoUrl: data?.store?.logoUrl || null,
         })
         setMpNeedSetup(
           getSession().user?.role === 'admin' &&
@@ -372,8 +373,12 @@ export default function Dashboard({ onExit }) {
       {gate !== 'login' && (
         <aside className="dash-side">
         <div className="dash-brand">
-          <span className="brand-chip">
-            <IconBolt />
+          <span className={`brand-chip${storeInfo?.logoUrl ? ' chip-logo' : ''}`}>
+            {storeInfo?.logoUrl ? (
+              <img className="brand-logo" src={storeInfo.logoUrl} alt="" />
+            ) : (
+              <IconBolt />
+            )}
           </span>
           <div className="dash-brand-text">
             <strong>{storeInfo?.name || user?.businessSlug || 'TechStore'}</strong>

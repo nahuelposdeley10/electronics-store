@@ -37,6 +37,17 @@
   height: 20px;
   fill: var(--gal-white);
 }
+.dash-brand .brand-chip.chip-logo {
+  width: auto;
+  height: auto;
+  background: transparent;
+}
+.dash-brand .brand-chip .brand-logo {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  border-radius: 6px;
+}
 .dash-brand-text {
   display: flex;
   flex-direction: column;
