@@ -306,7 +306,17 @@ router.post('/products', requirePermission('catalog.manage'), upload.single('ima
   }
 
   try {
-    const image = req.file ? await uploadToCloudinary(req.file) : ''
+    let image = ''
+    let imageWarning = ''
+    if (req.file) {
+      try {
+        image = await uploadToCloudinary(req.file)
+      } catch (error) {
+        if (error.status === 400) throw error
+        console.error('Product image upload error:', error)
+        imageWarning = 'El producto se creó, pero la imagen no se pudo subir'
+      }
+    }
     const lastId = (await Product.findOne({ adminId: tenant }).sort({ id: -1 }).lean())?.id || 0
     const product = await Product.create({
       adminId: tenant,
@@ -332,7 +342,7 @@ router.post('/products', requirePermission('catalog.manage'), upload.single('ima
         : [],
     })
 
-    return res.status(201).json({
+    const payload = {
       id: product.id,
       name: product.name,
       brand: product.brand,
@@ -340,9 +350,15 @@ router.post('/products', requirePermission('catalog.manage'), upload.single('ima
       price: product.price,
       stock: product.stock,
       image: product.image,
-    })
+    }
+    if (imageWarning) payload.warning = imageWarning
+    return res.status(201).json(payload)
   } catch (error) {
     console.error('Products create error:', error)
+    if (error?.name === 'ValidationError') {
+      const first = Object.values(error.errors || {})[0]
+      return res.status(400).json({ error: first ? first.message : 'Faltan datos obligatorios del producto' })
+    }
     return res.status(error.status || 500).json({ error: error.status ? error.message : 'No se pudo crear el producto' })
   }
 })
@@ -407,11 +423,20 @@ router.put('/products/:id', requirePermission('catalog.manage'), upload.single('
   }
 
   try {
-    if (req.file) patch.image = await uploadToCloudinary(req.file)
+    let imageWarning = ''
+    if (req.file) {
+      try {
+        patch.image = await uploadToCloudinary(req.file)
+      } catch (error) {
+        if (error.status === 400) return res.status(400).json({ error: error.message })
+        console.error('Product image upload error:', error)
+        imageWarning = 'El producto se actualizó, pero la imagen nueva no se pudo subir'
+      }
+    }
     Object.assign(product, patch)
     await product.save()
 
-    return res.json({
+    const payload = {
       id: product.id,
       name: product.name,
       brand: product.brand,
@@ -427,7 +452,9 @@ router.put('/products/:id', requirePermission('catalog.manage'), upload.single('
       image: product.image,
       description: product.description,
       specs: product.specs,
-    })
+    }
+    if (imageWarning) payload.warning = imageWarning
+    return res.json(payload)
   } catch (error) {
     console.error('Products update error:', error)
     return res.status(error.status || 500).json({ error: error.status ? error.message : 'No se pudo actualizar el producto' })

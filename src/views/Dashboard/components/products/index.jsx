@@ -99,6 +99,7 @@ function ProductsScreen({ canManage }) {
         : `Producto agregado: ${saved.name}`,
       'success',
     )
+    if (saved.warning) showToast(saved.warning, 'warn')
     setParams((prev) => ({ ...prev, page: 1 }))
   }
 

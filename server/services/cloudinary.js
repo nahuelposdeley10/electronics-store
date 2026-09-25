@@ -29,7 +29,12 @@ export function uploadToCloudinary(file) {
       { folder: 'techstore', resource_type: 'image' },
       (error, result) => {
         if (error) {
-          reject(error)
+          const wrapped = new Error(
+            `No se pudo subir la imagen a Cloudinary: ${error?.message || error || 'error desconocido'}`,
+          )
+          wrapped.status = error?.http_code || 500
+          wrapped.cause = error
+          reject(wrapped)
         } else {
           resolve(result.secure_url)
         }
