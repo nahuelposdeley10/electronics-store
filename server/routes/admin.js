@@ -8,6 +8,7 @@ import { uploadToCloudinary } from '../services/cloudinary.js'
 import { parsePagination, buildProductSearchFilter, escapeRegex, parseMetaFilter, buildAdminSort } from '../lib/catalog-query.js'
 import { getValidCategoryKeys } from '../lib/catalog-meta.js'
 import { changeStock } from '../lib/stock.js'
+import { registerPurchase } from '../lib/purchases.js'
 import { currentShift } from '../lib/cash.js'
 import { roundMoney, roundLine } from '../lib/money.js'
 import { CashMovement } from '../models/CashMovement.js'
@@ -288,7 +289,25 @@ router.get('/products', async (req, res) => {
 })
 
 router.post('/products', requirePermission('catalog.manage'), upload.single('image'), async (req, res) => {
-  const { name, brand, category, price, oldPrice, costPrice, stock, minStock, rating, freeShipping, badge, description, specs } = req.body || {}
+  const {
+    name,
+    brand,
+    category,
+    price,
+    oldPrice,
+    costPrice,
+    stock,
+    minStock,
+    rating,
+    freeShipping,
+    badge,
+    description,
+    specs,
+    supplier,
+    supplierBill,
+    initialQty,
+    initialCost,
+  } = req.body || {}
 
   if (!name || !brand || !category || price === undefined || price === '') {
     return res.status(400).json({ error: 'Nombre, marca, categoría y precio son requeridos' })
@@ -317,6 +336,7 @@ router.post('/products', requirePermission('catalog.manage'), upload.single('ima
         imageWarning = 'El producto se creó, pero la imagen no se pudo subir'
       }
     }
+    const wantsInitialStock = Math.floor(Number(initialQty)) > 0
     const lastId = (await Product.findOne({ adminId: tenant }).sort({ id: -1 }).lean())?.id || 0
     const product = await Product.create({
       adminId: tenant,
@@ -326,8 +346,8 @@ router.post('/products', requirePermission('catalog.manage'), upload.single('ima
       category,
       price: roundMoney(price),
       oldPrice: oldPrice ? roundMoney(oldPrice) : null,
-      costPrice: costPrice !== undefined && costPrice !== '' ? roundMoney(costPrice) : 0,
-      stock: stock !== undefined && stock !== '' ? Number(stock) : 0,
+      costPrice: !wantsInitialStock && costPrice !== undefined && costPrice !== '' ? roundMoney(costPrice) : 0,
+      stock: !wantsInitialStock && stock !== undefined && stock !== '' ? Number(stock) : 0,
       minStock: minStock !== undefined && minStock !== '' ? Number(minStock) : 0,
       rating: rating !== undefined && rating !== '' ? Number(rating) : 0,
       freeShipping: freeShipping === 'true' || freeShipping === true,
@@ -351,7 +371,44 @@ router.post('/products', requirePermission('catalog.manage'), upload.single('ima
       stock: product.stock,
       image: product.image,
     }
-    if (imageWarning) payload.warning = imageWarning
+
+    const warnings = []
+    if (imageWarning) warnings.push(imageWarning)
+
+    if (wantsInitialStock) {
+      const canInventory = (req.user?.perms || []).includes('inventory.write')
+      if (!canInventory) {
+        warnings.push('El producto se creó sin stock: no tenés permiso para cargar stock inicial')
+      } else {
+        try {
+          const result = await registerPurchase({
+            tenant,
+            supplier: String(supplier || '').trim(),
+            invoice: String(supplierBill || '').trim(),
+            items: [
+              {
+                productId: product.id,
+                quantity: Math.floor(Number(initialQty)),
+                cost: Number(initialCost) || 0,
+              },
+            ],
+            by: req.user?.email || null,
+          })
+          payload.stock = result.logged?.[0]?.stockAfter ?? payload.stock
+          payload.stockNumber = result.number
+          if (result.cashWarning) warnings.push(result.cashWarning)
+        } catch (error) {
+          console.error('Products initial stock error:', error)
+          if (error.status === 400) {
+            warnings.push(`${error.message}. Podés cargar el stock después desde Inventario.`)
+          } else {
+            warnings.push('El producto se creó, pero no se pudo cargar el stock inicial')
+          }
+        }
+      }
+    }
+
+    if (warnings.length > 0) payload.warning = warnings.join('. ')
     return res.status(201).json(payload)
   } catch (error) {
     console.error('Products create error:', error)

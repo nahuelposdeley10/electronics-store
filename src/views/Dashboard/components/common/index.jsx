@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { apiGet } from '@/lib/api'
+import { formatARS } from '@/data/format'
 import { REPORT_PERIODS, STATUS_META, STOCK_STATUS_LABELS, stockStatusOf } from '../../consts.js'
 import { IconChart, IconClock, IconSearchOff } from '@/components/Icons'
 import SearchSelect from '@/components/SearchSelect'
@@ -57,6 +58,160 @@ function OperatorSelect({ id, value, onChange }) {
       onChange={onChange}
       options={options}
     />
+  )
+}
+
+
+function ProductPicker({
+  id,
+  value,
+  onChange,
+  placeholder = 'Elegí un producto…',
+  showStock = true,
+  showPrice = false,
+}) {
+  const inputRef = useRef(null)
+  const [open, setOpen] = useState(false)
+  const [text, setText] = useState('')
+  const [results, setResults] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [label, setLabel] = useState('')
+  const [hi, setHi] = useState(0)
+
+  useEffect(() => {
+    let alive = true
+    const timer = setTimeout(() => {
+      setLoading(true)
+      const q = text.trim()
+      apiGet(`/api/admin/products?${new URLSearchParams({ q, limit: '20' }).toString()}`)
+        .then((res) => {
+          if (alive) setResults(res.items || [])
+        })
+        .catch(() => {
+          if (alive) setResults([])
+        })
+        .finally(() => {
+          if (alive) setLoading(false)
+        })
+    }, 250)
+    return () => {
+      alive = false
+      clearTimeout(timer)
+    }
+  }, [text])
+
+  const [lastValue, setLastValue] = useState(value)
+
+  if (value !== lastValue) {
+    setLastValue(value)
+    if (value === '' || value == null) setLabel('')
+  }
+
+  const shown = open ? text : label
+
+  const pick = (p) => {
+    onChange(String(p.id), p)
+    setLabel(p.name)
+    setOpen(false)
+    setText('')
+    setHi(0)
+    inputRef.current?.blur()
+  }
+
+  const tagOf = (p) => {
+    const bits = []
+    if (showStock) bits.push(`stock ${p.stock}`)
+    if (showPrice) bits.push(formatARS(p.price))
+    return bits.join(' · ')
+  }
+
+  const onKeyDown = (e) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      if (!open) {
+        setHi(0)
+        setOpen(true)
+        return
+      }
+      setHi((i) => Math.min(i + 1, results.length - 1))
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      if (!open) return
+      setHi((i) => Math.max(i - 1, 0))
+    } else if (e.key === 'Enter') {
+      e.preventDefault()
+      if (open) {
+        const p = results[Math.min(hi, results.length - 1)]
+        if (p) pick(p)
+      } else {
+        setOpen(true)
+        setText('')
+      }
+    } else if (e.key === 'Escape') {
+      setOpen(false)
+      setText('')
+      inputRef.current?.blur()
+    }
+  }
+
+  return (
+    <div className="filter-combo product-picker">
+      <div className="filter-combo-field">
+        <input
+          ref={inputRef}
+          id={id}
+          className="filter-combo-input"
+          type="text"
+          role="combobox"
+          aria-expanded={open}
+          aria-autocomplete="list"
+          aria-controls={`${id}-menu`}
+          aria-activedescendant={open ? `${id}-opt-${hi}` : undefined}
+          value={shown}
+          placeholder={placeholder}
+          onChange={(e) => {
+            setText(e.target.value)
+            setOpen(true)
+            setHi(0)
+          }}
+          onFocus={() => {
+            setOpen(true)
+            setHi(0)
+          }}
+          onBlur={() => setTimeout(() => setOpen(false), 120)}
+          onKeyDown={onKeyDown}
+        />
+        {open && (
+          <ul className="filter-combo-menu" id={`${id}-menu`} role="listbox">
+            {loading && (
+              <li className="filter-combo-empty" role="option" aria-disabled="true">
+                Buscando…
+              </li>
+            )}
+            {!loading && results.length === 0 && (
+              <li className="filter-combo-empty" role="option" aria-disabled="true">
+                Sin resultados
+              </li>
+            )}
+            {!loading &&
+              results.map((p, i) => (
+                <li key={p.id} role="option" aria-selected={String(p.id) === String(value)}>
+                  <button
+                    id={`${id}-opt-${i}`}
+                    type="button"
+                    className={`filter-combo-option${i === hi ? ' hi' : ''}`}
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => pick(p)}
+                  >
+                    {p.name}
+                    {tagOf(p) && <span className="filter-combo-tag">{tagOf(p)}</span>}
+                  </button>
+                </li>
+              ))}
+          </ul>
+        )}
+      </div>
+    </div>
   )
 }
 
@@ -318,4 +473,4 @@ function SettingsFetcher({ render }) {
 }
 
 
-export { StatusTag, EmptyNote, ScreenLoading, KpiTicket, StockBadge, StockValue, ChartTip, ChartLegend, ReportPeriodBar, ScreenBlocked, ToggleRow, ToggleSwitch, SettingsNote, SetImageField, SettingsFetcher, SortSelect, OperatorSelect }
+export { StatusTag, EmptyNote, ScreenLoading, KpiTicket, StockBadge, StockValue, ChartTip, ChartLegend, ReportPeriodBar, ScreenBlocked, ToggleRow, ToggleSwitch, SettingsNote, SetImageField, SettingsFetcher, SortSelect, OperatorSelect, ProductPicker }

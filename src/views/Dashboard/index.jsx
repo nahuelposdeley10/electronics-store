@@ -9,6 +9,7 @@ import {
   IconCard,
   IconCash,
   IconChart,
+  IconCross,
   IconInventory,
   IconLock,
   IconLogout,
@@ -17,7 +18,7 @@ import {
   IconWrench,
 } from '@/components/Icons'
 import DashboardLoading from '@/components/DashboardLoading'
-import { initials } from './consts.js'
+import { initials, ROLE_LABELS } from './consts.js'
 import {
   CashCurrentScreen,
   CashMovementsScreen,
@@ -110,6 +111,9 @@ export default function Dashboard({ onExit }) {
   const [storeInfo, setStoreInfo] = useState(null)
   const [mpNeedSetup, setMpNeedSetup] = useState(false)
   const [mpWarningClosed, setMpWarningClosed] = useState(false)
+  const [guideOpen, setGuideOpen] = useState(
+    () => localStorage.getItem('ts-guided-done') !== '1',
+  )
   const userIsSuper = user?.role === 'superadmin'
   const needsBusiness = userIsSuper && !superTenant
   const tenantFreeScreens = ['settings-users', 'settings-roles']
@@ -246,6 +250,11 @@ export default function Dashboard({ onExit }) {
     setMpNeedSetup(false)
     setMpWarningClosed(false)
     setGate('login')
+  }
+
+  const dismissGuide = () => {
+    localStorage.setItem('ts-guided-done', '1')
+    setGuideOpen(false)
   }
 
   useOrderEvents(
@@ -432,7 +441,7 @@ export default function Dashboard({ onExit }) {
               <strong>{user.name}</strong>
               <em>{user.email}</em>
             </span>
-            <span className={`role-chip role-${user.role}`}>{user.role}</span>
+            <span className={`role-chip role-${user.role}`}>{ROLE_LABELS[user.role] || user.role}</span>
           </div>
         )}
 
@@ -483,6 +492,15 @@ export default function Dashboard({ onExit }) {
       )}
 
       <main className="dash-main">
+        {gate === 'ready' && !needsBusiness && overview && overview.counts?.all === 0 && guideOpen && (
+          <FirstRunBanner
+            onGo={(id) => {
+              dismissGuide()
+              changeScreen(id)
+            }}
+            onClose={dismissGuide}
+          />
+        )}
         {userIsSuper && (activeScreen === 'businesses' || businessBlock) && (
           <BusinessesScreen
             current={superTenant}
@@ -523,7 +541,11 @@ export default function Dashboard({ onExit }) {
           <OverviewScreen data={overview} onView={changeScreen} />
         )}
         {gate === 'ready' && activeScreen === 'products' && (
-          <ProductsScreen canManage={can('catalog.manage')} />
+          <ProductsScreen
+            canManage={can('catalog.manage')}
+            canInventory={can('inventory.write')}
+            canCash={can('cash.manage')}
+          />
         )}
         {gate === 'ready' && activeScreen === 'product-categories' && (
           <MetaScreen
@@ -611,6 +633,48 @@ export default function Dashboard({ onExit }) {
           onClose={() => setMpWarningClosed(true)}
         />
       )}
+    </div>
+  )
+}
+
+
+function FirstRunBanner({ onGo, onClose }) {
+  const steps = [
+    { id: 'products', title: 'Cargá tus productos', hint: 'Ficha de venta, precio y foto' },
+    { id: 'stock-purchases', title: 'Agregá stock', hint: 'Comprá a proveedores' },
+    { id: 'cash-current', title: 'Abrí la caja', hint: 'Para cobrar en efectivo' },
+    { id: 'sales-pos', title: 'Vendé', hint: 'Registrá tu primera venta' },
+  ]
+  return (
+    <div className="first-run">
+      <div className="first-run-head">
+        <div>
+          <span className="dash-eyebrow">Primeros pasos</span>
+          <h2>Tu tienda está lista, ¡empezá a vender!</h2>
+        </div>
+        <button type="button" className="first-run-close" onClick={onClose} aria-label="Cerrar guía">
+          <IconCross />
+        </button>
+      </div>
+      <p className="first-run-sub">
+        Completá estos pasos en el orden que quieras; cada uno te lleva directo a la pantalla.
+      </p>
+      <div className="first-run-steps">
+        {steps.map((step, i) => (
+          <button
+            type="button"
+            key={step.id}
+            className="first-run-step"
+            onClick={() => onGo(step.id)}
+          >
+            <span className="first-run-num mono">{i + 1}</span>
+            <span className="first-run-step-text">
+              <strong>{step.title}</strong>
+              <em>{step.hint}</em>
+            </span>
+          </button>
+        ))}
+      </div>
     </div>
   )
 }

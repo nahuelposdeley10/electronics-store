@@ -34,6 +34,7 @@ export function requirePermission(code) {
     try {
       const user = await User.findById(req.user.sub).lean()
       const perms = await permissionsForUser(user, req.user.adminId)
+      req.user.perms = perms
       if (!perms.includes(code)) {
         return res.status(403).json({ error: 'No tenés permiso para esto' })
       }

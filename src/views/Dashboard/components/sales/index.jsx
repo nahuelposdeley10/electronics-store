@@ -4,7 +4,7 @@ import { apiConfirmOrder, apiDelete, apiGet, apiPost, apiPut } from '@/lib/api'
 import { useOrderEvents } from '@/lib/useOrderEvents'
 import { IconCross, IconEye, IconPlus, IconRefresh, IconReturn, IconSearch, IconTrash } from '@/components/Icons'
 import { PENDING_GROUP, PAYMENT_LABELS, PAYMENT_OPTIONS, QUOTE_STATUS_LABELS, fullDate, idDoc, itemsSummary, salePaymentLabel, shortDate, shortId } from '../../consts.js'
-import { EmptyNote, OperatorSelect, ScreenBlocked, ScreenLoading, SortSelect, StatusTag } from '../common'
+import { EmptyNote, OperatorSelect, ProductPicker, ScreenBlocked, ScreenLoading, SortSelect, StatusTag } from '../common'
 import { useToast } from '@/context/useToast'
 import { useConfirm } from '@/context/useConfirm'
 
@@ -718,7 +718,7 @@ function QuotesScreen({ canManage }) {
             aria-label="Buscar presupuestos"
           />
         </form>
-        <SortSelect id="quotes-sort" value={params.sort} onChange={onSort} label="Cliente" />
+        <SortSelect id="quotes-sort" value={params.sort} onChange={onSort} label="Orden" />
         <span className="dash-count mono">{data.total} presupuestos</span>
       </div>
 
@@ -832,7 +832,7 @@ function QuotesScreen({ canManage }) {
 
 function QuoteForm({ onClose, onSaved }) {
   const { confirm } = useConfirm()
-  const [products, setProducts] = useState([])
+  const [picked, setPicked] = useState(null)
   const [form, setForm] = useState({
     productId: '',
     qty: '1',
@@ -846,24 +846,10 @@ function QuoteForm({ onClose, onSaved }) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
-  useEffect(() => {
-    let alive = true
-    apiGet('/api/admin/products?limit=100')
-      .then((res) => {
-        if (alive) setProducts(res.items || [])
-      })
-      .catch((err) => {
-        if (alive) setError(err.message)
-      })
-    return () => {
-      alive = false
-    }
-  }, [])
-
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }))
 
   const addLine = () => {
-    const product = products.find((p) => String(p.id) === String(form.productId))
+    const product = picked
     const qty = Math.max(1, Math.floor(Number(form.qty) || 1))
     if (!product) return
     setLines((prev) => {
@@ -871,6 +857,8 @@ function QuoteForm({ onClose, onSaved }) {
       if (existing) return prev.map((l) => (l.product.id === product.id ? { ...l, quantity: l.quantity + qty } : l))
       return [...prev, { product, quantity: qty }]
     })
+    setPicked(null)
+    setForm((f) => ({ ...f, productId: '', qty: '1' }))
   }
 
   const removeLine = async (product) => {
@@ -932,14 +920,16 @@ function QuoteForm({ onClose, onSaved }) {
           <div className="pf-row">
             <label className="pf-field pf-grow">
               <span>Producto</span>
-              <select value={form.productId} onChange={set('productId')}>
-                <option value="">Seleccioná…</option>
-                {products.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name} — {formatARS(p.price)}
-                  </option>
-                ))}
-              </select>
+              <ProductPicker
+                id="quote-product"
+                value={form.productId}
+                showPrice
+                onChange={(id, product) => {
+                  setForm((f) => ({ ...f, productId: id }))
+                  setPicked(product || null)
+                }}
+                placeholder="Buscá el producto…"
+              />
             </label>
             <label className="pf-field">
               <span>Cantidad</span>

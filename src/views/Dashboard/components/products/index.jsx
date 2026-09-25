@@ -3,16 +3,16 @@ import { formatARS } from '@/data/format'
 import SearchSelect from '@/components/SearchSelect'
 import { apiDelete, apiGet, apiPost, apiPut, apiUpdate, apiUpload } from '@/lib/api'
 import { productImage } from '@/lib/productImage'
-import { IconCheck, IconClock, IconCross, IconEdit, IconLock, IconPlus, IconSearch, IconTrash } from '@/components/Icons'
-import { CATEGORY_LABELS, IMPORT_EXAMPLE, stockStatusOf } from '../../consts.js'
-import { EmptyNote, ScreenBlocked, ScreenLoading, SortSelect, StockValue } from '../common'
+import { IconCheck, IconClock, IconCross, IconEdit, IconInventory, IconLock, IconPlus, IconSearch, IconTrash } from '@/components/Icons'
+import { CATEGORY_LABELS, IMPORT_EXAMPLE, PAYMENT_LABELS, stockStatusOf } from '../../consts.js'
+import { EmptyNote, ProductPicker, ScreenBlocked, ScreenLoading, SortSelect, StockValue } from '../common'
 import { loadCatalogOptions } from '../common/catalogOptions.js'
 import { useToast } from '@/context/useToast'
 import { useConfirm } from '@/context/useConfirm'
 
 import './styles.css'
 
-function ProductsScreen({ canManage }) {
+function ProductsScreen({ canManage, canInventory, canCash }) {
   const { showToast } = useToast()
   const { confirm } = useConfirm()
   const [data, setData] = useState(null)
@@ -21,6 +21,7 @@ function ProductsScreen({ canManage }) {
   const [params, setParams] = useState({ q: '', category: '', brand: '', sort: '', page: 1 })
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState(null)
+  const [stockProduct, setStockProduct] = useState(null)
   const [cats, setCats] = useState([])
   const [brands, setBrands] = useState([])
   const [bulk, setBulk] = useState({ mode: 'percent', value: '', category: 'todas' })
@@ -96,7 +97,9 @@ function ProductsScreen({ canManage }) {
     showToast(
       editing
         ? `Producto actualizado: ${saved.name}`
-        : `Producto agregado: ${saved.name}`,
+        : saved.stockNumber
+          ? `Producto creado: ${saved.name} (stock inicial cargado)`
+          : `Producto agregado: ${saved.name}`,
       'success',
     )
     if (saved.warning) showToast(saved.warning, 'warn')
@@ -125,6 +128,11 @@ function ProductsScreen({ canManage }) {
     } catch (err) {
       showToast(err.message, 'error')
     }
+  }
+
+  const handleStockAdded = () => {
+    setStockProduct(null)
+    setParams((prev) => ({ ...prev }))
   }
 
   const applyBulk = async (e) => {
@@ -163,6 +171,14 @@ function ProductsScreen({ canManage }) {
           <em>en la galería</em>
         </div>
       </header>
+
+      <p className="sale-note">
+        La ficha de venta se carga acá. El <strong>costo</strong> y el <strong>stock</strong> se
+        cargan con una compra a proveedor:{' '}
+        {canInventory
+          ? 'podés hacerlo al crear el producto o desde el botón "Cargar stock" de cada fila.'
+          : 'una persona con permiso de inventario los carga desde Inventario → Compras.'}
+      </p>
 
       <div className="dash-toolbar">
         <form className="dash-search" role="search" onSubmit={submitSearch}>
@@ -273,6 +289,17 @@ function ProductsScreen({ canManage }) {
           product={editing}
           onClose={closeForm}
           onSaved={handleSaved}
+          canInventory={canInventory}
+        />
+      )}
+
+      {stockProduct && (
+        <QuickStockModal
+          product={stockProduct}
+          canCash={canCash}
+          canInventory={canInventory}
+          onClose={() => setStockProduct(null)}
+          onSaved={handleStockAdded}
         />
       )}
 
@@ -323,6 +350,17 @@ function ProductsScreen({ canManage }) {
                 {canManage && (
                   <td>
                     <span className="row-actions">
+                      {canInventory && (
+                        <button
+                          type="button"
+                          className="row-btn"
+                          title="Cargar stock (compra)"
+                          aria-label={`Cargar stock de ${p.name}`}
+                          onClick={() => setStockProduct(p)}
+                        >
+                          <IconInventory />
+                        </button>
+                      )}
                       <button
                         type="button"
                         className="row-btn"
@@ -347,7 +385,15 @@ function ProductsScreen({ canManage }) {
           </tbody>
         </table>
         {data.items.length === 0 && (
-          <EmptyNote text="Ningún producto con ese nombre, marca o categoría." />
+          <EmptyNote
+            text={
+              params.q
+                ? 'Ningún producto con ese nombre, marca o categoría.'
+                : data.total === 0
+                  ? 'Tu estantería está vacía. Tocá "Nuevo producto" para cargar tu primera ficha de venta.'
+                  : 'Ningún producto coincide con los filtros elegidos.'
+            }
+          />
         )}
       </div>
 
@@ -377,7 +423,7 @@ function ProductsScreen({ canManage }) {
 }
 
 
-function ProductForm({ product, onClose, onSaved }) {
+function ProductForm({ product, onClose, onSaved, canInventory }) {
   const seed = () => ({
     name: product?.name || '',
     brand: product?.brand || '',
@@ -393,6 +439,13 @@ function ProductForm({ product, onClose, onSaved }) {
   })
   const [form, setForm] = useState(seed)
   const [initial] = useState(seed)
+  const [initialStock, setInitialStock] = useState({
+    enabled: false,
+    supplier: '',
+    invoice: '',
+    quantity: '1',
+    cost: '',
+  })
   const [image, setImage] = useState(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -418,7 +471,13 @@ function ProductForm({ product, onClose, onSaved }) {
     (form.name || '').trim().length >= 2 &&
     (form.brand || '').trim().length >= 2 &&
     Number(form.price) > 0
-  const canSave = formDirty && valid
+  const stockValid =
+    !initialStock.enabled ||
+    ((initialStock.supplier || '').trim().length >= 2 &&
+      Math.floor(Number(initialStock.quantity)) > 0 &&
+      Number.isFinite(Number(initialStock.cost)) &&
+      Number(initialStock.cost) >= 0)
+  const canSave = formDirty && valid && (product || !initialStock.enabled || stockValid)
 
   const set = (key) => (e) =>
     setForm((f) => ({ ...f, [key]: e.target.value }))
@@ -434,14 +493,21 @@ function ProductForm({ product, onClose, onSaved }) {
       if (value !== '' && value != null) fd.append(key, String(value))
     })
     if (image) fd.append('image', image)
+    if (!product && initialStock.enabled && canInventory) {
+      fd.append('supplier', initialStock.supplier.trim())
+      if (initialStock.invoice.trim()) fd.append('supplierBill', initialStock.invoice.trim())
+      fd.append('initialQty', String(Math.floor(Number(initialStock.quantity))))
+      fd.append('initialCost', String(Number(initialStock.cost) || 0))
+    }
 
     try {
       if (product) {
         await apiUpdate(`/api/admin/products/${product.id}`, fd)
+        onSaved({ name: form.name })
       } else {
-        await apiUpload('/api/admin/products', fd)
+        const res = await apiUpload('/api/admin/products', fd)
+        onSaved({ name: form.name, stockNumber: res.stockNumber, warning: res.warning })
       }
-      onSaved({ name: form.name })
     } catch (err) {
       setError(err.message)
       setSaving(false)
@@ -533,36 +599,142 @@ function ProductForm({ product, onClose, onSaved }) {
               />
             </label>
 
-            <label className="pf-field">
-              <span>Costo ($)</span>
-              <input
-                type="number"
-                min="0"
-                step="1"
-                value={form.costPrice || 0}
-                disabled
-                className="pf-locked"
-                title="Se carga desde Inventario"
-              />
-            </label>
+            {product ? (
+              <>
+                <label className="pf-field" data-tip="Se actualiza con cada compra a proveedor desde Inventario">
+                  <span>Costo ($)</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={form.costPrice || 0}
+                    disabled
+                    className="pf-locked"
+                    title="Se actualiza desde Inventario"
+                  />
+                </label>
 
-            <label className="pf-field">
-              <span>Stock</span>
-              <input
-                type="number"
-                min="0"
-                step="1"
-                value={form.stock || 0}
-                disabled
-                className="pf-locked"
-                title="Se carga desde Inventario"
-              />
-            </label>
+                <label className="pf-field" data-tip="Se actualiza con cada compra, venta o ajuste desde Inventario">
+                  <span>Stock</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={form.stock || 0}
+                    disabled
+                    className="pf-locked"
+                    title="Se actualiza desde Inventario"
+                  />
+                </label>
 
-            <p className="pf-lock-note pf-full">
-              <IconLock />
-              Costo y stock se cargan desde Inventario (compras y movimientos).
-            </p>
+                <p className="pf-lock-note pf-full">
+                  <IconLock />
+                  Costo y stock reflejan tu inventario real y se actualizan desde Inventario.
+                </p>
+              </>
+            ) : canInventory ? (
+              <>
+                <div className="pf-field pf-full">
+                  <label className="pf-check">
+                    <input
+                      type="checkbox"
+                      checked={initialStock.enabled}
+                      onChange={(e) =>
+                        setInitialStock((s) => ({ ...s, enabled: e.target.checked }))
+                      }
+                    />
+                    <span>Cargar stock inicial</span>
+                  </label>
+                  <em className="pf-hint">
+                    Opcional: suma una compra a proveedor junto con el producto. Después podés
+                    agregar más stock desde Inventario → Compras.
+                  </em>
+                </div>
+
+                {initialStock.enabled && (
+                  <>
+                    <label className="pf-field" data-tip="Queda registrada en el historial de compras">
+                      <span>Proveedor</span>
+                      <input
+                        type="text"
+                        value={initialStock.supplier}
+                        onChange={(e) => setInitialStock((s) => ({ ...s, supplier: e.target.value }))}
+                        placeholder="Ej. Full Hogar - Distribuidora"
+                        required
+                      />
+                    </label>
+
+                    <label className="pf-field">
+                      <span>Nº factura / remito</span>
+                      <input
+                        type="text"
+                        value={initialStock.invoice}
+                        onChange={(e) => setInitialStock((s) => ({ ...s, invoice: e.target.value }))}
+                        placeholder="Opcional"
+                      />
+                    </label>
+
+                    <label className="pf-field">
+                      <span>Cantidad</span>
+                      <input
+                        type="number"
+                        min="1"
+                        step="1"
+                        value={initialStock.quantity}
+                        onChange={(e) => setInitialStock((s) => ({ ...s, quantity: e.target.value }))}
+                        required
+                      />
+                    </label>
+
+                    <label className="pf-field" data-tip="Costo por unidad: lo que pagás por cada producto">
+                      <span>Costo por unidad ($)</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={initialStock.cost}
+                        onChange={(e) => setInitialStock((s) => ({ ...s, cost: e.target.value }))}
+                        placeholder="Ej. 85000"
+                        required
+                      />
+                    </label>
+                  </>
+                )}
+              </>
+            ) : (
+              <>
+                <label className="pf-field" data-tip="Se actualiza con cada compra a proveedor desde Inventario">
+                  <span>Costo ($)</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={form.costPrice || 0}
+                    disabled
+                    className="pf-locked"
+                    title="Se actualiza desde Inventario"
+                  />
+                </label>
+
+                <label className="pf-field" data-tip="Se actualiza con cada compra, venta o ajuste desde Inventario">
+                  <span>Stock</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={form.stock || 0}
+                    disabled
+                    className="pf-locked"
+                    title="Se actualiza desde Inventario"
+                  />
+                </label>
+
+                <p className="pf-lock-note pf-full">
+                  <IconLock />
+                  Costo y stock se cargan con compras a proveedores desde Inventario.
+                </p>
+              </>
+            )}
 
             <label className="pf-field">
               <span>Rating (0–5)</span>
@@ -656,6 +828,202 @@ function ProductForm({ product, onClose, onSaved }) {
                 : product
                   ? 'Guardar cambios'
                   : 'Guardar producto'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+
+function QuickStockModal({ product, canCash, canInventory, onClose, onSaved }) {
+  const { showToast } = useToast()
+  const [form, setForm] = useState({
+    quantity: '1',
+    cost: '',
+    supplier: '',
+    invoice: '',
+    cashOut: false,
+    cashOutMethod: '',
+    cashOutAmount: '',
+  })
+  const [saving, setSaving] = useState(false)
+
+  const total = (Number(form.quantity) || 0) * (Number(form.cost) || 0)
+  const valid =
+    Math.floor(Number(form.quantity)) > 0 &&
+    Number.isFinite(Number(form.cost)) &&
+    Number(form.cost) >= 0 &&
+    (form.supplier || '').trim().length >= 2
+
+  const submit = async (e) => {
+    e.preventDefault()
+    if (!valid) return
+    setSaving(true)
+    try {
+      const payload = {
+        supplier: form.supplier.trim(),
+        invoice: form.invoice.trim(),
+        items: [
+          {
+            productId: product.id,
+            quantity: Math.floor(Number(form.quantity)),
+            cost: Number(form.cost),
+          },
+        ],
+      }
+      if (form.cashOut && canCash) {
+        payload.cashOut = {
+          amount: Number(form.cashOutAmount) || total,
+          method: form.cashOutMethod,
+        }
+      }
+      const res = await apiPost('/api/admin/inventory/purchases', payload)
+      const qty = res.purchase.items.reduce((n, i) => n + (i.quantity || 0), 0)
+      showToast(`Stock cargado: +${qty} ${product.name}`, 'success')
+      if (res.warning) showToast(res.warning, 'warn')
+      onSaved()
+    } catch (err) {
+      showToast(err.message, 'error')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="product-overlay" onMouseDown={saving ? undefined : onClose}>
+      <div
+        className="product-panel product-panel-sm"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Cargar stock"
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        <header className="product-head">
+          <div>
+            <span className="dash-eyebrow">Inventario</span>
+            <h2>Cargar stock</h2>
+          </div>
+          <button type="button" className="product-close" onClick={onClose} aria-label="Cerrar">
+            <IconCross />
+          </button>
+        </header>
+
+        <form onSubmit={submit}>
+          <div className="qs-product">
+            <strong>{product.name}</strong>
+            <span className="mono">Stock actual: {product.stock}</span>
+          </div>
+
+          {!canInventory && (
+            <em className="pf-hint">
+              Necesitás el permiso de inventario para cargar stock.
+            </em>
+          )}
+
+          <div className="pf-grid">
+            <label className="pf-field">
+              <span>Cantidad</span>
+              <input
+                type="number"
+                min="1"
+                step="1"
+                value={form.quantity}
+                onChange={(e) => setForm((f) => ({ ...f, quantity: e.target.value }))}
+                required
+              />
+            </label>
+            <label className="pf-field" data-tip="Costo por unidad: lo que pagás por cada producto">
+              <span>Costo por unidad ($)</span>
+              <input
+                type="number"
+                min="0"
+                step="1"
+                value={form.cost}
+                onChange={(e) => setForm((f) => ({ ...f, cost: e.target.value }))}
+                placeholder="Ej. 85000"
+                required
+              />
+            </label>
+            <label className="pf-field">
+              <span>Proveedor</span>
+              <input
+                type="text"
+                value={form.supplier}
+                onChange={(e) => setForm((f) => ({ ...f, supplier: e.target.value }))}
+                placeholder="Ej. Full Hogar - Distribuidora"
+                required
+              />
+            </label>
+            <label className="pf-field">
+              <span>Nº factura / remito</span>
+              <input
+                type="text"
+                value={form.invoice}
+                onChange={(e) => setForm((f) => ({ ...f, invoice: e.target.value }))}
+                placeholder="Opcional"
+              />
+            </label>
+            <div className="pf-field pf-full">
+              <div className="qs-total">
+                <span>Total de la compra</span>
+                <strong className="mono">{formatARS(total)}</strong>
+              </div>
+            </div>
+          </div>
+
+          {canCash && (
+            <label className="pur-cash">
+              <input
+                type="checkbox"
+                checked={form.cashOut}
+                onChange={(e) => setForm((f) => ({ ...f, cashOut: e.target.checked, cashOutAmount: '' }))}
+              />
+              <span>
+                Registrar el pago como egreso de caja
+                <em>Opción: resta del cajón el dinero que sale en esta compra.</em>
+              </span>
+            </label>
+          )}
+
+          {canCash && form.cashOut && (
+            <div className="pf-grid">
+              <label className="pf-field">
+                <span>Monto ($)</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  className="mono"
+                  value={form.cashOutAmount}
+                  onChange={(e) => setForm((f) => ({ ...f, cashOutAmount: e.target.value }))}
+                  placeholder={String(total)}
+                />
+              </label>
+              <label className="pf-field">
+                <span>Forma de pago</span>
+                <select
+                  value={form.cashOutMethod}
+                  onChange={(e) => setForm((f) => ({ ...f, cashOutMethod: e.target.value }))}
+                >
+                  <option value="">Elegí…</option>
+                  {Object.entries(PAYMENT_LABELS).map(([key, label]) => (
+                    <option key={key} value={key}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          )}
+
+          <div className="pf-actions">
+            <button type="button" className="ghost-btn" onClick={onClose} disabled={saving}>
+              Cancelar
+            </button>
+            <button type="submit" className="primary-btn" disabled={saving || !valid || !canInventory}>
+              {saving ? 'Guardando…' : 'Registrar compra y sumar stock'}
             </button>
           </div>
         </form>
@@ -1275,38 +1643,23 @@ function OffersScreen({ canManage }) {
 
 
 function OfferForm({ onClose, onSaved }) {
-  const [products, setProducts] = useState([])
+  const [picked, setPicked] = useState(null)
   const [form, setForm] = useState({ productId: '', oldPrice: '', price: '' })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
-  useEffect(() => {
-    let alive = true
-    apiGet('/api/admin/products?limit=100')
-      .then((res) => {
-        if (alive) setProducts(res.items || [])
-      })
-      .catch((err) => {
-        if (alive) setError(err.message)
-      })
-    return () => {
-      alive = false
-    }
-  }, [])
-
-  const selected = products.find((p) => String(p.id) === String(form.productId))
+  const selected = picked
 
   const set = (key) => (e) =>
     setForm((f) => ({ ...f, [key]: e.target.value }))
 
-  const selectProduct = (e) => {
-    const id = e.target.value
-    const p = products.find((x) => String(x.id) === String(id))
+  const selectProduct = (id, p) => {
     setForm((f) => ({
       ...f,
       productId: id,
       oldPrice: p ? String(p.price) : '',
     }))
+    setPicked(p || null)
   }
 
   const submit = async (e) => {
@@ -1362,14 +1715,12 @@ function OfferForm({ onClose, onSaved }) {
           <div className="pf-grid">
             <label className="pf-field pf-full">
               <span>Producto</span>
-              <select value={form.productId} onChange={selectProduct} required>
-                <option value="">Elegí un producto…</option>
-                {products.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name} · {p.brand}
-                  </option>
-                ))}
-              </select>
+              <ProductPicker
+                id="offer-product"
+                value={form.productId}
+                onChange={selectProduct}
+                placeholder="Buscá el producto a ofertar…"
+              />
             </label>
 
             {selected && (
@@ -1537,7 +1888,7 @@ function ImportScreen({ canManage }) {
         </form>
       ) : (
         <div className="table-wrap">
-          <EmptyNote text="Solo superadmins pueden importar productos." />
+          <EmptyNote text="Necesitás el permiso de administrar productos para importar." />
         </div>
       )}
     </div>

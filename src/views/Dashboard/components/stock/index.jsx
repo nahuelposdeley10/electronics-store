@@ -4,8 +4,8 @@ import SearchSelect from '@/components/SearchSelect'
 import { apiGet, apiPost, apiPut } from '@/lib/api'
 import { productImage } from '@/lib/productImage'
 import { IconCheck, IconCross, IconPlus, IconSearch } from '@/components/Icons'
-import { CATEGORY_LABELS, MOVEMENT_CHIPS, MOVEMENT_TYPE_LABELS, shortDate, fullDate, itemsSummary, stockStatusOf } from '../../consts.js'
-import { EmptyNote, OperatorSelect, ScreenBlocked, ScreenLoading, SortSelect, StockBadge, StockValue } from '../common'
+import { CATEGORY_LABELS, MOVEMENT_CHIPS, MOVEMENT_TYPE_LABELS, PAYMENT_LABELS, shortDate, fullDate, itemsSummary, stockStatusOf } from '../../consts.js'
+import { EmptyNote, OperatorSelect, ProductPicker, ScreenBlocked, ScreenLoading, SortSelect, StockBadge, StockValue } from '../common'
 import { loadCatalogOptions } from '../common/catalogOptions.js'
 import { useToast } from '@/context/useToast'
 import { useConfirm } from '@/context/useConfirm'
@@ -371,24 +371,12 @@ function MovementsScreen() {
 
 function AdjustmentsScreen({ canManage }) {
   const { showToast } = useToast()
-  const [products, setProducts] = useState([])
+  const [picked, setPicked] = useState(null)
   const [movements, setMovements] = useState(null)
   const [error, setError] = useState('')
   const [params, setParams] = useState({ type: 'ajuste', q: '', page: 1 })
   const [form, setForm] = useState({ productId: '', delta: '', reason: '' })
   const [saving, setSaving] = useState(false)
-
-  useEffect(() => {
-    let alive = true
-    apiGet('/api/admin/products?limit=100')
-      .then((res) => {
-        if (alive) setProducts(res.items || [])
-      })
-      .catch((err) => console.warn('No se pudieron cargar los productos para ajustes', err))
-    return () => {
-      alive = false
-    }
-  }, [])
 
   useEffect(() => {
     let alive = true
@@ -420,10 +408,8 @@ function AdjustmentsScreen({ canManage }) {
         delta: Number(form.delta),
         reason: form.reason.trim(),
       })
-      const product = products.find((p) => p.id === Number(form.productId))
-      showToast(`Ajuste aplicado en "${product?.name || res.movement.productName}" → stock ${res.stock}`, 'success')
+      showToast(`Ajuste aplicado en "${picked?.name || res.movement.productName}" → stock ${res.stock}`, 'success')
       setForm((f) => ({ ...f, delta: '', reason: '' }))
-      setMovements((prev) => (prev ? { ...prev } : prev))
       setParams((prev) => ({ ...prev }))
     } catch (err) {
       showToast(err.message, 'error')
@@ -435,9 +421,7 @@ function AdjustmentsScreen({ canManage }) {
   if (error) return <ScreenBlocked message={error} />
   if (!movements) return <ScreenLoading label="Preparando ajustes…" />
 
-  const selectedProduct = form.productId
-    ? products.find((p) => p.id === Number(form.productId))
-    : null
+  const selectedProduct = picked
   const resultingStock =
     selectedProduct && form.delta !== ''
       ? selectedProduct.stock + Number(form.delta)
@@ -463,7 +447,7 @@ function AdjustmentsScreen({ canManage }) {
       </header>
 
       {!canManage && (
-        <p className="sale-note">Solo el superadmin puede aplicar ajustes.</p>
+        <p className="sale-note">Necesitás el permiso de inventario para corregir stock.</p>
       )}
 
       <div className="inv-grid">
@@ -471,18 +455,15 @@ function AdjustmentsScreen({ canManage }) {
           <h2>Ajustar stock manualmente</h2>
           <label className="inv-field">
             <span>Producto</span>
-            <select
+            <ProductPicker
+              id="adjust-product"
               value={form.productId}
-              onChange={(e) => setForm((f) => ({ ...f, productId: e.target.value }))}
-              required
-            >
-              <option value="">Elegí un producto…</option>
-              {products.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name} · {p.brand} (stock {p.stock})
-                </option>
-              ))}
-            </select>
+              onChange={(id, product) => {
+                setForm((f) => ({ ...f, productId: id }))
+                setPicked(product || null)
+              }}
+              placeholder="Elegí un producto…"
+            />
           </label>
           {selectedProduct && (
             <div className="inv-stock-hint mono">
@@ -649,7 +630,7 @@ function MinStockScreen({ canManage }) {
       </header>
 
       {!canManage && (
-        <p className="sale-note">Solo el administrador puede cambiar los mínimos.</p>
+        <p className="sale-note">Necesitás el permiso de inventario para cambiar los mínimos.</p>
       )}
 
       <div className="dash-toolbar">
@@ -778,7 +759,6 @@ function MinStockScreen({ canManage }) {
 function PurchasesScreen({ canManage }) {
   const { showToast } = useToast()
   const { confirm } = useConfirm()
-  const [products, setProducts] = useState([])
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
   const [query, setQuery] = useState('')
@@ -787,21 +767,12 @@ function PurchasesScreen({ canManage }) {
   const [form, setForm] = useState({
     supplier: '',
     invoice: '',
-    lines: [{ productId: '', quantity: '1', cost: '' }],
+    lines: [{ productId: '', productName: '', quantity: '1', cost: '' }],
+    cashOut: false,
+    cashOutMethod: '',
+    cashOutAmount: '',
   })
   const [saving, setSaving] = useState(false)
-
-  useEffect(() => {
-    let alive = true
-    apiGet('/api/admin/products?limit=100')
-      .then((res) => {
-        if (alive) setProducts(res.items || [])
-      })
-      .catch((err) => console.warn('No se pudieron cargar los productos para compras', err))
-    return () => {
-      alive = false
-    }
-  }, [])
 
   useEffect(() => {
     let alive = true
@@ -841,18 +812,20 @@ function PurchasesScreen({ canManage }) {
   }
 
   const addLine = () => {
-    setForm((f) => ({ ...f, lines: [...f.lines, { productId: '', quantity: '1', cost: '' }] }))
+    setForm((f) => ({
+      ...f,
+      lines: [...f.lines, { productId: '', productName: '', quantity: '1', cost: '' }],
+    }))
   }
 
   const removeLine = async (index) => {
     const line = form.lines[index]
-    const product = products.find((p) => String(p.id) === String(line?.productId))
     const ok = await confirm({
       title: 'Quitar línea',
-      message: product
+      message: line?.productName
         ? (
             <>
-              ¿Quitar <strong>{product.name}</strong> de la compra?
+              ¿Quitar <strong>{line.productName}</strong> de la compra?
             </>
           )
         : '¿Quitar esta línea de la compra?',
@@ -881,16 +854,27 @@ function PurchasesScreen({ canManage }) {
         setSaving(false)
         return
       }
-      const res = await apiPost('/api/admin/inventory/purchases', {
+      const payload = {
         supplier: form.supplier.trim(),
         invoice: form.invoice.trim(),
         items,
-      })
+      }
+      if (form.cashOut) {
+        payload.cashOut = {
+          amount: Number(form.cashOutAmount) || purchaseTotal(),
+          method: form.cashOutMethod,
+        }
+      }
+      const res = await apiPost('/api/admin/inventory/purchases', payload)
       showToast(`Compra #${res.purchase.number} registrada — total ${formatARS(res.purchase.total)}. Stock actualizado.`, 'success')
+      if (res.warning) showToast(res.warning, 'warn')
       setForm({
         supplier: '',
         invoice: '',
-        lines: [{ productId: '', quantity: '1', cost: '' }],
+        lines: [{ productId: '', productName: '', quantity: '1', cost: '' }],
+        cashOut: false,
+        cashOutMethod: '',
+        cashOutAmount: '',
       })
       setVersion((v) => v + 1)
     } catch (err) {
@@ -904,7 +888,7 @@ function PurchasesScreen({ canManage }) {
   if (error) return <ScreenBlocked message={error} />
 
   const lineTotal = (line) => (Number(line.quantity) || 0) * (Number(line.cost) || 0)
-  const purchaseTotal = form.lines.reduce((sum, line) => sum + lineTotal(line), 0)
+  const purchaseTotal = () => form.lines.reduce((sum, line) => sum + lineTotal(line), 0)
   const hasValidPurchaseLine = form.lines.some(
     (l) => Boolean(l.productId) && Math.floor(Number(l.quantity)) > 0 && Number.isFinite(Number(l.cost)) && Number(l.cost) >= 0,
   )
@@ -924,7 +908,7 @@ function PurchasesScreen({ canManage }) {
       </header>
 
       {!canManage && (
-        <p className="sale-note">Solo el superadmin puede cargar compras.</p>
+        <p className="sale-note">Necesitás el permiso de inventario para cargar compras.</p>
       )}
 
       <div className="inv-grid">
@@ -956,18 +940,21 @@ function PurchasesScreen({ canManage }) {
                 <div className="pur-line-top">
                   <label className="pur-line-field pur-line-product">
                     <span>Producto</span>
-                    <select
+                    <ProductPicker
+                      id={`purchase-product-${index}`}
                       value={line.productId}
-                      onChange={(e) => updateLine(index, 'productId', e.target.value)}
-                      required
-                    >
-                      <option value="">Elegí…</option>
-                      {products.map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.name} · {p.brand} (stock {p.stock})
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(id, product) => {
+                        setForm((f) => ({
+                          ...f,
+                          lines: f.lines.map((l, i) =>
+                            i === index
+                              ? { ...l, productId: id, productName: product?.name || '' }
+                              : l,
+                          ),
+                        }))
+                      }}
+                      placeholder="Elegí un producto…"
+                    />
                   </label>
                   <button
                     type="button"
@@ -1011,8 +998,53 @@ function PurchasesScreen({ canManage }) {
 
           <div className="pur-total">
             <span>Total de la compra</span>
-            <strong className="mono">{formatARS(purchaseTotal)}</strong>
+            <strong className="mono">{formatARS(purchaseTotal())}</strong>
           </div>
+
+          <label className="pur-cash">
+            <input
+              type="checkbox"
+              checked={form.cashOut}
+              disabled={!canManage}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, cashOut: e.target.checked, cashOutAmount: '' }))
+              }
+            />
+            <span>
+              Registrar el pago como egreso de caja
+              <em>Opción: resta del cajón el dinero que sale en esta compra.</em>
+            </span>
+          </label>
+          {form.cashOut && (
+            <div className="pur-cash-box">
+              <label className="inv-field">
+                <span>Monto ($)</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  className="mono"
+                  value={form.cashOutAmount}
+                  onChange={(e) => setForm((f) => ({ ...f, cashOutAmount: e.target.value }))}
+                  placeholder={String(purchaseTotal())}
+                />
+              </label>
+              <label className="inv-field">
+                <span>Forma de pago</span>
+                <select
+                  value={form.cashOutMethod}
+                  onChange={(e) => setForm((f) => ({ ...f, cashOutMethod: e.target.value }))}
+                >
+                  <option value="">Elegí…</option>
+                  {Object.entries(PAYMENT_LABELS).map(([key, label]) => (
+                    <option key={key} value={key}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          )}
 
           <button type="submit" className="primary-btn" disabled={saving || !canManage || !canSubmitPurchase}>
             {saving ? 'Guardando…' : 'Registrar compra'}
@@ -1195,8 +1227,7 @@ function PhysicalInventoryScreen({ canManage }) {
       </header>
 
       {!canManage && (
-        <p className="sale-note">Solo el administrador puede guardar el conteo.
-        </p>
+        <p className="sale-note">Necesitás el permiso de inventario para guardar el conteo.</p>
       )}
 
       <div className="dash-toolbar">

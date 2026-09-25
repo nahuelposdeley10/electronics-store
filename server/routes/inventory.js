@@ -11,9 +11,8 @@ import {
   buildAdminSort,
 } from '../lib/catalog-query.js'
 import { changeStock } from '../lib/stock.js'
+import { registerPurchase } from '../lib/purchases.js'
 import { requireTenantIdOf } from '../lib/tenant.js'
-import { roundMoney, roundLine } from '../lib/money.js'
-import { nextSequence, sequenceKey } from '../lib/counter.js'
 
 const router = express.Router()
 
@@ -356,97 +355,50 @@ router.get('/purchases', async (req, res) => {
 router.post('/purchases', requirePermission('inventory.write'), async (req, res) => {
   try {
     const tenant = requireTenantIdOf(req)
-    const supplier = String(req.body?.supplier || '').trim()
-    const invoice = String(req.body?.invoice || '').trim()
-    const items = (req.body?.items || [])
-      .map((row) => ({
-        productId: Number(row?.productId),
-        quantity: Math.floor(Number(row?.quantity)),
-        cost: roundMoney(row?.cost),
-      }))
-      .filter((row) => Number.isFinite(row.productId) && row.quantity > 0 && Number.isFinite(row.cost) && row.cost >= 0)
+    const canCash = (req.user?.perms || []).includes('cash.manage')
+    const cashOut = canCash
+      ? {
+          amount: Number(req.body?.cashOut?.amount),
+          method: String(req.body?.cashOut?.method || ''),
+        }
+      : null
 
-    if (supplier.length < 2) {
-      return res.status(400).json({ error: 'Nombrá el proveedor' })
-    }
-    if (items.length === 0) {
-      return res.status(400).json({ error: 'Agregá al menos un producto a la compra' })
-    }
-
-    const ids = [...new Set(items.map((row) => row.productId))]
-    const dbProducts = await Product.find({ id: { $in: ids }, adminId: tenant }).lean()
-    const byId = new Map(dbProducts.map((p) => [p.id, p]))
-    if (byId.size !== ids.length) {
-      return res.status(400).json({ error: 'Algún producto ya no existe' })
-    }
-
-    const reference = `${supplier}${invoice ? ` · Fact. ${invoice}` : ''}`
-    const lastNumber = (await Purchase.findOne({ adminId: tenant }).sort({ number: -1 }).lean())?.number || 0
-    const number = await nextSequence(sequenceKey(tenant, 'purchase'), lastNumber)
-
-    const lines = []
-    let total = 0
-    for (const row of items) {
-      const product = byId.get(row.productId)
-      const lineTotal = roundLine(row.cost, row.quantity)
-      total += lineTotal
-      lines.push({
-        productId: product.id,
-        name: product.name,
-        quantity: row.quantity,
-        cost: row.cost,
-        total: lineTotal,
-      })
-    }
-    total = roundMoney(total)
-
-    const purchase = await Purchase.create({
-      adminId: tenant,
-      number,
-      supplier,
-      invoice,
-      items: lines,
-      total,
-      createdBy: req.user?.email || null,
+    const result = await registerPurchase({
+      tenant,
+      supplier: req.body?.supplier,
+      invoice: req.body?.invoice,
+      items: req.body?.items,
+      by: req.user?.email || null,
+      cashOut,
     })
 
-    const logged = []
-    for (const row of items) {
-      const product = byId.get(row.productId)
-      if (Number.isFinite(row.cost) && product.costPrice !== row.cost) {
-        await Product.updateOne({ id: product.id, adminId: tenant }, { $set: { costPrice: row.cost } })
-      }
-      const movement = await changeStock({
-        productId: product.id,
-        delta: row.quantity,
-        type: 'compra',
-        reason: reference,
-        ref: String(number),
-        createdBy: req.user?.email || null,
-        adminId: tenant,
-      })
-      logged.push({
-        productId: product.id,
-        delta: movement ? movement.delta : 0,
-        stockAfter: movement ? movement.stockAfter : product.stock,
-      })
-    }
-
-    return res.status(201).json({
+    const { purchase, logged, cashWarning } = result
+    const payload = {
       ok: true,
       purchase: {
         id: String(purchase._id),
         number: purchase.number,
         supplier: purchase.supplier,
         invoice: purchase.invoice,
-        items: lines,
+        items: purchase.items.map((i) => ({
+          productId: i.productId,
+          name: i.name,
+          quantity: i.quantity,
+          cost: i.cost,
+          total: i.total,
+        })),
         total: purchase.total,
         createdAt: purchase.createdAt,
       },
       logged,
-    })
+    }
+    if (cashWarning) payload.warning = cashWarning
+    return res.status(201).json(payload)
   } catch (error) {
     console.error('Purchase create error:', error)
+    if (error.status) {
+      return res.status(error.status).json({ error: error.message })
+    }
     return res.status(500).json({ error: 'No se pudo registrar la compra' })
   }
 })

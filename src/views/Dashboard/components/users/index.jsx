@@ -5,7 +5,7 @@ import { getSuperTenant } from '@/lib/tenant'
 import { IconCheck, IconCross, IconEdit, IconPlus, IconSearch, IconTrash } from '@/components/Icons'
 import { useToast } from '@/context/useToast'
 import { useConfirm } from '@/context/useConfirm'
-import { PERM_CODES, PERM_LABELS, initials, shortDate } from '../../consts.js'
+import { PERM_CODES, PERM_LABELS, ROLE_LABELS, initials, shortDate } from '../../consts.js'
 import { EmptyNote, ScreenBlocked, ScreenLoading, SortSelect, ToggleRow, ToggleSwitch } from '../common'
 
 import './styles.css'
@@ -308,9 +308,9 @@ function UsersScreen() {
               <label className="inv-field">
                 <span>Rol</span>
                 <select value={form.role} onChange={set('role')}>
-                  <option value="admin">admin</option>
-                  <option value="operator">operator</option>
-                  <option value="superadmin">superadmin</option>
+                  <option value="admin">Dueño</option>
+                  <option value="operator">Vendedor</option>
+                  {isSuper && <option value="superadmin">Dueño general</option>}
                 </select>
               </label>
             )}
@@ -402,7 +402,7 @@ function UsersScreen() {
                   </span>
                 </td>
                 <td>
-                  <span className={`role-chip role-${u.role}`}>{u.role}</span>
+                  <span className={`role-chip role-${u.role}`}>{ROLE_LABELS[u.role] || u.role}</span>
                 </td>
                 <td>
                   <span className={`status-tag${u.active ? '' : ' status-muted'}`}>
@@ -630,7 +630,7 @@ function RolesScreen() {
                   </span>
                 </td>
                 <td>
-                  <span className={`role-chip role-${u.role}`}>{u.role}</span>
+                  <span className={`role-chip role-${u.role}`}>{ROLE_LABELS[u.role] || u.role}</span>
                 </td>
                 <td className="t-date">
                   {Array.isArray(u.permissions)
