@@ -10,8 +10,8 @@ export async function nextSequence(key, startingSeq = 0) {
 
   await Counter.findOneAndUpdate(
     { _id: key },
-    { $setOnInsert: { seq: min } },
-    { upsert: true, setDefaultsOnInsert: true },
+    { $max: { seq: min } },
+    { upsert: true },
   )
 
   const doc = await Counter.findOneAndUpdate(

@@ -355,6 +355,11 @@ router.post('/products', requirePermission('catalog.manage'), upload.single('ima
     return res.status(201).json(payload)
   } catch (error) {
     console.error('Products create error:', error)
+    if (error?.code === 11000) {
+      return res
+        .status(409)
+        .json({ error: 'Se detectó un id de producto repetido; reintentá guardar el producto' })
+    }
     if (error?.name === 'ValidationError') {
       const first = Object.values(error.errors || {})[0]
       return res.status(400).json({ error: first ? first.message : 'Faltan datos obligatorios del producto' })
