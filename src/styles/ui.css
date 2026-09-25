@@ -1226,7 +1226,6 @@ html.anim-off .hero-bay::before,
 html.anim-off .hero-bay.bay-live .bay-bg,
 html.anim-off .hero-bay.bay-live .bay-shade,
 html.anim-off .cart-punch,
-html.anim-off .newsletter-ok,
 html.anim-off .box-media::after,
 html.anim-off .marquee-track {
   animation: none;

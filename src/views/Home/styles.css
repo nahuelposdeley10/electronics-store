@@ -288,74 +288,6 @@
   color: var(--gal-ink);
   box-shadow: inset 0 -3px 0 var(--gal-panel-2);
 }
-.newsletter-counter {
-  border: 1px solid var(--gal-line-strong);
-  background: var(--gal-white);
-  padding: clamp(28px, 4vw, 48px);
-  display: grid;
-  grid-template-columns: 1.2fr 1fr;
-  gap: 28px;
-  align-items: center;
-}
-.nl-copy h2 {
-  font-size: clamp(26px, 3vw, 40px);
-  line-height: 1;
-  margin-bottom: 12px;
-}
-.nl-copy p {
-  color: var(--gal-ink-soft);
-  max-width: 40ch;
-}
-.newsletter-form {
-  display: flex;
-  gap: 10px;
-  background: #fff;
-  border: 1.5px solid var(--gal-line-strong);
-  padding: 4px;
-  border-radius: 4px;
-}
-.newsletter-form input {
-  flex: 1;
-  border: 0;
-  background: transparent;
-  padding: 10px 12px;
-  font-size: 15px;
-  color: var(--gal-ink);
-  min-width: 0;
-}
-.newsletter-form input:focus-visible {
-  outline: 2px solid var(--gal-facade);
-  outline-offset: -2px;
-}
-.newsletter-form button {
-  background: var(--gal-black);
-  color: #fff;
-  border-radius: 3px;
-  padding: 0 20px;
-  font-weight: 800;
-  font-size: 14px;
-  transition: background 0.15s;
-}
-.newsletter-form button:hover {
-  background: var(--gal-facade);
-}
-.newsletter-ok {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--gal-ink);
-  font-weight: 700;
-  font-size: 16px;
-  background: var(--gal-panel-2);
-  padding: 18px 20px;
-  border-radius: 4px;
-}
-.newsletter-ok svg {
-  width: 20px;
-  height: 20px;
-  color: var(--gal-facade);
-  flex-shrink: 0;
-}
 .results .product-grid {
   margin-top: 22px;
 }
@@ -375,10 +307,6 @@
   .gaming-media {
     min-height: 260px;
     order: -1;
-  }
-
-  .newsletter-counter {
-    grid-template-columns: 1fr;
   }
 }
 @media (max-width: 768px) {
@@ -419,14 +347,6 @@
   .band-shipping {
     flex-direction: column;
     gap: 8px;
-  }
-
-  .newsletter-form {
-    flex-direction: column;
-  }
-
-  .newsletter-form button {
-    padding: 12px;
   }
 }
 .bay-eyebrow {
@@ -514,9 +434,6 @@
   100% {
     transform: scale(1.03);
   }
-}
-.newsletter-ok {
-  animation: bay-rise 0.4s var(--ease-out);
 }
 .bay-stage {
   position: absolute;

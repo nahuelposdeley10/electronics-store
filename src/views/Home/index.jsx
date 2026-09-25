@@ -49,8 +49,6 @@ export default function Home({ onView }) {
     .replace(/\{cuotas\}/g, String(maxMonths))
     .replace(/\{ciudad\}/g, settings.store.addressShort)
     .trim()
-  const [newsletter, setNewsletter] = useState(false)
-  const [email, setEmail] = useState('')
   const [bayLive, setBayLive] = useState(false)
   const heroRef = useRef(null)
   const stageRef = useRef(null)
@@ -100,15 +98,6 @@ export default function Home({ onView }) {
     const newArrivals = products.filter((p) => p.badge === 'Nuevo')
     return newArrivals.length ? newArrivals : products.slice(2, 6)
   }, [products])
-
-  const subscribe = (e) => {
-    e.preventDefault()
-    if (email) {
-      setNewsletter(true)
-      setEmail('')
-      setTimeout(() => setNewsletter(false), 3000)
-    }
-  }
 
   return (
     <main className="home">
@@ -240,31 +229,6 @@ export default function Home({ onView }) {
             </span>
           ))}
         </div>
-      </section>
-
-      <section className="newsletter-counter" data-reveal="up">
-        <div className="nl-copy">
-          <h2>Ofertas de la galería, por mail</h2>
-          <p>Suscribite y enterate primero de descuentos, lanzamientos y stock restockeado.</p>
-        </div>
-        {newsletter ? (
-          <div className="newsletter-ok">
-            <IconCheck />
-            Listo. Revisá tu correo: ahí llega la primera.
-          </div>
-        ) : (
-          <form onSubmit={subscribe} className="newsletter-form">
-            <input
-              type="email"
-              required
-              placeholder="tu@email.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              aria-label="Tu correo electrónico"
-            />
-            <button type="submit">Suscribirme</button>
-          </form>
-        )}
       </section>
     </main>
   )
