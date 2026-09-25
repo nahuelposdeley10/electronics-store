@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { useEffect, useMemo } from 'react'
 import { CartContext } from './cartContext'
-import { useCatalog } from './useCatalog'
 import { useToast } from './useToast'
 import { fetchSiteSettings } from '../lib/siteSettings'
 import { getTenantHeaders } from '../lib/tenant'
@@ -12,7 +11,6 @@ const COUPON_STORAGE_KEY = 'electronics-store-coupon'
 const round2 = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100
 
 export default function CartProvider({ children }) {
-  const { products } = useCatalog()
   const { showToast } = useToast()
   const [items, setItems] = useState(() => {
     try {
@@ -81,40 +79,61 @@ export default function CartProvider({ children }) {
   }, [])
 
   useEffect(() => {
-    if (!products.length || !items.length) return
-    const remaining = items.filter((item) => {
-      const product = products.find((p) => p.id === item.id)
-      return !product || product.stock > 0
-    })
-    const hydrated = remaining.map((item) => {
-      const product = products.find((p) => p.id === item.id)
-      if (!product) return item
-      const quantity = Math.min(item.quantity, product.stock)
-      const line = {
-        ...item,
-        name: product.name,
-        price: product.price,
-        image: product.image,
-        freeShipping: product.freeShipping,
-        quantity,
-      }
-      return line
-    })
-    const changed =
-      hydrated.length !== items.length ||
-      hydrated.some((line, i) => {
-        const prev = items[i]
-        return (
-          line.name !== prev.name ||
-          Number(line.price) !== Number(prev.price) ||
-          line.image !== prev.image ||
-          Boolean(line.freeShipping) !== Boolean(prev.freeShipping) ||
-          line.quantity !== prev.quantity
-        )
+    const refreshFromServer = () => {
+      const ids = [...new Set(items.map((item) => item.id))]
+      if (!ids.length) return
+      Promise.all(
+        ids.map((id) =>
+          fetch(`/api/products/${id}`, { headers: getTenantHeaders() })
+            .then((res) => (res.ok ? res.json() : Promise.reject(new Error(String(res.status)))))
+            .catch(() => null),
+        ),
+      ).then((fresh) => {
+        const byId = new Map(fresh.filter(Boolean).map((p) => [p.id, p]))
+        setItems((prev) => {
+          let changed = false
+          const next = []
+          for (const item of prev) {
+            const product = byId.get(item.id)
+            if (product && product.stock <= 0) {
+              changed = true
+              continue
+            }
+            if (!product) {
+              next.push(item)
+              continue
+            }
+            const line = {
+              ...item,
+              name: product.name,
+              price: Number(product.price),
+              image: product.image,
+              freeShipping: Boolean(product.freeShipping),
+              quantity: Math.min(item.quantity, product.stock),
+            }
+            if (
+              line.name === item.name &&
+              Number(line.price) === Number(item.price) &&
+              line.image === item.image &&
+              Boolean(line.freeShipping) === Boolean(item.freeShipping) &&
+              line.quantity === item.quantity
+            ) {
+              next.push(item)
+            } else {
+              changed = true
+              next.push(line)
+            }
+          }
+          return changed ? next : prev
+        })
       })
-    if (!changed) return
-    Promise.resolve().then(() => setItems(hydrated))
-  }, [products, items])
+    }
+
+    refreshFromServer()
+    const onFocus = () => refreshFromServer()
+    window.addEventListener('focus', onFocus)
+    return () => window.removeEventListener('focus', onFocus)
+  }, [items])
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(items))
@@ -158,11 +177,6 @@ export default function CartProvider({ children }) {
   }
 
   const updateQuantity = (id, quantity) => {
-    const product = products.find((p) => p.id === Number(id))
-    if (product && quantity > product.stock) {
-      showToast(`Solo hay ${product.stock} unidades en stock`, 'warn')
-      return
-    }
     if (quantity <= 0) {
       removeItem(id)
       return
