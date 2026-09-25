@@ -88,6 +88,20 @@ export default function Footer({ onNavigate }) {
 
       <div className="footer-bottom">
         <p>© {year} {settings.store.name}. Todos los derechos reservados.</p>
+        <nav className="footer-legal" aria-label="Información legal">
+          <button type="button" onClick={() => onNavigate('info', 'politica-de-privacidad')}>
+            Privacidad
+          </button>
+          <button type="button" onClick={() => onNavigate('info', 'terminos-y-condiciones')}>
+            Términos
+          </button>
+          <button type="button" onClick={() => onNavigate('info', 'politica-de-cookies')}>
+            Cookies
+          </button>
+          <button type="button" onClick={() => onNavigate('info', 'politica-de-reembolsos')}>
+            Reembolsos
+          </button>
+        </nav>
         <button type="button" className="footer-panel-link" onClick={() => onNavigate('dashboard')}>
           Panel de ventas
         </button>

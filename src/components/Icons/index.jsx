@@ -35,6 +35,17 @@ export function IconCart(props) {
   )
 }
 
+export function IconCookie(props) {
+  return (
+    <svg {...S} {...props}>
+      <circle cx="12" cy="12" r="8.5" />
+      <circle cx="9.2" cy="9.6" r="1" fill="currentColor" stroke="none" />
+      <circle cx="14.6" cy="10.2" r="1" fill="currentColor" stroke="none" />
+      <circle cx="11" cy="14.6" r="1" fill="currentColor" stroke="none" />
+    </svg>
+  )
+}
+
 export function IconArrow(props) {
   return (
     <svg {...S} {...props}>

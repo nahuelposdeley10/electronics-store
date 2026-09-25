@@ -8,6 +8,7 @@ import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import Toast from '@/components/Toast'
 import ConfirmDialog from '@/components/ConfirmDialog'
+import CookieConsent from '@/components/CookieConsent'
 import WhatsAppButton from '@/components/WhatsAppButton'
 import ProductCard from '@/components/ProductCard'
 import DashboardLoading from '@/components/DashboardLoading'
@@ -315,10 +316,11 @@ function AppContent() {
       ) : (
         <>
           <div className="scroll-tape" ref={tapeRef} aria-hidden="true" />
-          <Header onNavigate={(n) => navigate(n)} view={view.name} onSearch={handleSearch} />
+          <Header onNavigate={navigate} view={view.name} onSearch={handleSearch} />
           {content}
-          <Footer onNavigate={(n) => navigate(n)} />
+          <Footer onNavigate={navigate} />
           <WhatsAppButton />
+          <CookieConsent onNavigate={navigate} />
         </>
       )}
     </CartProvider>

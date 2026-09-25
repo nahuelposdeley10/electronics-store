@@ -8,6 +8,10 @@ const INFO_TITLES = {
   garantia: 'Garantía',
   devoluciones: 'Devoluciones',
   contacto: 'Contacto',
+  'politica-de-privacidad': 'Política de privacidad',
+  'terminos-y-condiciones': 'Términos y condiciones',
+  'politica-de-cookies': 'Política de cookies',
+  'politica-de-reembolsos': 'Política de reembolsos',
 }
 
 function absolute(href) {
