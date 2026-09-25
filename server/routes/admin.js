@@ -293,9 +293,6 @@ router.post('/products', requirePermission('catalog.manage'), upload.single('ima
   if (!name || !brand || !category || price === undefined || price === '') {
     return res.status(400).json({ error: 'Nombre, marca, categoría y precio son requeridos' })
   }
-  if (!req.file) {
-    return res.status(400).json({ error: 'La imagen es requerida (PNG, JPG o WEBP)' })
-  }
 
   let tenant
   try {
@@ -309,7 +306,7 @@ router.post('/products', requirePermission('catalog.manage'), upload.single('ima
   }
 
   try {
-    const image = await uploadToCloudinary(req.file)
+    const image = req.file ? await uploadToCloudinary(req.file) : ''
     const lastId = (await Product.findOne({ adminId: tenant }).sort({ id: -1 }).lean())?.id || 0
     const product = await Product.create({
       adminId: tenant,

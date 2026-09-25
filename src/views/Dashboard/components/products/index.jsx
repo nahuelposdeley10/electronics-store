@@ -610,7 +610,7 @@ function ProductForm({ product, onClose, onSaved }) {
               <span>
                 {product
                   ? 'Imagen nueva (dejá vacío para conservar la actual)'
-                  : 'Imagen (PNG, JPG o WEBP)'}
+                  : 'Imagen (opcional · PNG, JPG o WEBP)'}
               </span>
               {product && !image && (
                 <img className="pf-preview" src={productImage(product.image)} alt="" />
@@ -619,7 +619,6 @@ function ProductForm({ product, onClose, onSaved }) {
                 type="file"
                 accept="image/*"
                 onChange={(e) => setImage(e.target.files[0] || null)}
-                required={!product}
               />
             </label>
 

@@ -15,6 +15,13 @@ export function uploadToCloudinary(file) {
     error.status = 400
     return Promise.reject(error)
   }
+  if (!env.cloudinaryCloudName || !env.cloudinaryApiKey || !env.cloudinaryApiSecret) {
+    const error = new Error(
+      'El servicio de imágenes (Cloudinary) no está configurado en el servidor: agregá CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY y CLOUDINARY_API_SECRET al entorno del deploy',
+    )
+    error.status = 500
+    return Promise.reject(error)
+  }
   // resource_type 'image' forzado: Cloudinary no interpreta el archivo como
   // un documento (SVG/HTML con JS embebido quedan fuera del upload).
   return new Promise((resolve, reject) => {
