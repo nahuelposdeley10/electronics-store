@@ -4,7 +4,7 @@ import { apiConfirmOrder, apiDelete, apiGet, apiPost, apiPut } from '@/lib/api'
 import { useOrderEvents } from '@/lib/useOrderEvents'
 import { IconCross, IconEye, IconPlus, IconRefresh, IconReturn, IconSearch, IconTrash } from '@/components/Icons'
 import { PENDING_GROUP, PAYMENT_LABELS, PAYMENT_OPTIONS, QUOTE_STATUS_LABELS, fullDate, idDoc, itemsSummary, salePaymentLabel, shortDate, shortId } from '../../consts.js'
-import { EmptyNote, OperatorSelect, ProductPicker, ScreenBlocked, ScreenLoading, SortSelect, StatusTag } from '../common'
+import { EmptyNote, FilterReset, OperatorSelect, ProductPicker, ScreenBlocked, ScreenLoading, SortSelect, StatusTag } from '../common'
 import { useToast } from '@/context/useToast'
 import { useConfirm } from '@/context/useConfirm'
 
@@ -26,7 +26,7 @@ function SaleDetail({ order, onClose }) {
 
         <div className="detail-meta">
           <StatusTag status={order.status} />
-          <span className={`payment-tag${order.source === 'web' && !order.payment ? ' web' : ''}`}>
+          <span className={`payment-tag${order.source === 'web' && !order.payment ? ' web pm-web' : order.payment ? ` pm-${order.payment}` : ''}`}>
             {salePaymentLabel(order)}
           </span>
           {order.status === 'refunded' && order.returnedAt && (
@@ -155,7 +155,7 @@ function SalesScreen() {
 
   useEffect(() => {
     let alive = true
-    const qs = new URLSearchParams({ page: String(params.page), limit: '11' })
+    const qs = new URLSearchParams({ page: String(params.page), limit: '10' })
     if (params.group !== 'all') qs.set('group', params.group)
     if (params.payment !== 'all') qs.set('payment', params.payment)
     if (params.operator) qs.set('operator', params.operator)
@@ -177,6 +177,11 @@ function SalesScreen() {
   const submitSearch = (e) => {
     e.preventDefault()
     setParams((prev) => ({ ...prev, q: query.trim(), page: 1 }))
+  }
+
+  const resetFilters = () => {
+    setQuery('')
+    setParams({ group: 'all', payment: 'all', operator: '', from: '', to: '', q: '', page: 1 })
   }
 
   const recheck = (order) => {
@@ -296,6 +301,10 @@ function SalesScreen() {
             value={params.operator}
             onChange={(value) => setParams((prev) => ({ ...prev, operator: value, page: 1 }))}
           />
+          <FilterReset
+            active={Boolean(query || params.q || params.from || params.to || params.payment !== 'all' || params.operator || params.group !== 'all')}
+            onClick={resetFilters}
+          />
         </div>
         <span className="dash-count mono">{data.total} ventas</span>
       </div>
@@ -305,7 +314,8 @@ function SalesScreen() {
           <button
             key={chip.id}
             type="button"
-            className={`sale-chip mono${params.group === chip.id ? ' active' : ''}`}
+            className={`sale-chip mono status-filter-${chip.id}${params.group === chip.id ? ' active' : ''}`}
+            aria-pressed={params.group === chip.id}
             onClick={() => setParams((prev) => ({ ...prev, group: chip.id, page: 1 }))}
           >
             {chip.label} <span>{chip.count}</span>
@@ -354,7 +364,7 @@ function SalesScreen() {
                 <td className="t-dim">{order.soldBy || '—'}</td>
                 <td className="t-detail">{itemsSummary(order.items)}</td>
                 <td>
-                  <span className={`payment-tag${order.source === 'web' && !order.payment ? ' web' : ''}`}>
+                  <span className={`payment-tag${order.source === 'web' && !order.payment ? ' web pm-web' : order.payment ? ` pm-${order.payment}` : ''}`}>
                     {salePaymentLabel(order)}
                   </span>
                 </td>
@@ -390,7 +400,7 @@ function SalesScreen() {
         )}
       </div>
 
-      {data.total > 11 && (
+      {data.total > 10 && (
         <div className="dash-pager">
           <button
             type="button"
@@ -452,6 +462,8 @@ function ReturnsScreen({ canManage }) {
 
   const setFilter = (id) => setParams((prev) => ({ ...prev, filter: id, page: 1 }))
 
+  const resetFilters = () => setParams({ filter: 'all', operator: '', page: 1 })
+
   const doReturn = async (order) => {
     const ok = await confirm({
       title: 'Registrar devolución',
@@ -504,6 +516,7 @@ function ReturnsScreen({ canManage }) {
           value={params.operator}
           onChange={(value) => setParams((prev) => ({ ...prev, operator: value, page: 1 }))}
         />
+        <FilterReset active={Boolean(params.filter !== 'all' || params.operator)} onClick={resetFilters} />
       </div>
 
       <div className="sale-chips" role="group" aria-label="Filtrar devoluciones">
@@ -511,7 +524,8 @@ function ReturnsScreen({ canManage }) {
           <button
             key={chip.id}
             type="button"
-            className={`sale-chip mono${params.filter === chip.id ? ' active' : ''}`}
+            className={`sale-chip mono status-filter-${chip.id}${params.filter === chip.id ? ' active' : ''}`}
+            aria-pressed={params.filter === chip.id}
             onClick={() => setFilter(chip.id)}
           >
             {chip.label} <span>{chip.count}</span>
@@ -643,6 +657,11 @@ function QuotesScreen({ canManage }) {
   const onSort = (value) =>
     setParams((prev) => ({ ...prev, sort: value, page: 1 }))
 
+  const resetFilters = () => {
+    setQuery('')
+    setParams({ status: 'all', q: '', sort: '', page: 1 })
+  }
+
   const updateStatus = (quote, status) => {
     apiPut(`/api/admin/quotes/${quote._id}`, { status })
       .then((updated) => {
@@ -708,7 +727,7 @@ function QuotesScreen({ canManage }) {
       </header>
 
       <div className="dash-toolbar">
-        <form className="dash-search" role="search" onSubmit={submitSearch}>
+        <form className="dash-search quote-search" role="search" onSubmit={submitSearch}>
           <IconSearch />
           <input
             type="text"
@@ -718,7 +737,13 @@ function QuotesScreen({ canManage }) {
             aria-label="Buscar presupuestos"
           />
         </form>
-        <SortSelect id="quotes-sort" value={params.sort} onChange={onSort} label="Orden" />
+        <div className="dash-filters">
+          <SortSelect id="quotes-sort" value={params.sort} onChange={onSort} label="Orden" />
+          <FilterReset
+            active={Boolean(query || params.q || params.sort || params.status !== 'all')}
+            onClick={resetFilters}
+          />
+        </div>
         <span className="dash-count mono">{data.total} presupuestos</span>
       </div>
 
@@ -727,7 +752,8 @@ function QuotesScreen({ canManage }) {
           <button
             key={chip.id}
             type="button"
-            className={`sale-chip mono${params.status === chip.id ? ' active' : ''}`}
+            className={`sale-chip mono status-filter-${chip.id}${params.status === chip.id ? ' active' : ''}`}
+            aria-pressed={params.status === chip.id}
             onClick={() => setParams((prev) => ({ ...prev, status: chip.id, page: 1 }))}
           >
             {chip.label} <span>{chip.count}</span>

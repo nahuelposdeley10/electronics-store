@@ -1,13 +1,13 @@
 import { IconCheck, IconClock, IconCross } from '@/components/Icons'
 
 const STATUS_META = {
-  approved: { label: 'Aprobada', Icon: IconCheck },
-  pending: { label: 'Pendiente', Icon: IconClock },
-  in_process: { label: 'En proceso', Icon: IconClock },
-  rejected: { label: 'Rechazada', Icon: IconCross },
-  cancelled: { label: 'Cancelada', Icon: IconCross },
-  refunded: { label: 'Reembolsada', Icon: IconClock },
-  charged_back: { label: 'Contracargo', Icon: IconCross },
+  approved: { label: 'Aprobada', Icon: IconCheck, tone: 'approved' },
+  pending: { label: 'Pendiente', Icon: IconClock, tone: 'pending' },
+  in_process: { label: 'En proceso', Icon: IconClock, tone: 'in_process' },
+  rejected: { label: 'Rechazada', Icon: IconCross, tone: 'rejected' },
+  cancelled: { label: 'Cancelada', Icon: IconCross, tone: 'cancelled' },
+  refunded: { label: 'Reembolsada', Icon: IconClock, tone: 'refunded' },
+  charged_back: { label: 'Contracargo', Icon: IconCross, tone: 'charged_back' },
 }
 
 

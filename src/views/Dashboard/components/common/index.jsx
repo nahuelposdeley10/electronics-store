@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { apiGet } from '@/lib/api'
 import { formatARS } from '@/data/format'
 import { REPORT_PERIODS, STATUS_META, STOCK_STATUS_LABELS, stockStatusOf } from '../../consts.js'
-import { IconChart, IconClock, IconSearchOff } from '@/components/Icons'
+import { IconChart, IconClock, IconRefresh, IconSearchOff } from '@/components/Icons'
 import SearchSelect from '@/components/SearchSelect'
 import { loadOperators } from './catalogOptions'
 
@@ -30,6 +30,22 @@ function SortSelect({ value, onChange, id = 'sort', label = 'Orden' }) {
         ))}
       </select>
     </label>
+  )
+}
+
+function FilterReset({ active = false, onClick, label = 'Limpiar filtros' }) {
+  return (
+    <button
+      type="button"
+      className="filter-reset-btn"
+      onClick={onClick}
+      disabled={!active}
+      aria-label={label}
+      title={label}
+    >
+      <IconRefresh />
+      <span>{label}</span>
+    </button>
   )
 }
 
@@ -167,6 +183,7 @@ function ProductPicker({
           aria-autocomplete="list"
           aria-controls={`${id}-menu`}
           aria-activedescendant={open ? `${id}-opt-${hi}` : undefined}
+          aria-label={placeholder}
           value={shown}
           placeholder={placeholder}
           onChange={(e) => {
@@ -219,8 +236,9 @@ function ProductPicker({
 function StatusTag({ status }) {
   const meta = STATUS_META[status] || { label: status, Icon: IconClock }
   const { Icon } = meta
+  const tone = meta.tone ? ` status-${meta.tone}` : ''
   return (
-    <span className="status-tag">
+    <span className={`status-tag${tone}`}>
       <Icon />
       {meta.label}
     </span>
@@ -230,7 +248,7 @@ function StatusTag({ status }) {
 
 function EmptyNote({ text }) {
   return (
-    <div className="empty-note">
+    <div className="empty-note" role="status">
       <IconSearchOff />
       <p>{text}</p>
     </div>
@@ -240,7 +258,7 @@ function EmptyNote({ text }) {
 
 function ScreenLoading({ label = 'Leyendo la caja…' }) {
   return (
-    <div className="dash-screen dash-loading" role="status">
+    <div className="dash-screen dash-loading" role="status" aria-live="polite">
       <span className="load-ring" aria-hidden="true" />
       <p className="load-label">{label}</p>
     </div>
@@ -316,6 +334,7 @@ function ReportPeriodBar({ days, onChange }) {
           key={p.days}
           type="button"
           className={`sale-chip mono${days === p.days ? ' active' : ''}`}
+          aria-pressed={days === p.days}
           onClick={() => onChange(p.days)}
         >
           {p.label}
@@ -328,14 +347,14 @@ function ReportPeriodBar({ days, onChange }) {
 
 function ScreenBlocked({ message }) {
   return (
-    <div className="dash-screen dash-unlock">
+    <div className="dash-screen dash-unlock" role="alert">
       <div className="unlock-card">
         <span className="unlock-icon">
           <IconChart />
         </span>
         <span className="dash-eyebrow">Algo se trabó</span>
         <h1>No pudimos leer el panel</h1>
-        <p>{message}.</p>
+        <p>{message ? `${String(message).replace(/[.。]+$/, '')}.` : 'No hay información disponible.'}</p>
       </div>
     </div>
   )
@@ -473,4 +492,4 @@ function SettingsFetcher({ render }) {
 }
 
 
-export { StatusTag, EmptyNote, ScreenLoading, KpiTicket, StockBadge, StockValue, ChartTip, ChartLegend, ReportPeriodBar, ScreenBlocked, ToggleRow, ToggleSwitch, SettingsNote, SetImageField, SettingsFetcher, SortSelect, OperatorSelect, ProductPicker }
+export { StatusTag, EmptyNote, ScreenLoading, KpiTicket, StockBadge, StockValue, ChartTip, ChartLegend, ReportPeriodBar, ScreenBlocked, ToggleRow, ToggleSwitch, SettingsNote, SetImageField, SettingsFetcher, SortSelect, FilterReset, OperatorSelect, ProductPicker }

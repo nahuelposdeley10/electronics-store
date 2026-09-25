@@ -198,7 +198,7 @@
 .set-field select:focus {
   outline: 0;
   border-color: var(--gal-facade);
-  box-shadow: 0 0 0 3px rgba(215, 38, 29, 0.1);
+  box-shadow: none;
 }
 .set-field input:disabled,
 .set-field select:disabled {

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Label, LabelList, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { formatARS } from '@/data/format'
 import { apiGet } from '@/lib/api'
 import { CHART_COLORS, CHART_GRID, CHART_TICK, chartDayShort, compactARS, reportPaymentLabel, shortDate, shortId, stockStatusOf } from '../../consts.js'
@@ -152,7 +152,10 @@ function SalesReportScreen() {
         <section className="dash-card">
           <div className="dash-card-head">
             <h2>Facturado por día</h2>
-            <span className="dash-count">línea · ventas punteado</span>
+            <span className="rep-inline-legend">
+              <span><i className="rep-legend-line rep-legend-line-red" /> facturado</span>
+              <span><i className="rep-legend-line rep-legend-line-dark" /> ventas</span>
+            </span>
           </div>
           {data.series.length === 0 ? (
             <EmptyNote text="Sin ventas en el período." />
@@ -174,7 +177,7 @@ function SalesReportScreen() {
                     content={<ChartTip formatter={(v, key) => (key === 'count' ? `${v} ventas` : formatARS(v))} />}
                     cursor={{ stroke: '#b9c0b8', strokeDasharray: '3 3' }}
                   />
-                  <Area yAxisId="0" type="monotone" dataKey="total" name="Facturado" stroke="#d7261d" strokeWidth={2} fill="url(#areaSales)" dot={false} activeDot={{ r: 4, stroke: '#fbfcfa', strokeWidth: 2 }} />
+                  <Area yAxisId="0" type="monotone" dataKey="total" name="Facturado" stroke="#d7261d" strokeWidth={2.5} fill="url(#areaSales)" dot={{ r: 2.5, fill: '#fbfcfa', stroke: '#d7261d', strokeWidth: 1.5 }} activeDot={{ r: 5, stroke: '#fbfcfa', strokeWidth: 2 }} />
                   <Area yAxisId="count" type="monotone" dataKey="count" name="Ventas" stroke="#171a12" strokeWidth={1.5} strokeDasharray="4 4" fill="none" dot={false} />
                 </AreaChart>
               </ResponsiveContainer>
@@ -207,6 +210,7 @@ function SalesReportScreen() {
                       {payData.map((p, i) => (
                         <Cell key={p.key} fill={CHART_COLORS[i % CHART_COLORS.length]} />
                       ))}
+                      <Label value={formatARS(payTotal)} position="center" className="rep-pie-total" />
                     </Pie>
                     <Tooltip content={<ChartTip formatter={(v) => formatARS(v)} />} />
                   </PieChart>
@@ -225,7 +229,7 @@ function SalesReportScreen() {
           {data.bySource.length > 0 && (
             <div className="rep-breakdown">
               {data.bySource.map((s) => (
-                <span key={s.key} className="payment-tag">{s.key} · {s.count}</span>
+                <span key={s.key} className={`payment-tag pm-${s.key}`}>{s.key} · {s.count}</span>
               ))}
             </div>
           )}
@@ -342,7 +346,9 @@ function ProductsReportScreen() {
                   axisLine={false}
                 />
                 <Tooltip content={<ChartTip formatter={(v) => `${v} uds`} />} cursor={{ fill: '#e7f1fb' }} />
-                <Bar dataKey="units" name="Unidades" fill="#d7261d" radius={[0, 3, 3, 0]} barSize={16} />
+                  <Bar dataKey="units" name="Unidades" fill="#d7261d" radius={[0, 4, 4, 0]} barSize={16}>
+                    <LabelList dataKey="units" position="right" formatter={(value) => `${value} uds`} className="rep-bar-label" />
+                  </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -448,8 +454,8 @@ function ProfitReportScreen() {
                 <XAxis dataKey="label" tick={CHART_TICK} interval="preserveStartEnd" minTickGap={16} axisLine={{ stroke: '#b9c0b8' }} tickLine={false} />
                 <YAxis tickFormatter={compactARS} tick={CHART_TICK} width={44} axisLine={false} tickLine={false} />
                 <Tooltip content={<ChartTip formatter={(v) => formatARS(v)} />} cursor={{ fill: '#e7f1fb' }} />
-                <Bar dataKey="Facturado" name="Facturado" fill="#d7261d" radius={[3, 3, 0, 0]} barSize={14} />
-                <Bar dataKey="Costo" name="Costo" fill="#c79a63" radius={[3, 3, 0, 0]} barSize={14} />
+                <Bar dataKey="Facturado" name="Facturado" fill="#d7261d" radius={[4, 4, 0, 0]} barSize={14} />
+                <Bar dataKey="Costo" name="Costo" fill="#c79a63" radius={[4, 4, 0, 0]} barSize={14} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -476,7 +482,9 @@ function ProfitReportScreen() {
                   axisLine={false}
                 />
                 <Tooltip content={<ChartTip formatter={(v) => formatARS(v)} />} cursor={{ fill: '#e7f1fb' }} />
-                <Bar dataKey="profit" name="Ganancia" fill="#d7261d" radius={[0, 3, 3, 0]} barSize={16} />
+                <Bar dataKey="profit" name="Ganancia" fill="#d7261d" radius={[0, 4, 4, 0]} barSize={16}>
+                  <LabelList dataKey="profit" position="right" formatter={compactARS} className="rep-bar-label" />
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -561,6 +569,7 @@ function StockReportScreen() {
                       {statusData.map((s) => (
                         <Cell key={s.key} fill={s.color} />
                       ))}
+                      <Label value={data.totals.products} position="center" className="rep-pie-total" />
                     </Pie>
                     <Tooltip
                       content={<ChartTip formatter={(v) => `${v} producto${v === 1 ? '' : 's'}`} />}
@@ -602,7 +611,9 @@ function StockReportScreen() {
                     axisLine={false}
                   />
                   <Tooltip content={<ChartTip formatter={(v) => formatARS(v)} />} cursor={{ fill: '#e7f1fb' }} />
-                  <Bar dataKey="value" name="Valor" fill="#c8dcf2" radius={[0, 3, 3, 0]} barSize={12} />
+                  <Bar dataKey="value" name="Valor" fill="#8fb6dc" radius={[0, 4, 4, 0]} barSize={12}>
+                    <LabelList dataKey="value" position="right" formatter={compactARS} className="rep-bar-label" />
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -723,7 +734,9 @@ function CustomersReportScreen() {
                     axisLine={false}
                   />
                   <Tooltip content={<ChartTip formatter={(v) => formatARS(v)} />} cursor={{ fill: '#e7f1fb' }} />
-                  <Bar dataKey="total" name="Gasto" fill="#d7261d" radius={[0, 3, 3, 0]} barSize={16} />
+                  <Bar dataKey="total" name="Gasto" fill="#d7261d" radius={[0, 4, 4, 0]} barSize={16}>
+                    <LabelList dataKey="total" position="right" formatter={compactARS} className="rep-bar-label" />
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -755,6 +768,7 @@ function CustomersReportScreen() {
                       {recentData.map((r, i) => (
                         <Cell key={r.key} fill={CHART_COLORS[i % CHART_COLORS.length]} />
                       ))}
+                      <Label value={formatARS(recentTotal)} position="center" className="rep-pie-total" />
                     </Pie>
                     <Tooltip content={<ChartTip formatter={(v) => formatARS(v)} />} />
                   </PieChart>

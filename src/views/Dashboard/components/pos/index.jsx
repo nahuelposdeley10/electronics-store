@@ -6,7 +6,7 @@ import { productImage } from '@/lib/productImage'
 import { IconCheck, IconMinus, IconPlus, IconSearch, IconTrash } from '@/components/Icons'
 import { shortId } from '../../consts.js'
 import { stockStatusOf } from '../../consts.js'
-import { EmptyNote, StockValue } from '../common'
+import { EmptyNote, FilterReset, StockValue } from '../common'
 import { loadCatalogOptions } from '../common/catalogOptions.js'
 import { useToast } from '@/context/useToast'
 import { useConfirm } from '@/context/useConfirm'
@@ -50,7 +50,7 @@ function PosScreen({ canManage }) {
 
   useEffect(() => {
     let alive = true
-    const params = new URLSearchParams({ limit: 20, page })
+    const params = new URLSearchParams({ limit: 10, page })
     if (query.trim()) params.set('q', query.trim())
     if (category) params.set('category', category)
     if (brand) params.set('brand', brand)
@@ -84,6 +84,13 @@ function PosScreen({ canManage }) {
 
   const onBrand = (value) => {
     setBrand(value)
+    setPage(1)
+  }
+
+  const resetFilters = () => {
+    setQuery('')
+    setCategory('')
+    setBrand('')
     setPage(1)
   }
 
@@ -225,6 +232,7 @@ function PosScreen({ canManage }) {
                 { value: ':none:', label: 'Sin marca' },
               ]}
             />
+            <FilterReset active={Boolean(query || category || brand)} onClick={resetFilters} />
             <span className="dash-count mono">{totalItems} productos</span>
           </div>
           <div className="pos-list">

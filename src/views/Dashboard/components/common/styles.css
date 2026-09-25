@@ -418,3 +418,36 @@ a.set-image-preview:hover {
   outline: 0;
   border-color: var(--gal-facade);
 }
+
+.filter-reset-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: end;
+  min-height: 36px;
+  border: 1px solid var(--gal-line-strong);
+  border-radius: 3px;
+  background: var(--gal-white);
+  color: var(--gal-ink-soft);
+  padding: 8px 11px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.filter-reset-btn svg {
+  width: 14px;
+  height: 14px;
+}
+.filter-reset-btn:hover:not(:disabled) {
+  border-color: var(--gal-facade);
+  color: var(--gal-facade-deep);
+}
+.filter-reset-btn:focus-visible {
+  outline: 2px solid var(--gal-facade);
+  outline-offset: 2px;
+}
+.filter-reset-btn:disabled {
+  opacity: 0.48;
+  cursor: default;
+}

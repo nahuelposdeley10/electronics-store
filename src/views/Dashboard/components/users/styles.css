@@ -33,7 +33,7 @@
 .slug-input input:focus {
   outline: 0;
   border-color: transparent;
-  box-shadow: 0 0 0 3px rgba(215, 38, 29, 0.12);
+  box-shadow: none;
 }
 .status-muted {
   opacity: 0.55;

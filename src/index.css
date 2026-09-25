@@ -100,9 +100,15 @@ img {
   max-width: 100%;
 }
 
-:focus-visible {
+:focus-visible:not(input):not(select):not(textarea) {
   outline: 2px solid var(--gal-focus);
   outline-offset: 2px;
+}
+
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: none;
 }
 
 ::selection {

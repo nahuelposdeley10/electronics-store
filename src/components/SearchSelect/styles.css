@@ -29,7 +29,7 @@
 .filter-combo-input:focus {
   outline: 0;
   border-color: var(--gal-facade);
-  box-shadow: 0 0 0 3px rgba(215, 38, 29, 0.12);
+  box-shadow: none;
 }
 .filter-combo:focus-within .filter-combo-input {
   border-color: var(--gal-facade);

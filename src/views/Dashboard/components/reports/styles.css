@@ -101,10 +101,69 @@
 }
 .rep-chart {
   width: 100%;
+  padding: 12px 10px 8px;
+  border: 1px solid var(--gal-line);
+  border-radius: 5px;
+  background: var(--gal-panel);
+  overflow: hidden;
 }
 .rep-chart svg {
   display: block;
   font-variant-numeric: tabular-nums;
+}
+.rep-chart .recharts-cartesian-grid-horizontal line {
+  stroke: #d7ddd7;
+  stroke-dasharray: 2 4;
+}
+.rep-chart .recharts-cartesian-axis-tick-value {
+  fill: #73786d;
+  font-family: var(--font-mono);
+  font-size: 10px;
+}
+.rep-chart .recharts-cartesian-axis-line {
+  stroke: #b9c0b8;
+}
+.rep-chart .recharts-tooltip-cursor {
+  opacity: 0.65;
+}
+.rep-bar-label {
+  fill: #43473c;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+}
+.rep-pie-total {
+  fill: #171a12;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 700;
+}
+.rep-inline-legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--gal-ink-faint);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.rep-inline-legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.rep-legend-line {
+  display: inline-block;
+  width: 17px;
+  border-top: 2px solid currentColor;
+}
+.rep-legend-line-red {
+  color: #d7261d;
+}
+.rep-legend-line-dark {
+  color: #171a12;
+  border-top-style: dashed;
 }
 .rep-breakdown {
   display: flex;
@@ -116,4 +175,13 @@
   margin-top: 14px;
   font-size: 11.5px;
   color: var(--gal-ink-faint);
+}
+@media (max-width: 680px) {
+  .rep-chart {
+    padding-inline: 4px;
+  }
+  .rep-inline-legend {
+    gap: 6px;
+    font-size: 9px;
+  }
 }

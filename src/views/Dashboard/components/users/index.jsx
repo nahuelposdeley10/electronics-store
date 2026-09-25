@@ -6,7 +6,7 @@ import { IconCheck, IconCross, IconEdit, IconPlus, IconSearch, IconTrash } from 
 import { useToast } from '@/context/useToast'
 import { useConfirm } from '@/context/useConfirm'
 import { PERM_CODES, PERM_LABELS, ROLE_LABELS, initials, shortDate } from '../../consts.js'
-import { EmptyNote, ScreenBlocked, ScreenLoading, SortSelect, ToggleRow, ToggleSwitch } from '../common'
+import { EmptyNote, FilterReset, ScreenBlocked, ScreenLoading, SortSelect, ToggleRow, ToggleSwitch } from '../common'
 
 import './styles.css'
 
@@ -455,7 +455,7 @@ function RolesScreen() {
   const [sortVal, setSortVal] = useState('recent')
   const [onlinePayments, setOnlinePayments] = useState(true)
   const [savingOnline, setSavingOnline] = useState(false)
-  const PAGE_SIZE = 8
+  const PAGE_SIZE = 10
 
   const superTenantNow = isSuper ? getSuperTenant() : null
 
@@ -596,7 +596,18 @@ function RolesScreen() {
             </button>
           )}
         </form>
-        <SortSelect id="users-sort" value={sortVal} onChange={setSortVal} />
+        <div className="dash-filters">
+          <SortSelect id="users-sort" value={sortVal} onChange={setSortVal} />
+          <FilterReset
+            active={Boolean(query || sortVal !== 'recent')}
+            onClick={() => {
+              setQuery('')
+              setPage(1)
+              setSortVal('recent')
+              setExpanded(null)
+            }}
+          />
+        </div>
       </div>
 
       {isSuper && !superTenantNow && (

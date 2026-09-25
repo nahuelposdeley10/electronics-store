@@ -402,10 +402,11 @@ export default function Dashboard({ onExit }) {
               : activeScreen === item.id
             return (
               <div key={item.id} className="dash-nav-group">
-                <button
-                  type="button"
-                  className={`dash-nav-item${active ? ' active' : ''}`}
-                  onClick={() => changeScreen(item.children ? item.children[0].id : item.id)}
+                  <button
+                    type="button"
+                    className={`dash-nav-item${active ? ' active' : ''}`}
+                    aria-current={active ? 'page' : undefined}
+                    onClick={() => changeScreen(item.children ? item.children[0].id : item.id)}
                 >
                   <item.icon />
                   {item.label}
@@ -417,6 +418,7 @@ export default function Dashboard({ onExit }) {
                         key={child.id}
                         type="button"
                         className={`dash-nav-sub-item${activeScreen === child.id ? ' active' : ''}`}
+                        aria-current={activeScreen === child.id ? 'page' : undefined}
                         onClick={() => changeScreen(child.id)}
                       >
                         {child.label}

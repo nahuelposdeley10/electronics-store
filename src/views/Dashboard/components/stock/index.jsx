@@ -5,7 +5,7 @@ import { apiGet, apiPost, apiPut } from '@/lib/api'
 import { productImage } from '@/lib/productImage'
 import { IconCheck, IconCross, IconPlus, IconSearch } from '@/components/Icons'
 import { CATEGORY_LABELS, MOVEMENT_CHIPS, MOVEMENT_TYPE_LABELS, PAYMENT_LABELS, shortDate, fullDate, itemsSummary, stockStatusOf } from '../../consts.js'
-import { EmptyNote, OperatorSelect, ProductPicker, ScreenBlocked, ScreenLoading, SortSelect, StockBadge, StockValue } from '../common'
+import { EmptyNote, FilterReset, OperatorSelect, ProductPicker, ScreenBlocked, ScreenLoading, SortSelect, StockBadge, StockValue } from '../common'
 import { loadCatalogOptions } from '../common/catalogOptions.js'
 import { useToast } from '@/context/useToast'
 import { useConfirm } from '@/context/useConfirm'
@@ -40,7 +40,7 @@ function StockScreen() {
       q: params.q,
       low: params.low,
       page: String(params.page),
-      limit: '50',
+      limit: '10',
     })
     if (params.category) paramsString.set('category', params.category)
     if (params.brand) paramsString.set('brand', params.brand)
@@ -72,6 +72,11 @@ function StockScreen() {
 
   const onBrand = (value) =>
     setParams((prev) => ({ ...prev, brand: value, page: 1 }))
+
+  const resetFilters = () => {
+    setQuery('')
+    setParams({ q: '', low: '', category: '', brand: '', sort: '', page: 1 })
+  }
 
   const onSort = (value) =>
     setParams((prev) => ({ ...prev, sort: value, page: 1 }))
@@ -129,6 +134,10 @@ function StockScreen() {
               ...brands.map((b) => ({ value: b, label: b })),
               { value: ':none:', label: 'Sin marca' },
             ]}
+          />
+          <FilterReset
+            active={Boolean(query || params.q || params.low || params.category || params.brand || params.sort)}
+            onClick={resetFilters}
           />
           <SortSelect id="stock-sort" value={params.sort} onChange={onSort} />
         </div>
@@ -223,7 +232,7 @@ function MovementsScreen() {
       type: params.type,
       q: params.q,
       page: String(params.page),
-      limit: '20',
+      limit: '10',
     })
     if (params.operator) paramsString.set('operator', params.operator)
     apiGet(`/api/admin/inventory/movements?${paramsString}`)
@@ -246,6 +255,11 @@ function MovementsScreen() {
   const submitSearch = (e) => {
     e.preventDefault()
     setParams((prev) => ({ ...prev, q: query.trim(), page: 1 }))
+  }
+
+  const resetFilters = () => {
+    setQuery('')
+    setParams({ type: '', operator: '', q: '', page: 1 })
   }
 
   if (!data && !error) return <ScreenLoading label="Leyendo los movimientos…" />
@@ -280,6 +294,7 @@ function MovementsScreen() {
           value={params.operator}
           onChange={(value) => setParams((prev) => ({ ...prev, operator: value, page: 1 }))}
         />
+        <FilterReset active={Boolean(query || params.q || params.operator || params.type)} onClick={resetFilters} />
         <span className="count-tag mono">
           {data.items.length} de {data.total}
         </span>
@@ -291,6 +306,7 @@ function MovementsScreen() {
             key={chip.id}
             type="button"
             className={`sale-chip mono${params.type === chip.id ? ' active' : ''}`}
+            aria-pressed={params.type === chip.id}
             onClick={() => setParams((prev) => ({ ...prev, type: chip.id, page: 1 }))}
           >
             {chip.label}
@@ -557,7 +573,7 @@ function MinStockScreen({ canManage }) {
 
   useEffect(() => {
     let alive = true
-    const qs = new URLSearchParams({ page: String(params.page), limit: '50' })
+    const qs = new URLSearchParams({ page: String(params.page), limit: '10' })
     if (params.q) qs.set('q', params.q)
     if (params.category) qs.set('category', params.category)
     if (params.brand) qs.set('brand', params.brand)
@@ -607,6 +623,11 @@ function MinStockScreen({ canManage }) {
 
   const onBrand = (value) =>
     setParams((prev) => ({ ...prev, brand: value, page: 1 }))
+
+  const resetFilters = () => {
+    setQuery('')
+    setParams({ page: 1, q: '', category: '', brand: '' })
+  }
 
   if (!data && !error) return <ScreenLoading label="Leyendo los mínimos…" />
   if (error) return <ScreenBlocked message={error} />
@@ -664,6 +685,10 @@ function MinStockScreen({ canManage }) {
               ...brands.map((b) => ({ value: b, label: b })),
               { value: ':none:', label: 'Sin marca' },
             ]}
+          />
+          <FilterReset
+            active={Boolean(query || params.q || params.category || params.brand)}
+            onClick={resetFilters}
           />
         </div>
         <span className="count-tag mono">
@@ -802,6 +827,11 @@ function PurchasesScreen({ canManage }) {
   const submitSearch = (e) => {
     e.preventDefault()
     setParams((prev) => ({ ...prev, q: query.trim(), page: 1 }))
+  }
+
+  const resetFilters = () => {
+    setQuery('')
+    setParams({ q: '', operator: '', page: 1 })
   }
 
   const updateLine = (index, field, value) => {
@@ -1069,6 +1099,7 @@ function PurchasesScreen({ canManage }) {
               value={params.operator}
               onChange={(value) => setParams((prev) => ({ ...prev, operator: value, page: 1 }))}
             />
+            <FilterReset active={Boolean(query || params.q || params.operator)} onClick={resetFilters} />
           </div>
           {data.items.length === 0 && <p className="inv-empty">Todavía no hay compras.</p>}
           <div className="inv-mov-list">
@@ -1146,7 +1177,7 @@ function PhysicalInventoryScreen({ canManage }) {
 
   useEffect(() => {
     let alive = true
-    const qs = new URLSearchParams({ page: String(params.page), limit: '50' })
+    const qs = new URLSearchParams({ page: String(params.page), limit: '10' })
     if (params.q) qs.set('q', params.q)
     if (params.category) qs.set('category', params.category)
     if (params.brand) qs.set('brand', params.brand)
@@ -1205,6 +1236,11 @@ function PhysicalInventoryScreen({ canManage }) {
   const onBrand = (value) =>
     setParams((prev) => ({ ...prev, brand: value, page: 1 }))
 
+  const resetFilters = () => {
+    setQuery('')
+    setParams({ page: 1, q: '', category: '', brand: '' })
+  }
+
   if (!data && !error) return <ScreenLoading label="Preparando el conteo…" />
   if (error) return <ScreenBlocked message={error} />
 
@@ -1261,6 +1297,10 @@ function PhysicalInventoryScreen({ canManage }) {
               ...brands.map((b) => ({ value: b, label: b })),
               { value: ':none:', label: 'Sin marca' },
             ]}
+          />
+          <FilterReset
+            active={Boolean(query || params.q || params.category || params.brand)}
+            onClick={resetFilters}
           />
         </div>
         <span className="count-tag mono">

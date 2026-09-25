@@ -5,7 +5,7 @@ import { apiDelete, apiGet, apiPost, apiPut, apiUpdate, apiUpload } from '@/lib/
 import { productImage } from '@/lib/productImage'
 import { IconCheck, IconClock, IconCross, IconEdit, IconInventory, IconLock, IconPlus, IconSearch, IconTrash } from '@/components/Icons'
 import { CATEGORY_LABELS, IMPORT_EXAMPLE, PAYMENT_LABELS, stockStatusOf } from '../../consts.js'
-import { EmptyNote, ProductPicker, ScreenBlocked, ScreenLoading, SortSelect, StockValue } from '../common'
+import { EmptyNote, FilterReset, ProductPicker, ScreenBlocked, ScreenLoading, SortSelect, StockValue } from '../common'
 import { loadCatalogOptions } from '../common/catalogOptions.js'
 import { useToast } from '@/context/useToast'
 import { useConfirm } from '@/context/useConfirm'
@@ -26,6 +26,20 @@ function ProductsScreen({ canManage, canInventory, canCash }) {
   const [brands, setBrands] = useState([])
   const [bulk, setBulk] = useState({ mode: 'percent', value: '', category: 'todas' })
   const [bulkSaving, setBulkSaving] = useState(false)
+
+  useEffect(() => {
+    if (!formOpen && !stockProduct) return undefined
+
+    const previousBodyOverflow = document.body.style.overflow
+    const previousHtmlOverflow = document.documentElement.style.overflow
+    document.body.style.overflow = 'hidden'
+    document.documentElement.style.overflow = 'hidden'
+
+    return () => {
+      document.body.style.overflow = previousBodyOverflow
+      document.documentElement.style.overflow = previousHtmlOverflow
+    }
+  }, [formOpen, stockProduct])
 
   useEffect(() => {
     let alive = true
@@ -81,6 +95,11 @@ function ProductsScreen({ canManage, canInventory, canCash }) {
 
   const onSort = (value) =>
     setParams((prev) => ({ ...prev, sort: value, page: 1 }))
+
+  const resetFilters = () => {
+    setQuery('')
+    setParams({ q: '', category: '', brand: '', sort: '', page: 1 })
+  }
 
   const openForm = (product = null) => {
     setEditing(product)
@@ -217,6 +236,10 @@ function ProductsScreen({ canManage, canInventory, canCash }) {
             />
           </label>
           <SortSelect id="products-sort" value={params.sort} onChange={onSort} />
+          <FilterReset
+            active={Boolean(query || params.q || params.category || params.brand || params.sort)}
+            onClick={resetFilters}
+          />
         </div>
         <span className="count-tag mono">
           {data.items.length} de {data.total}
@@ -1041,6 +1064,14 @@ function MetaScreen({ kind, title, eyebrow, empty, canManage }) {
   const [editing, setEditing] = useState(null)
   const [refresh, setRefresh] = useState(0)
   const [formOpen, setFormOpen] = useState(false)
+  const [page, setPage] = useState(1)
+  const [lastKind, setLastKind] = useState(kind)
+  const PAGE_SIZE = 10
+
+  if (kind !== lastKind) {
+    setLastKind(kind)
+    setPage(1)
+  }
 
   const hasKey = kind === 'categories'
   const singular = hasKey ? 'categoría' : 'marca'
@@ -1123,6 +1154,10 @@ function MetaScreen({ kind, title, eyebrow, empty, canManage }) {
   if (!items && !error) return <ScreenLoading label="Cargando la estantería…" />
   if (error) return <ScreenBlocked message={error} />
 
+  const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE))
+  const safePage = Math.min(page, totalPages)
+  const visible = items.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
+
   return (
     <div className="dash-screen">
       <header className="dash-head">
@@ -1171,7 +1206,7 @@ function MetaScreen({ kind, title, eyebrow, empty, canManage }) {
             </tr>
           </thead>
           <tbody>
-            {items.map((item) => (
+            {visible.map((item) => (
               <tr key={hasKey ? item.key : item.name}>
                 <td>
                   <strong>{item.name}</strong>
@@ -1212,6 +1247,28 @@ function MetaScreen({ kind, title, eyebrow, empty, canManage }) {
         </table>
         {items.length === 0 && <EmptyNote text={empty} />}
       </div>
+
+      {totalPages > 1 && (
+        <div className="dash-pager">
+          <button
+            type="button"
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={safePage <= 1}
+          >
+            ← Anterior
+          </button>
+          <span className="mono">
+            Página {safePage} de {totalPages} · {items.length} {plural}
+          </span>
+          <button
+            type="button"
+            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            disabled={safePage >= totalPages}
+          >
+            Siguiente →
+          </button>
+        </div>
+      )}
     </div>
   )
 }
@@ -1397,6 +1454,11 @@ function OffersScreen({ canManage }) {
   const onSort = (value) =>
     setParams((prev) => ({ ...prev, sort: value, page: 1 }))
 
+  const resetFilters = () => {
+    setQuery('')
+    setParams({ q: '', category: '', brand: '', sort: '', page: 1 })
+  }
+
   const oldPriceOf = (p) => edits[p.id]?.oldPrice ?? p.oldPrice ?? ''
 
   const priceOf = (p) => edits[p.id]?.price ?? p.price ?? ''
@@ -1504,6 +1566,10 @@ function OffersScreen({ canManage }) {
             options={brands.map((b) => ({ value: b, label: b }))}
           />
           <SortSelect id="offers-sort" value={params.sort} onChange={onSort} />
+          <FilterReset
+            active={Boolean(query || params.q || params.category || params.brand || params.sort)}
+            onClick={resetFilters}
+          />
         </div>
         <span className="count-tag mono">
           {data.items.length} de {data.total}

@@ -84,6 +84,14 @@
   outline: 0;
   border-color: var(--gal-facade);
 }
+.quote-search:focus-within {
+  box-shadow: none;
+}
+.quote-search input:focus {
+  outline: none;
+  border: 0;
+  box-shadow: none;
+}
 .quote-status {
   display: inline-flex;
   font-size: 11px;

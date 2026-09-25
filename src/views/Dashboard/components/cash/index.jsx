@@ -118,7 +118,7 @@ function CashMovementsScreen({ canManage }) {
 
   useEffect(() => {
     let alive = true
-    const qs = new URLSearchParams({ page: String(params.page), limit: '20' })
+    const qs = new URLSearchParams({ page: String(params.page), limit: '10' })
     if (params.kind !== 'all') qs.set('kind', params.kind)
     if (params.operator) qs.set('operator', params.operator)
     apiGet(`/api/admin/cash/movements?${qs}`)
@@ -275,6 +275,7 @@ function CashMovementsScreen({ canManage }) {
             key={chip.id}
             type="button"
             className={`sale-chip mono${params.kind === chip.id ? ' active' : ''}`}
+            aria-pressed={params.kind === chip.id}
             onClick={() => setParams((prev) => ({ ...prev, kind: chip.id, page: 1 }))}
           >
             {chip.label}
