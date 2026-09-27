@@ -18,7 +18,8 @@
   --gal-black: #173b5e;
   --gal-sun: #f4b740;
   display: flex;
-  min-height: 100svh;
+  min-height: 100vh;
+  min-height: 100dvh;
   color: var(--gal-ink);
   background: radial-gradient(circle at 78% -10%, rgba(37, 99, 235, .09), transparent 32rem), var(--gal-panel);
 }
@@ -34,7 +35,8 @@
   padding: 22px 14px 18px;
   position: sticky;
   top: 0;
-  height: 100svh;
+  height: 100vh;
+  height: 100dvh;
 }
 .dash-brand {
   display: flex;
@@ -660,6 +662,41 @@
 .store-preview-cta-copy em { margin-top: 3px; color: var(--gal-ink-soft); font-size: 10.5px; font-style: normal; }
 .store-preview-cta-arrow { color: #175cd3; font-size: 18px; font-weight: 800; transition: transform .18s var(--ease-out); }
 .store-preview-cta:hover .store-preview-cta-arrow { transform: translate(2px, -2px); }
+.dash.theme-dark .store-preview-cta {
+  border-color: #315d77;
+  background: linear-gradient(115deg, #173b5c, #153e49);
+  color: #e8f1fb;
+  box-shadow: 0 8px 22px rgba(2, 9, 17, .22);
+}
+.dash.theme-dark .store-preview-cta::after {
+  background: linear-gradient(105deg, transparent 30%, rgba(142, 222, 255, .22) 48%, transparent 66%);
+}
+.dash.theme-dark .store-preview-cta:hover {
+  border-color: #58a6ff;
+  background: linear-gradient(115deg, #1c466d, #174c58);
+  box-shadow: 0 12px 28px rgba(2, 9, 17, .3);
+}
+.dash.theme-dark .store-preview-cta-copy small,
+.dash.theme-dark .store-preview-cta-arrow { color: #8fc6ff; }
+.dash.theme-dark .store-preview-cta-copy em { color: #afc0d4; }
+.dash.theme-dark .store-preview-cta-icon {
+  background: #2563a5;
+  box-shadow: 0 0 0 5px rgba(88, 166, 255, .14);
+}
+
+/* Las previews representan la tienda pública, no el tema visual del panel. */
+.dash.theme-dark :where(.appearance-preview, .live-preview-browser) {
+  color-scheme: light;
+  --gal-ink: #12233f;
+  --gal-ink-soft: #405574;
+  --gal-ink-faint: #6b7c98;
+  --gal-panel: #f4f8fc;
+  --gal-panel-2: #e9f1f9;
+  --gal-white: #ffffff;
+  --gal-line: #d8e4f0;
+  --gal-line-strong: #b8cadc;
+  --gal-black: #173b5e;
+}
 @keyframes store-preview-shine {
   0%, 55%, 100% { transform: translateX(-120%); }
   75% { transform: translateX(120%); }
