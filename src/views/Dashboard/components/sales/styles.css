@@ -10,10 +10,15 @@
   letter-spacing: 0.03em;
 }
 .t-detail {
+  width: 260px;
   max-width: 260px;
   color: var(--gal-ink-soft);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .t-payer {
+  width: 240px;
   max-width: 240px;
 }
 .t-payer strong {

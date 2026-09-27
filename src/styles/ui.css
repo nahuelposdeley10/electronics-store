@@ -661,6 +661,15 @@
   font-size: 13.5px;
   min-width: 640px;
 }
+.dash-table th,
+.dash-table td {
+  min-width: 0;
+}
+.dash-table td:last-child,
+.dash-table th:last-child,
+.dash-table .row-actions {
+  white-space: nowrap;
+}
 .dash-table th {
   text-align: left;
   font-size: 11px;
@@ -696,6 +705,14 @@
 .t-dim {
   color: var(--gal-ink-faint);
 }
+.dash-table .t-desc,
+.dash-table .t-cat,
+.dash-table .t-coupon {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .t-cell-product {
   display: flex;
   align-items: center;
@@ -715,6 +732,9 @@
   display: block;
   font-size: 13.5px;
   line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .t-cell-product em {
   display: block;
@@ -723,6 +743,13 @@
   font-weight: 600;
   color: var(--gal-ink-faint);
   margin-top: 2px;
+}
+.t-cell-name strong {
+  display: block;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .sale-chips {
   display: flex;
