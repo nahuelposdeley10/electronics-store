@@ -95,6 +95,13 @@ async function main() {
   )
 
   const sG = await getSettings({ fresh: true })
+  await saveSettings({ tenant: tenantA, section: 'appearance', value: { primary: '#175cd3', showGaming: false, corners: 'rounded' } })
+  const appearanceA = await getSettings({ fresh: true, tenant: tenantA })
+  const appearanceB = await getSettings({ fresh: true, tenant: tenantB })
+  check(appearanceA.appearance.primary === '#175cd3' && appearanceA.appearance.showGaming === false, 'la personalización persiste al volver a leer la tienda')
+  check(appearanceA.appearance.corners === 'rounded', 'el estilo de tarjetas se guarda')
+  check(appearanceB.appearance.primary === '#d7261d' && appearanceB.appearance.showGaming === true, 'la personalización no modifica otras tiendas')
+  check(appearanceA.payments.mercadopago.webhookSecret === 'secret-copiado-de-mp', 'personalizar no modifica credenciales ni otras secciones')
   check(
     sG?.payments?.mercadopago?.webhookSecret == null,
     'el scope global queda vacío hasta pegar el de MP',

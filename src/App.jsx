@@ -24,6 +24,7 @@ import { parseLocation, urlForView } from '@/lib/router'
 import { applySEO, seoMeta } from '@/lib/seo'
 import { useSiteSettings, mergeSettings } from '@/lib/siteSettings'
 import { initMotion } from '@/lib/motion'
+import { appearanceVariables } from '@/lib/appearance'
 import './styles/ui.css'
 
 initMotion()
@@ -314,14 +315,14 @@ function AppContent() {
           />
         </Suspense>
       ) : (
-        <>
+        <div className="storefront" data-product-columns={settings.appearance.productsPerRow} style={appearanceVariables(settings.appearance)}>
           <div className="scroll-tape" ref={tapeRef} aria-hidden="true" />
           <Header onNavigate={navigate} view={view.name} onSearch={handleSearch} />
           {content}
           <Footer onNavigate={navigate} />
-          <WhatsAppButton />
+          {settings.appearance.showWhatsapp && <WhatsAppButton />}
           <CookieConsent onNavigate={navigate} />
-        </>
+        </div>
       )}
     </CartProvider>
   )

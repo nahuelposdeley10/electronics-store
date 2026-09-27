@@ -65,7 +65,7 @@ export default function GallerySection({ onView, brands }) {
   }, [page, category, brand, sort])
 
   return (
-    <section className="home-section gallery-section">
+    <section id="catalogo" className="home-section gallery-section">
       <div className="section-head">
         <h2 id="section-galeria" data-reveal="sweep">
           Toda la galería

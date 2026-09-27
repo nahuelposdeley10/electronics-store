@@ -3,6 +3,14 @@
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 12px;
 }
+.settings-live-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(300px, .65fr);
+  gap: 24px;
+  align-items: start;
+}
+.settings-live-layout > .set-card { min-width: 0; }
+.set-messages { margin-top: 28px; }
 .set-grow {
   grid-column: span 2;
 }
@@ -70,4 +78,83 @@
 }
 .mp-paused-note strong {
   color: var(--gal-facade-deep);
+}
+.mp-status-card {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+}
+.mp-status-card > div { display: grid; gap: 3px; }
+.mp-status-card p { margin: 0; }
+.mp-status-icon {
+  display: grid;
+  place-items: center;
+  width: 108px;
+  height: 42px;
+  flex: 0 0 108px;
+  border-radius: 10px;
+  background: #e5f3ff;
+  color: #168dcc;
+}
+.mp-status-icon img { display: block; width: 96px; height: auto; }
+.mp-credentials-guide {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 16px;
+  padding: 20px;
+  border: 1px solid #b9d4f0;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #f3f8fe, #fff);
+  box-shadow: 0 8px 24px rgba(23, 92, 211, .07);
+}
+.mp-credentials-guide-head { display: flex; align-items: flex-start; gap: 14px; }
+.mp-credentials-guide-icon { display: grid; place-items: center; width: 108px; height: 44px; flex: 0 0 108px; border-radius: 9px; background: #fff; box-shadow: 0 0 0 1px rgba(23, 92, 211, .1), 0 5px 14px rgba(23, 92, 211, .1); }
+.mp-credentials-guide-icon img { display: block; width: 96px; height: auto; }
+.mp-credentials-guide-head > div { display: grid; gap: 5px; }
+.mp-credentials-guide-head h2 { font-family: var(--font-ui); font-size: 18px; line-height: 1.25; }
+.mp-credentials-guide-head p { max-width: 76ch; color: var(--gal-ink-soft); font-size: 13px; line-height: 1.5; }
+.mp-credentials-guide-steps { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.mp-credentials-guide-steps > div { display: flex; align-items: flex-start; gap: 10px; padding: 12px; border: 1px solid #d8e6f5; border-radius: 6px; background: rgba(255, 255, 255, .75); }
+.mp-credentials-guide-steps b { display: grid; place-items: center; width: 24px; height: 24px; flex: 0 0 24px; border-radius: 50%; background: #e7f1fb; color: #175cd3; font-family: var(--font-mono); font-size: 11px; }
+.mp-credentials-guide-steps span { display: grid; gap: 4px; }
+.mp-credentials-guide-steps strong { font-size: 13px; }
+.mp-credentials-guide-steps small { color: var(--gal-ink-soft); font-size: 11.5px; line-height: 1.45; }
+.mp-credentials-guide-steps code { color: #175cd3; font-family: var(--font-mono); }
+.mp-credentials-guide-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.mp-credentials-guide-actions a { text-decoration: none; }
+.mp-credentials-guide-actions svg { width: 15px; height: 15px; transform: rotate(-45deg); }
+.mp-credentials-guide-actions .primary-btn img { width: 70px; height: auto; padding: 3px 6px; border-radius: 5px; background: #fff; }
+.mp-credentials-safety { padding-top: 12px; border-top: 1px solid #d8e6f5; color: var(--gal-ink-faint); font-size: 11.5px; line-height: 1.45; }
+.theme-dark .mp-credentials-guide {
+  border-color: #315675;
+  background: linear-gradient(135deg, #142b42, #112237);
+  box-shadow: 0 12px 30px rgba(2, 9, 17, .24), inset 0 1px 0 rgba(255, 255, 255, .035);
+}
+.theme-dark .mp-credentials-guide-icon {
+  background: #fff;
+  box-shadow: 0 0 0 5px rgba(88, 166, 255, .09);
+}
+.theme-dark .mp-status-icon { background: #fff; box-shadow: 0 0 0 1px rgba(143, 198, 255, .14); }
+.theme-dark .mp-credentials-guide-head h2 { color: #edf6ff; }
+.theme-dark .mp-credentials-guide-head p { color: #aec1d4; }
+.theme-dark .mp-credentials-guide-steps > div {
+  border-color: #2c4a66;
+  background: rgba(24, 48, 72, .82);
+}
+.theme-dark .mp-credentials-guide-steps b {
+  background: #203f5d;
+  color: #8fc6ff;
+  box-shadow: inset 0 0 0 1px rgba(143, 198, 255, .12);
+}
+.theme-dark .mp-credentials-guide-steps strong { color: #e7f1fb; }
+.theme-dark .mp-credentials-guide-steps small { color: #a9bbce; }
+.theme-dark .mp-credentials-guide-steps code { color: #8fc6ff; }
+.theme-dark .mp-credentials-safety { border-top-color: #2c4a66; color: #91a6bc; }
+@media (max-width: 980px) {
+  .settings-live-layout { grid-template-columns: 1fr; }
+}
+@media (max-width: 620px) {
+  .mp-credentials-guide-head { flex-direction: column; }
+  .mp-credentials-guide-steps { grid-template-columns: 1fr; }
+  .mp-credentials-guide-actions a { width: 100%; justify-content: center; }
 }

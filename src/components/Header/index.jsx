@@ -57,7 +57,7 @@ export default function Header({ onNavigate, view, onSearch }) {
 
   return (
     <>
-      {marqueeItems && (
+      {settings.appearance.showMarquee && marqueeItems && (
         <div className="marquee" aria-label="Beneficios de la tienda">
           <div className="marquee-track">
             {[...marqueeItems, ...marqueeItems, ...marqueeItems, ...marqueeItems].map(

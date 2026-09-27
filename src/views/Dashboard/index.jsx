@@ -9,13 +9,17 @@ import {
   IconCard,
   IconCash,
   IconChart,
+  IconChevron,
   IconCross,
   IconInventory,
   IconLock,
   IconLogout,
   IconReport,
+  IconMoon,
+  IconSun,
   IconTicket,
   IconWrench,
+  IconEye,
 } from '@/components/Icons'
 import DashboardLoading from '@/components/DashboardLoading'
 import { initials, ROLE_LABELS } from './consts.js'
@@ -52,6 +56,9 @@ import {
 import { CouponsScreen } from './components/marketing'
 import { BusinessesScreen, UsersScreen, RolesScreen } from './components/users'
 import { PaymentsScreen, StoreScreen, GeneralScreen } from './components/settings'
+import AppearanceScreen from './components/appearance'
+import StoreHub from './components/storeHub'
+import { STORE_PAGES, isNavGroupActive } from './storeNavigation.js'
 
 import './styles.css'
 
@@ -77,10 +84,19 @@ const SCREEN_PERMS = {
   'settings-roles': 'settings.manage',
   'settings-payments': 'settings.manage',
   'settings-store': 'settings.manage',
+  'settings-content': 'settings.manage',
+  'settings-hub': 'settings.manage',
   'settings-general': 'settings.manage',
+  'settings-appearance': 'settings.manage',
 }
 
 export default function Dashboard({ onExit }) {
+  const [theme, setTheme] = useState(() => {
+    const saved = localStorage.getItem('ts-admin-theme')
+    if (saved === 'light' || saved === 'dark') return saved
+    return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+  })
+  const [collapsedGroups, setCollapsedGroups] = useState(() => new Set())
   const [screen, setScreen] = useState(
     () => sessionStorage.getItem('ts-admin-screen') || 'overview',
   )
@@ -118,7 +134,8 @@ export default function Dashboard({ onExit }) {
   const needsBusiness = userIsSuper && !superTenant
   const tenantFreeScreens = ['settings-users', 'settings-roles']
   const canView = (id) =>
-    userIsSuper || !SCREEN_PERMS[id] || (perms || []).includes(SCREEN_PERMS[id])
+    (id !== 'settings-appearance' || userIsSuper || user?.role === 'admin') &&
+    (userIsSuper || !SCREEN_PERMS[id] || (perms || []).includes(SCREEN_PERMS[id]))
   const activeScreen = canView(screen) ? screen : 'overview'
   const businessBlock = needsBusiness && !tenantFreeScreens.includes(activeScreen)
 
@@ -135,6 +152,27 @@ export default function Dashboard({ onExit }) {
         setTimeout(() => setCopiedStoreUrl(false), 1600)
       })
       .catch(() => console.warn('No se pudo copiar el enlace de la tienda'))
+  }
+
+  const changeTheme = (nextTheme) => {
+    setTheme(nextTheme)
+    localStorage.setItem('ts-admin-theme', nextTheme)
+  }
+
+  const openNavItem = (item) => {
+    if (!item.children) {
+      changeScreen(item.id)
+      return
+    }
+    const active = isNavGroupActive(item, activeScreen)
+    const expanded = active && !collapsedGroups.has(item.id)
+    setCollapsedGroups((current) => {
+      const next = new Set(current)
+      if (expanded) next.add(item.id)
+      else next.delete(item.id)
+      return next
+    })
+    if (!active) changeScreen(item.landing || item.children[0].id)
   }
 
   useEffect(() => {
@@ -309,6 +347,7 @@ export default function Dashboard({ onExit }) {
       label: 'Ventas',
       icon: IconCard,
       prefix: 'sales-',
+      landing: 'sales-history',
       children: [
         { id: 'sales-pos', label: 'Nueva venta / POS', require: 'pos.manage' },
         { id: 'sales-history', label: 'Historial de ventas' },
@@ -356,16 +395,23 @@ export default function Dashboard({ onExit }) {
       ],
     },
     {
+      id: 'storefront',
+      label: 'Tienda online',
+      icon: IconEye,
+      children: [
+        { id: 'settings-hub', label: 'Qué querés cambiar' },
+        ...STORE_PAGES,
+      ],
+    },
+    {
       id: 'settings',
-      label: 'Configuración',
+      label: 'Administración',
       icon: IconWrench,
       prefix: 'settings-',
       children: [
         { id: 'settings-users', label: 'Usuarios', require: 'users.manage' },
-        { id: 'settings-roles', label: 'Roles y permisos', require: 'settings.manage' },
-        { id: 'settings-payments', label: 'Métodos de pago', require: 'settings.manage' },
-        { id: 'settings-store', label: 'Datos del negocio', require: 'settings.manage' },
-        { id: 'settings-general', label: 'Configuración general', require: 'settings.manage' },
+        { id: 'settings-roles', label: 'Permisos por usuario', require: 'settings.manage' },
+        { id: 'settings-payments', label: 'Medios de pago', require: 'settings.manage' },
       ],
     },
   ].filter((item) => !item.children || item.children.length > 0)
@@ -378,7 +424,7 @@ export default function Dashboard({ onExit }) {
   if (gate === 'loading' && !needsBusiness) return <DashboardLoading />
 
   return (
-    <div className="dash">
+    <div className={`dash theme-${theme}`}>
       {gate !== 'login' && (
         <aside className="dash-side">
         <div className="dash-brand">
@@ -397,21 +443,23 @@ export default function Dashboard({ onExit }) {
 
         <nav className="dash-nav" aria-label="Panel de administración">
           {visibleNav.map((item) => {
-            const active = item.children
-              ? activeScreen === item.id || activeScreen.startsWith(item.prefix || '')
-              : activeScreen === item.id
+            const active = isNavGroupActive(item, activeScreen)
+            const expanded = Boolean(item.children && active && !collapsedGroups.has(item.id))
             return (
               <div key={item.id} className="dash-nav-group">
                   <button
                     type="button"
                     className={`dash-nav-item${active ? ' active' : ''}`}
                     aria-current={active ? 'page' : undefined}
-                    onClick={() => changeScreen(item.children ? item.children[0].id : item.id)}
+                    aria-expanded={item.children ? expanded : undefined}
+                    title={item.children ? 'Abrir o cerrar submenú' : undefined}
+                    onClick={() => openNavItem(item)}
                 >
                   <item.icon />
-                  {item.label}
+                  <span>{item.label}</span>
+                  {item.children && <IconChevron className={`dash-nav-chevron${expanded ? ' expanded' : ''}`} />}
                 </button>
-                {item.children && active && (
+                {expanded && (
                   <div className="dash-nav-sub">
                     {item.children.map((child) => (
                       <button
@@ -449,24 +497,36 @@ export default function Dashboard({ onExit }) {
 
         {user?.role === 'admin' && (
           <div className="dash-side-store">
-            <span className="dash-side-store-label">URL de tu tienda</span>
+            <div className="dash-side-store-head">
+              <span className="dash-side-store-status" aria-hidden="true" />
+              <span className="dash-side-store-label">Tu tienda está online</span>
+            </div>
             {user.businessSlug ? (
               <>
+                <span className="dash-side-store-hint">Compartí esta dirección con tus clientes</span>
                 <a
                   className="dash-side-store-url mono"
                   href={storeUrl()}
                   target="_blank"
                   rel="noopener noreferrer"
+                  title={storeUrl()}
                 >
-                  /u/{user.businessSlug}
+                  {storeUrl().replace(/^https?:\/\//, '')}
                 </a>
-                <button
-                  type="button"
-                  className="dash-side-store-copy"
-                  onClick={copyStoreUrl}
-                >
-                  {copiedStoreUrl ? '¡Copiada!' : 'Copiar URL'}
-                </button>
+                <div className="dash-side-store-actions">
+                  <button
+                    type="button"
+                    className={`dash-side-store-copy${copiedStoreUrl ? ' is-copied' : ''}`}
+                    onClick={copyStoreUrl}
+                    aria-live="polite"
+                  >
+                    {copiedStoreUrl ? '¡URL copiada!' : 'Copiar URL'}
+                  </button>
+                  <a className="dash-side-store-open" href={storeUrl()} target="_blank" rel="noopener noreferrer">
+                    <IconEye />
+                    Ver tienda
+                  </a>
+                </div>
               </>
             ) : (
               <span className="dash-side-store-empty">
@@ -477,6 +537,16 @@ export default function Dashboard({ onExit }) {
         )}
 
         <div className="dash-side-foot">
+          <div className="dash-theme" role="group" aria-label="Tema del panel">
+            <button type="button" className={theme === 'light' ? 'active' : ''} aria-pressed={theme === 'light'} onClick={() => changeTheme('light')}>
+              <IconSun />
+              Claro
+            </button>
+            <button type="button" className={theme === 'dark' ? 'active' : ''} aria-pressed={theme === 'dark'} onClick={() => changeTheme('dark')}>
+              <IconMoon />
+              Oscuro
+            </button>
+          </div>
           {user?.role === 'admin' && user?.businessSlug && (
             <button type="button" className="dash-exit" onClick={onExit}>
               <IconBack />
@@ -494,6 +564,16 @@ export default function Dashboard({ onExit }) {
       )}
 
       <main className="dash-main">
+        {gate === 'ready' && !businessBlock && STORE_PAGES.some((page) => page.id === activeScreen) && (
+          <div className="dash-store-shortcuts" aria-label="Accesos de tienda online">
+            <button type="button" className="ghost-btn" onClick={() => changeScreen('settings-hub')}><IconBack />Qué querés cambiar</button>
+            {user?.role === 'admin' && user?.businessSlug && <a className="store-preview-cta" href={storeUrl()} target="_blank" rel="noopener noreferrer" aria-label="Abrir vista previa de mi tienda en una nueva pestaña">
+              <span className="store-preview-cta-icon"><IconEye /></span>
+              <span className="store-preview-cta-copy"><small>Vista previa</small><strong>Ver mi tienda</strong><em>Abrir antes de revisar o publicar</em></span>
+              <span className="store-preview-cta-arrow" aria-hidden="true">↗</span>
+            </a>}
+          </div>
+        )}
         {gate === 'ready' && !needsBusiness && overview && overview.counts?.all === 0 && guideOpen && (
           <FirstRunBanner
             onGo={(id) => {
@@ -623,7 +703,10 @@ export default function Dashboard({ onExit }) {
         {(gate === 'ready' || needsBusiness) && activeScreen === 'settings-roles' && <RolesScreen />}
         {gate === 'ready' && activeScreen === 'settings-payments' && <PaymentsScreen />}
         {gate === 'ready' && activeScreen === 'settings-store' && <StoreScreen />}
+        {gate === 'ready' && activeScreen === 'settings-content' && <StoreScreen mode="content" />}
+        {gate === 'ready' && activeScreen === 'settings-hub' && <StoreHub onView={changeScreen} canView={canView} storeUrl={user?.role === 'admin' && user?.businessSlug ? storeUrl() : null} />}
         {gate === 'ready' && activeScreen === 'settings-general' && <GeneralScreen />}
+        {gate === 'ready' && activeScreen === 'settings-appearance' && <AppearanceScreen key={superTenant || user?.id} />}
       </main>
 
       {gate === 'ready' && !needsBusiness && mpNeedSetup && !mpWarningClosed && (
@@ -708,7 +791,7 @@ function MpSetupWarning({ onConfigure, onClose }) {
         <p className="mp-warning-hint">
           En Mercado Pago: <em>Panel de desarrolladores → tu aplicación → Credenciales →
           Access Token</em>. Pegá ese token (empieza con <code>APP_USR-</code>) en{' '}
-          <em>Configuración → Métodos de pago</em>.
+          <em>Administración → Medios de pago</em>.
         </p>
         <button type="button" className="mp-warning-skip" onClick={onClose}>
           Ahora no

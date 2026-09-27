@@ -35,6 +35,7 @@ function Section({ title, items, onView, offer = false }) {
 export default function Home({ onView }) {
   const { products, brands } = useCatalog()
   const settings = mergeSettings(useSiteSettings())
+  const appearance = settings.appearance
   const maxMonths = Math.max(
     ...((settings.general.installments && settings.general.installments.length
       ? settings.general.installments
@@ -62,7 +63,7 @@ export default function Home({ onView }) {
     )
     io.observe(el)
     return () => io.disconnect()
-  }, [])
+  }, [appearance.showHero])
 
   useEffect(() => {
     const stage = stageRef.current
@@ -83,7 +84,7 @@ export default function Home({ onView }) {
     window.addEventListener('scroll', onScroll, { passive: true })
     update()
     return () => window.removeEventListener('scroll', onScroll)
-  }, [])
+  }, [appearance.showHero])
 
   const topDeals = useMemo(() => {
     const onSale = products.filter(
@@ -101,7 +102,7 @@ export default function Home({ onView }) {
 
   return (
     <main className="home">
-      <section ref={heroRef} className={bayLive ? 'hero-bay bay-live' : 'hero-bay'}>
+      {appearance.showHero && <section ref={heroRef} className={bayLive ? 'hero-bay bay-live' : 'hero-bay'}>
         <div className="bay-stage" ref={stageRef}>
           {settings.store.coverUrl && (
             <img
@@ -132,10 +133,10 @@ export default function Home({ onView }) {
                 type="button"
                 className="hero-btn"
                 onClick={() =>
-                  document.querySelector('#ofertas')?.scrollIntoView({ behavior: 'smooth' })
+                  document.querySelector('#catalogo')?.scrollIntoView({ behavior: 'smooth' })
                 }
               >
-                Comprar ahora
+                {appearance.heroButton}
                 <IconArrow />
               </button>
               <ul className="bay-trust">
@@ -167,11 +168,11 @@ export default function Home({ onView }) {
             <span>y servicio técnico propio</span>
           </div>
         </div>
-      </section>
+      </section>}
 
       <div id="ofertas" className="anchor" />
 
-      <Section title="Ofertas de la semana" items={topDeals} onView={onView} offer />
+      {appearance.showOffers && <Section title="Ofertas de la semana" items={topDeals} onView={onView} offer />}
 
       {shippingEnabled ? (
         <div className="band-shipping" data-reveal="up">
@@ -187,9 +188,9 @@ export default function Home({ onView }) {
         </div>
       )}
 
-      <Section title="Recién llegados" items={newest} onView={onView} />
+      {appearance.showNewArrivals && <Section title="Recién llegados" items={newest} onView={onView} />}
 
-      <section className="gaming-bay" data-reveal="up">
+      {appearance.showGaming && <section className="gaming-bay" data-reveal="up">
         <div className="gaming-copy">
           <span className="gaming-kicker">Sala 04</span>
           <h2>GAMING</h2>
@@ -211,11 +212,11 @@ export default function Home({ onView }) {
             loading="lazy"
           />
         </div>
-      </section>
+      </section>}
 
       <GallerySection onView={onView} brands={brands} />
 
-      <section className="brands-strip" aria-label="Marcas oficiales">
+      {appearance.showBrands && <section className="brands-strip" aria-label="Marcas oficiales">
         <h2 data-reveal="sweep">Marcas oficiales</h2>
         <div className="brands">
           {brands.map((brand, i) => (
@@ -229,7 +230,7 @@ export default function Home({ onView }) {
             </span>
           ))}
         </div>
-      </section>
+      </section>}
     </main>
   )
 }

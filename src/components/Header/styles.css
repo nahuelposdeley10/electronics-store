@@ -1,7 +1,7 @@
 /*---------------- Marquee (tira superior) ----------------*/
 .marquee {
   background: var(--gal-black);
-  color: var(--gal-facade-ink);
+  color: #fff;
   overflow: hidden;
   font-family: var(--font-mono);
   font-size: 12px;
@@ -114,6 +114,7 @@
 }
 .search-bar button:hover {
   background: var(--gal-facade);
+  color: var(--gal-facade-ink);
 }
 .search-bar button svg {
   width: 18px;
@@ -153,7 +154,7 @@
   top: -9px;
   right: -7px;
   background: var(--gal-facade);
-  color: #fff;
+  color: var(--gal-facade-ink);
   border-radius: 50%;
   min-width: 20px;
   height: 20px;

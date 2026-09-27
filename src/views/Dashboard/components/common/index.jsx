@@ -413,22 +413,28 @@ function SettingsNote({ text }) {
 
 
 function SetImageField({ label, hint, value, uploading, onFile, onRemove, wide }) {
+  const kind = wide ? 'cover' : 'logo'
   return (
-    <div className={wide ? 'set-image-box is-wide' : 'set-image-box'}>
-      <span className="set-image-label">{label}</span>
+    <div className={`set-image-box is-${kind}`}>
+      <div className="set-image-head">
+        <span className="set-image-label">{label}</span>
+        <span className={`set-image-status${value ? ' has-image' : ''}`}>
+          {value ? 'Imagen cargada' : 'Sin imagen'}
+        </span>
+      </div>
       {value ? (
         <a
           className="set-image-preview"
           href={value}
           target="_blank"
           rel="noreferrer"
-          title="Abrir imagen completa"
+          title={`Abrir ${label.toLowerCase()} en tamaño completo`}
         >
           <img
             src={value}
-            alt=""
-            className={wide ? 'set-image-fit-cover' : 'set-image-fit-contain'}
+            alt={`Vista previa de ${label.toLowerCase()}`}
           />
+          <span className="set-image-zoom" aria-hidden="true">Ver completa</span>
         </a>
       ) : (
         <div className="set-image-preview is-empty">
@@ -437,7 +443,7 @@ function SetImageField({ label, hint, value, uploading, onFile, onRemove, wide }
       )}
       <div className="set-image-actions">
         <label className="primary-btn set-image-upload">
-          {uploading ? 'Subiendo…' : 'Subir imagen'}
+          {uploading ? 'Subiendo…' : value ? 'Cambiar imagen' : 'Subir imagen'}
           <input
             type="file"
             accept="image/*"
@@ -454,7 +460,7 @@ function SetImageField({ label, hint, value, uploading, onFile, onRemove, wide }
               target="_blank"
               rel="noreferrer"
             >
-              Ver
+              Abrir original
             </a>
             <button type="button" className="ghost-btn" onClick={onRemove}>
               Quitar

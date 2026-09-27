@@ -1,10 +1,12 @@
 ﻿import { useState } from 'react'
 import { apiPut, apiUpload, getSession } from '@/lib/api'
 import { getSuperTenant } from '@/lib/tenant'
-import { IconCross, IconEdit, IconPlus } from '@/components/Icons'
+import { IconArrow, IconCross, IconEdit, IconPlus } from '@/components/Icons'
+import mercadoPagoLogo from '@/assets/mercado-pago-logo.png'
 import { useToast } from '@/context/useToast'
 import { useConfirm } from '@/context/useConfirm'
 import { SetImageField, SettingsFetcher, ToggleRow } from '../common'
+import LiveStorePreview from './components/LiveStorePreview'
 
 import './styles.css'
 
@@ -122,8 +124,8 @@ function PaymentsScreenBody({ settings, saving, onSave }) {
     <div className="dash-screen">
       <header className="dash-head">
         <div>
-          <span className="dash-eyebrow">Configuración</span>
-          <h1>Métodos de pago</h1>
+          <span className="dash-eyebrow">Administración</span>
+          <h1>Medios de pago</h1>
         </div>
       </header>
 
@@ -133,7 +135,9 @@ function PaymentsScreenBody({ settings, saving, onSave }) {
         </p>
       </div>
 
-      <div className="set-card">
+      <div className="set-card mp-status-card">
+        <span className="mp-status-icon"><img src={mercadoPagoLogo} alt="Mercado Pago" /></span>
+        <div>
         <strong>Estado de Mercado Pago</strong>
 {!online ? (
         <p className="settings-warn">
@@ -145,14 +149,35 @@ function PaymentsScreenBody({ settings, saving, onSave }) {
       ) : (
         <p className="settings-warn">Pendiente de configurar — sin credenciales esta tienda no puede cobrar online.</p>
       )}
+        </div>
       </div>
+
+      <section className="mp-credentials-guide" aria-labelledby="mp-credentials-guide-title">
+        <div className="mp-credentials-guide-head">
+          <span className="mp-credentials-guide-icon"><img src={mercadoPagoLogo} alt="Mercado Pago" /></span>
+          <div>
+            <span className="dash-eyebrow">Antes de completar los campos</span>
+            <h2 id="mp-credentials-guide-title">¿Dónde encuentro los datos de Mercado Pago?</h2>
+            <p>Abrí tu aplicación en Mercado Pago Developers y copiá únicamente las credenciales de producción de tu propia cuenta.</p>
+          </div>
+        </div>
+        <div className="mp-credentials-guide-steps">
+          <div><b>1</b><span><strong>Access Token y Public Key</strong><small>Tu aplicación → Credenciales de producción. El Access Token empieza con <code>APP_USR-</code>.</small></span></div>
+          <div><b>2</b><span><strong>Webhook Secret</strong><small>Tu aplicación → Webhooks → Configurar notificación → revelar clave secreta.</small></span></div>
+        </div>
+        <div className="mp-credentials-guide-actions">
+          <a className="primary-btn" href="https://www.mercadopago.com.ar/developers/panel/app" target="_blank" rel="noopener noreferrer"><img src={mercadoPagoLogo} alt="" /> Abrir mis credenciales</a>
+          <a className="ghost-btn" href="https://www.mercadopago.com.ar/developers/es/docs/links-and-debts/additional-content/your-integrations/notifications/webhooks?scope=prod" target="_blank" rel="noopener noreferrer">Ver guía de Webhooks <IconArrow /></a>
+        </div>
+        <p className="mp-credentials-safety">No compartas estas claves por mensajes ni las pegues en la tienda pública. Se guardan únicamente para procesar tus cobros.</p>
+      </section>
 
       <form className="set-card set-form" onSubmit={submit}>
         {!online && (
           <p className="set-hint mp-paused-note">
             <strong>Pagos online apagados por el súper admin.</strong> Mientras tanto la web
             pide el pedido por <strong>WhatsApp</strong> usando el número de{" "}
-            <em>Datos del negocio</em>. Igual podés cargar o editar estas credenciales: se
+            <em>Tienda online → Datos y contacto</em>. Igual podés cargar o editar estas credenciales: se
             guardan y quedan listas para cuando se vuelvan a activar los pagos online.
           </p>
         )}
@@ -223,7 +248,7 @@ function PaymentsScreenBody({ settings, saving, onSave }) {
 }
 
 
-function StoreScreen() {
+function StoreScreen({ mode = 'business' }) {
   const { showToast } = useToast()
   const [saving, setSaving] = useState(false)
 
@@ -232,9 +257,25 @@ function StoreScreen() {
     try {
       await apiPut('/api/admin/settings', { section: 'store', value: store })
       if (hero) await apiPut('/api/admin/settings', { section: 'hero', value: hero })
-      showToast('Datos del negocio guardados.', 'success')
+      showToast(mode === 'content' ? 'Portada y textos guardados.' : 'Datos y contacto guardados.', 'success')
+      return true
     } catch (err) {
       showToast(err.message, 'error')
+      return false
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const saveMessages = async (_shipping, general) => {
+    setSaving(true)
+    try {
+      await apiPut('/api/admin/settings', { section: 'general', value: general })
+      showToast('Mensajes de la cinta guardados.', 'success')
+      return true
+    } catch (err) {
+      showToast(err.message, 'error')
+      return false
     } finally {
       setSaving(false)
     }
@@ -243,14 +284,17 @@ function StoreScreen() {
   return (
     <SettingsFetcher
       render={(settings) => (
-        <StoreScreenBody settings={settings} saving={saving} onSave={save} />
+        <StoreScreenBody key={mode} mode={mode} settings={settings} saving={saving} onSave={save}>
+          {mode === 'content' && <GeneralScreenBody mode="messages" settings={settings} saving={saving} onSave={saveMessages} />}
+        </StoreScreenBody>
       )}
     />
   )
 }
 
 
-function StoreScreenBody({ settings, saving, onSave }) {
+function StoreScreenBody({ settings, saving, onSave, mode = 'business', children }) {
+  const content = mode === 'content'
   const { showToast } = useToast()
   const store = settings.store || {}
   const hero = settings.hero || {}
@@ -270,7 +314,7 @@ function StoreScreenBody({ settings, saving, onSave }) {
     heroAccent: hero.titleAccent || '',
     heroLead: hero.lead || '',
   })
-  const [loadedForm] = useState(form)
+  const [loadedForm, setLoadedForm] = useState(form)
   const [uploading, setUploading] = useState(null)
 
   const toPayload = (f) => ({
@@ -305,7 +349,7 @@ function StoreScreenBody({ settings, saving, onSave }) {
       const res = await apiUpload('/api/admin/settings/media', fd)
       setForm((f) => ({ ...f, [`${which}Url`]: res[which] }))
       showToast(
-        `${which === 'logo' ? 'Logo' : 'Portada'} actualizado. Guardalo con los demás cambios.`,
+        `${which === 'logo' ? 'Logo' : 'Portada'} publicado en tu tienda.`,
         'success',
       )
     } catch (err) {
@@ -319,56 +363,64 @@ function StoreScreenBody({ settings, saving, onSave }) {
     setForm((f) => ({ ...f, [`${which}Url`]: '' }))
   }
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault()
-    if (!dirty) return
-    onSave(
-      { ...form, phone: form.phone.trim(), email: form.email.trim() },
-      {
+    if (!dirty || saving || uploading) return
+    const fields = content
+      ? ['coverUrl', 'band']
+      : ['name', 'tagline', 'logoUrl', 'phone', 'whatsapp', 'email', 'addressFull', 'addressShort', 'hours']
+    const saved = await onSave(
+      { ...store, ...Object.fromEntries(fields.map((key) => [key, form[key].trim()])) },
+      content ? {
+        ...hero,
         title: form.heroTitle.trim(),
         titleAccent: form.heroAccent.trim(),
         lead: form.heroLead.trim(),
-      },
+      } : null,
     )
+    if (saved) setLoadedForm(form)
   }
 
   return (
     <div className="dash-screen">
       <header className="dash-head">
         <div>
-          <span className="dash-eyebrow">Configuración</span>
-          <h1>Datos del negocio</h1>
+          <span className="dash-eyebrow">Tienda online</span>
+          <h1>{content ? 'Portada y mensajes' : 'Datos y contacto'}</h1>
         </div>
       </header>
 
       <div className="dash-toolbar">
         <p className="list-note">
-          Estos datos se muestran en la tienda: cabecera, pie de página, mapa, portada y botón de WhatsApp.
+          {content ? 'Elegí la imagen de bienvenida y escribí los mensajes que ven tus clientes. Para cambiar colores u ocultar secciones, entrá en Tienda online → Colores y diseño.' : 'Presentá tu negocio y ayudá a tus clientes a contactarte. Estos datos aparecen en la cabecera, el pie de página, el mapa y WhatsApp.'}
         </p>
       </div>
 
+      <div className="settings-live-layout">
       <form className="set-card set-form" onSubmit={submit}>
-        <h3>Logo y portada</h3>
+        <h3>{content ? 'Imagen de portada' : 'Logo del negocio'}</h3>
+        <p className="set-hint">La vista previa muestra la imagen completa. Las imágenes se publican al subirlas; para quitarlas o cambiar los textos, guardá los cambios al final.</p>
         <div className="set-row set-images">
-          <SetImageField
+          {!content && <SetImageField
             label="Logo"
-            hint="Aparece en el header y el pie de la tienda. PNG con fondo transparente recomendado."
+            hint="Aparece en la cabecera y al pie de tu tienda. Recomendamos PNG con fondo transparente."
             value={form.logoUrl}
             uploading={uploading === 'logo'}
             onFile={(e) => uploadImage('logo', e)}
             onRemove={() => removeImage('logo')}
-          />
-          <SetImageField
+          />}
+          {content && <SetImageField
             label="Portada"
-            hint="Imagen de fondo del hero de inicio. Si no hay, el hero queda sin imagen."
+            hint="Imagen de fondo de la bienvenida. Si la quitás, la portada se muestra solo con texto."
             value={form.coverUrl}
             uploading={uploading === 'cover'}
             onFile={(e) => uploadImage('cover', e)}
             onRemove={() => removeImage('cover')}
             wide
-          />
+          />}
         </div>
 
+        {!content && <>
         <h3>Identidad</h3>
         <div className="set-row">
           <label className="inv-field">
@@ -413,14 +465,16 @@ function StoreScreenBody({ settings, saving, onSave }) {
           <input value={form.hours} onChange={set('hours')} />
         </label>
 
-        <h3>Hero de inicio</h3>
+        </>}
+        {content && <>
+        <h3>Bienvenida de la página de inicio</h3>
         <div className="set-row">
           <label className="inv-field">
             <span>Título principal</span>
             <input value={form.heroTitle} onChange={set('heroTitle')} maxLength={160} />
           </label>
           <label className="inv-field">
-            <span>Remate del título</span>
+            <span>Parte destacada del título</span>
             <input value={form.heroAccent} onChange={set('heroAccent')} maxLength={160} />
           </label>
         </div>
@@ -429,7 +483,7 @@ function StoreScreenBody({ settings, saving, onSave }) {
           <textarea value={form.heroLead} onChange={set('heroLead')} rows={3} maxLength={300} />
         </label>
         <p className="set-hint">
-          Guardá el texto que se muestra en el hero del inicio. Podés usar{' '}
+          Este texto aparece en la portada. Podés usar{' '}
           <code>{'{cuotas}'}</code> (máx. cuotas sin interés) y <code>{'{ciudad}'}</code>{' '}
           (dirección corta) dentro del texto.
         </p>
@@ -439,13 +493,17 @@ function StoreScreenBody({ settings, saving, onSave }) {
           <span>Texto promocional</span>
           <textarea value={form.band} onChange={set('band')} rows={2} />
         </label>
+        </>}
 
         <div className="set-actions">
-          <button type="submit" className="primary-btn" disabled={saving || !dirty}>
-            {saving ? 'Guardando...' : 'Guardar cambios'}
+          <button type="submit" className="primary-btn" disabled={saving || uploading !== null || !dirty}>
+            {saving ? 'Guardando...' : content ? 'Guardar portada y textos' : 'Guardar datos y contacto'}
           </button>
         </div>
       </form>
+      <LiveStorePreview variant={content ? 'content' : 'contact'} data={form} appearance={settings.appearance} />
+      </div>
+      {children}
     </div>
   )
 }
@@ -455,14 +513,15 @@ function GeneralScreen() {
   const { showToast } = useToast()
   const [saving, setSaving] = useState(false)
 
-  const save = async (shipping, general) => {
+  const save = async (shipping) => {
     setSaving(true)
     try {
       await apiPut('/api/admin/settings', { section: 'shipping', value: shipping })
-      await apiPut('/api/admin/settings', { section: 'general', value: general })
-      showToast('Configuración general guardada.', 'success')
+      showToast('Envíos guardados.', 'success')
+      return true
     } catch (err) {
       showToast(err.message, 'error')
+      return false
     } finally {
       setSaving(false)
     }
@@ -478,21 +537,22 @@ function GeneralScreen() {
 }
 
 
-function GeneralScreenBody({ settings, saving, onSave }) {
+function GeneralScreenBody({ settings, saving, onSave, mode = 'shipping' }) {
+  const messages = mode === 'messages'
   const { confirm } = useConfirm()
   const shipping = settings.shipping || {}
   const general = settings.general || {}
   const [form, setForm] = useState({
     enabled: shipping.enabled !== false,
-    cost: String(shipping.cost || 5999),
-    freeThreshold: String(shipping.freeThreshold || 300000),
+    cost: String(shipping.cost ?? 5999),
+    freeThreshold: String(shipping.freeThreshold ?? 300000),
     label: shipping.label || 'Envío a domicilio',
   })
   const [marquee, setMarquee] = useState(
     (Array.isArray(general.marquee) ? general.marquee : []).filter(Boolean),
   )
-  const [loadedForm] = useState(form)
-  const [loadedMarquee] = useState(marquee)
+  const [loadedForm, setLoadedForm] = useState(form)
+  const [loadedMarquee, setLoadedMarquee] = useState(marquee)
   const [marqueeInput, setMarqueeInput] = useState('')
   const [editingIndex, setEditingIndex] = useState(null)
   const [draft, setDraft] = useState('')
@@ -548,38 +608,46 @@ function GeneralScreenBody({ settings, saving, onSave }) {
     if (ok) setMarquee([])
   }
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault()
-    if (!dirty) return
-    onSave(
+    if (!dirty || saving) return
+    const saved = await onSave(
       {
+        ...shipping,
         enabled: form.enabled !== false,
         cost: Math.max(0, Number(form.cost) || 0),
         freeThreshold: Math.max(0, Number(form.freeThreshold) || 0),
         label: form.label.trim() || 'Envío a domicilio',
       },
       {
+        ...general,
         marquee: marquee.filter(Boolean),
       },
     )
+    if (saved) {
+      setLoadedForm(form)
+      setLoadedMarquee(marquee)
+    }
   }
 
   return (
-    <div className="dash-screen">
-      <header className="dash-head">
+    <div className={messages ? 'set-messages' : 'dash-screen'}>
+      {!messages && <header className="dash-head">
         <div>
-          <span className="dash-eyebrow">Configuración</span>
-          <h1>Configuración general</h1>
+          <span className="dash-eyebrow">Tienda online</span>
+          <h1>Envíos</h1>
         </div>
-      </header>
+      </header>}
 
       <div className="dash-toolbar">
         <p className="list-note">
-          Envíos y la cinta superior de la tienda. Afecta el checkout, el carrito y las tarjetas de producto.
+          {messages ? 'La cinta superior tiene su propio botón de guardar. Para mostrarla u ocultarla, usá Tienda online → Colores y diseño.' : 'Definí el costo de entrega y desde qué importe ofrecés envío gratis. Estos valores se aplican al carrito y al finalizar la compra.'}
         </p>
       </div>
 
+      <div className="settings-live-layout">
       <form className="set-card set-form" onSubmit={submit}>
+        {!messages && <>
         <h3>Envíos</h3>
         <div className="set-toggles">
           <ToggleRow
@@ -608,8 +676,10 @@ function GeneralScreenBody({ settings, saving, onSave }) {
           </label>
         </div>
         {form.enabled && <p className="set-hint">Si el costo es 0, el envío es siempre gratis.</p>}
+        </>}
 
-        <h3>Cinta superior (marquee)</h3>
+        {messages && <>
+        <h3>Mensajes de la cinta superior</h3>
         <div className="set-list">
           {marquee.map((item, index) =>
             editingIndex === index ? (
@@ -618,14 +688,14 @@ function GeneralScreenBody({ settings, saving, onSave }) {
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') saveEdit(index)
+                    if (e.key === 'Enter') { e.preventDefault(); saveEdit(index) }
                     if (e.key === 'Escape') setEditingIndex(null)
                   }}
                   autoFocus
                   placeholder="Mensaje…"
                 />
                 <button type="button" className="ghost-btn" onClick={() => saveEdit(index)}>
-                  Guardar
+                  Aplicar edición
                 </button>
                 <button type="button" className="ghost-btn" onClick={() => setEditingIndex(null)}>
                   Cancelar
@@ -658,11 +728,11 @@ function GeneralScreenBody({ settings, saving, onSave }) {
           {marquee.length === 0 && <p className="set-empty">Sin mensajes. La cinta queda oculta.</p>}
         </div>
         <p className="set-hint">
-          El lápiz edita el mensaje y la X lo elimina. Después apretá "Guardar cambios".
+          El lápiz edita el mensaje y la X lo quita de la lista. Después usá «Guardar mensajes» para publicarlos.
         </p>
         <div className="set-inline-add">
-          <input value={marqueeInput} onChange={(e) => setMarqueeInput(e.target.value)} placeholder="Nuevo mensaje…" />
-          <button type="button" className="ghost-btn" onClick={addMarquee}>
+          <input aria-label="Nuevo mensaje de la cinta" value={marqueeInput} onChange={(e) => setMarqueeInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addMarquee() } }} placeholder="Ej.: Retirá gratis en nuestro local" />
+          <button type="button" className="ghost-btn" onClick={addMarquee} disabled={!marqueeInput.trim()}>
             <IconPlus />
             Agregar
           </button>
@@ -672,13 +742,17 @@ function GeneralScreenBody({ settings, saving, onSave }) {
             </button>
           )}
         </div>
+        </>}
 
         <div className="set-actions">
-          <button type="submit" className="primary-btn" disabled={saving || !dirty}>
-            {saving ? 'Guardando...' : 'Guardar cambios'}
+          <button type="submit" className="primary-btn" disabled={saving || !dirty || (messages && (editingIndex !== null || Boolean(marqueeInput.trim())))}>
+            {saving ? 'Guardando...' : messages ? 'Guardar mensajes' : 'Guardar envíos'}
           </button>
         </div>
+        {messages && (editingIndex !== null || Boolean(marqueeInput.trim())) && <p className="set-hint">Aplicá la edición o agregá el mensaje a la lista antes de guardar.</p>}
       </form>
+      <LiveStorePreview variant={messages ? 'messages' : 'shipping'} data={form} items={marquee} appearance={settings.appearance} />
+      </div>
     </div>
   )
 }

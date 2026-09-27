@@ -345,3 +345,20 @@ export function IconTicket(props) {
     </svg>
   )
 }
+
+export function IconSun(props) {
+  return (
+    <svg {...S} {...props}>
+      <circle cx="12" cy="12" r="3.5" />
+      <path d="M12 2.5v2M12 19.5v2M4.5 4.5l1.4 1.4M18.1 18.1l1.4 1.4M2.5 12h2M19.5 12h2M4.5 19.5l1.4-1.4M18.1 5.9l1.4-1.4" />
+    </svg>
+  )
+}
+
+export function IconMoon(props) {
+  return (
+    <svg {...S} {...props}>
+      <path d="M20.2 15.4A8.5 8.5 0 0 1 8.6 3.8 8.5 8.5 0 1 0 20.2 15.4Z" />
+    </svg>
+  )
+}

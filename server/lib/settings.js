@@ -1,6 +1,7 @@
 import mongoose from 'mongoose'
 import { Setting } from '../models/Setting.js'
 import { roundMoney } from './money.js'
+import { APPEARANCE_DEFAULTS, normalizeAppearance } from '../../src/lib/appearance.js'
 
 export const ALL_PERMISSIONS = [
   'settings.manage',
@@ -39,6 +40,7 @@ export const OPERATOR_DEFAULT_PERMISSIONS = [
 
 export function defaults() {
   return {
+    appearance: { ...APPEARANCE_DEFAULTS },
     store: {
       name: 'TechStore',
       tagline: 'caja · Villa Urquiza',
@@ -197,6 +199,7 @@ function sanitizeValue(fallback, value) {
 // descartan claves desconocidas y se acotan tipos y tamaños, para que
 // objetos gigantes/arbitrarios nunca lleguen al público ni queden en DB.
 function sanitizeSection(section, input) {
+  if (section === 'appearance') return normalizeAppearance(input)
   const fallback = defaults()[section]
   if (section === 'roles') return sanitizeRoles(input)
   if (!fallback || typeof fallback !== 'object' || Array.isArray(fallback)) return {}

@@ -5,6 +5,7 @@ import { getSettings, saveSettings } from '../lib/settings.js'
 import { uploadToCloudinary } from '../services/cloudinary.js'
 import { publicTenantId, requireTenantIdOf } from '../lib/tenant.js'
 import { allowedImageFilter } from '../lib/image-guard.js'
+import { User } from '../models/User.js'
 
 const router = express.Router()
 
@@ -14,7 +15,7 @@ const upload = multer({
   fileFilter: allowedImageFilter,
 })
 
-const PUBLIC_SECTIONS = ['store', 'shipping', 'general', 'payments', 'hero']
+const PUBLIC_SECTIONS = ['store', 'shipping', 'general', 'payments', 'hero', 'appearance']
 
 function requireTenant(req, res, next) {
   try {
@@ -61,11 +62,17 @@ router.get('/admin/settings', requireAuth, requirePermission('settings.manage'),
 
 router.put('/admin/settings', requireAuth, requirePermission('settings.manage'), requireTenant, async (req, res) => {
   const { section, value: requestedValue } = req.body || {}
-  if (!section || requestedValue === undefined) {
+  if (typeof section !== 'string' || !section || requestedValue === undefined) {
     return res.status(400).json({ error: 'Sección y valor requeridos' })
   }
   try {
     const value = requestedValue
+    if (section === 'appearance') {
+      const currentUser = await User.findById(req.user.sub).lean()
+      if (!currentUser?.active || !['admin', 'superadmin'].includes(currentUser.role) || currentUser.role !== req.user.role) {
+        return res.status(403).json({ error: 'Solo los administradores pueden personalizar la tienda' })
+      }
+    }
     if (section === 'roles' && req.user.role !== 'superadmin') {
       return res.status(403).json({ error: 'Los permisos ahora se editan por usuario' })
     }
@@ -88,8 +95,14 @@ router.post(
   upload.single('file'),
   async (req, res) => {
     const field = String(req.body.field || '').trim()
-    if (!['logo', 'cover'].includes(field)) {
-      return res.status(400).json({ error: 'Campo inválido (logo o cover)' })
+    if (!['logo', 'cover', 'background'].includes(field)) {
+      return res.status(400).json({ error: 'Campo inválido (logo, cover o background)' })
+    }
+    if (field === 'background') {
+      const currentUser = await User.findById(req.user.sub).lean()
+      if (!currentUser?.active || !['admin', 'superadmin'].includes(currentUser.role) || currentUser.role !== req.user.role) {
+        return res.status(403).json({ error: 'Solo los administradores pueden personalizar la tienda' })
+      }
     }
     if (!req.file) {
       return res.status(400).json({ error: 'Imagen requerida' })
@@ -97,6 +110,7 @@ router.post(
     try {
       const tenant = requireTenantIdOf(req)
       const url = await uploadToCloudinary(req.file)
+      if (field === 'background') return res.json({ background: url })
       const current = await getSettings({ tenant })
       const saved = await saveSettings({
         section: 'store',

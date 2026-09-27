@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { getTenantHeaders } from './tenant.js'
+import { getTenantHeaders, getTenantSlug } from './tenant.js'
+import { normalizeAppearance } from './appearance.js'
 
 const FALLBACK = {
   store: {
@@ -51,47 +52,68 @@ const FALLBACK = {
   },
 }
 
-let cached = null
-let inflight = null
+const cache = new Map()
+const requests = new Map()
+const SETTINGS_REFRESH_KEY = 'ts-site-settings-refresh'
 
-export function fetchSiteSettings() {
-  if (cached) return Promise.resolve(cached)
-  if (!inflight) {
-    inflight = fetch('/api/settings/public', { headers: getTenantHeaders() })
+export function notifySiteSettingsChanged() {
+  try {
+    window.localStorage.setItem(SETTINGS_REFRESH_KEY, String(Date.now()))
+  } catch {
+    // La tienda igualmente vuelve a consultar al recuperar el foco.
+  }
+}
+
+export function fetchSiteSettings({ fresh = false } = {}) {
+  const key = getTenantSlug() || 'global'
+  if (!fresh && cache.has(key)) return Promise.resolve(cache.get(key))
+  if (!requests.has(key)) {
+    const request = fetch('/api/settings/public', { headers: getTenantHeaders(), cache: 'no-store' })
       .then((res) => (res.ok ? res.json() : Promise.reject(new Error('settings'))))
       .then((data) => {
-        cached = data
-        inflight = null
-        return cached
+        cache.set(key, data)
+        return data
       })
       .catch((err) => {
-        inflight = null
         throw err
       })
+      .finally(() => requests.delete(key))
+    requests.set(key, request)
   }
-  return inflight
+  return requests.get(key)
 }
 
 export function useSiteSettings() {
-  const [settings, setSettings] = useState(cached)
+  const key = getTenantSlug() || 'global'
+  const [settings, setSettings] = useState(() => cache.get(key) || null)
 
   useEffect(() => {
     let alive = true
-    fetchSiteSettings()
+    const refresh = (fresh = false) => fetchSiteSettings({ fresh })
       .then((data) => {
         if (alive) setSettings(data)
       })
       .catch((err) => console.warn('No se pudieron cargar los ajustes del sitio', err))
+    refresh(true)
+    const onFocus = () => { refresh(true) }
+    const onStorage = (event) => {
+      if (event.key === SETTINGS_REFRESH_KEY) refresh(true)
+    }
+    window.addEventListener('focus', onFocus)
+    window.addEventListener('storage', onStorage)
     return () => {
       alive = false
+      window.removeEventListener('focus', onFocus)
+      window.removeEventListener('storage', onStorage)
     }
-  }, [])
+  }, [key])
 
   return settings
 }
 
 export function mergeSettings(override) {
   return {
+    appearance: normalizeAppearance(override?.appearance),
     store: { ...FALLBACK.store, ...(override?.store || {}) },
     shipping: { ...FALLBACK.shipping, ...(override?.shipping || {}) },
     hero: { ...FALLBACK.hero, ...(override?.hero || {}) },

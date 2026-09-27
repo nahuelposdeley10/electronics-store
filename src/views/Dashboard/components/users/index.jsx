@@ -250,7 +250,7 @@ function UsersScreen() {
     <div className="dash-screen">
       <header className="dash-head">
         <div>
-          <span className="dash-eyebrow">Configuración</span>
+          <span className="dash-eyebrow">Administración</span>
           <h1>Usuarios</h1>
         </div>
         <div className="dash-head-today">
@@ -540,7 +540,7 @@ function RolesScreen() {
     <div className="dash-screen">
       <header className="dash-head">
         <div>
-          <span className="dash-eyebrow">Configuración</span>
+          <span className="dash-eyebrow">Administración</span>
           <h1>Permisos por usuario</h1>
         </div>
         <div className="dash-head-today">
@@ -759,7 +759,7 @@ function PermUserEditor({ user, onSaved, isBusinessOwner, onlinePayments, saving
             hint={
               onlinePayments
                 ? 'La web cobra con Mercado Pago y el carrito usa el botón de pago.'
-                : 'Desactivado: la web usa "Pedir por WhatsApp" con el número de Datos del negocio.'
+                : 'Desactivado: la web usa "Pedir por WhatsApp" con el número de Tienda online → Datos y contacto.'
             }
             checked={onlinePayments !== false}
             disabled={savingOnline}
