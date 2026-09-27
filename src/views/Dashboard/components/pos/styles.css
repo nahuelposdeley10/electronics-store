@@ -54,6 +54,29 @@
 .pos-item.stock-item-sin {
   background: #fbe9e6;
 }
+.dash.theme-dark .pos-item.stock-item-ok {
+  background: #173b2d;
+  border-color: #2d5b46;
+}
+.dash.theme-dark .pos-item.stock-item-justo {
+  background: #463b1d;
+  border-color: #6a5a2d;
+}
+.dash.theme-dark .pos-item.stock-item-bajo,
+.dash.theme-dark .pos-item.stock-item-sin {
+  background: #47282b;
+  border-color: #704044;
+}
+.dash.theme-dark .pos-item:hover:not(:disabled) {
+  background: #193b5c;
+  border-color: #58a6ff;
+}
+.dash.theme-dark .pos-item-meta strong { color: #e8f1fb; }
+.dash.theme-dark .pos-item-meta em,
+.dash.theme-dark .pos-item-stock { color: #afc0d4; }
+.dash.theme-dark .pos-item-stock.out { color: #ffaaa7; }
+.dash.theme-dark .pos-item-price,
+.dash.theme-dark .pos-item svg { color: #8fc6ff; }
 .pos-item-meta {
   display: flex;
   flex-direction: column;
