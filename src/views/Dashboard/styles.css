@@ -843,6 +843,150 @@
 .dash.theme-dark :is(input, textarea)::placeholder { color: #71869d; }
 .dash.theme-dark .cash-strip span { background: var(--gal-white); }
 .dash.theme-dark .rep-legend-line-dark { color: #b9d0e5; }
+
+/* Las filas de inventario conservan verde/amarillo/rojo sin volver a la paleta clara. */
+.dash.theme-dark .stock-row-ok td {
+  background: #173b2d !important;
+  color: #d9f7e4;
+  border-color: #2d5b46;
+}
+.dash.theme-dark .stock-row-justo td {
+  background: #463b1d !important;
+  color: #ffedb4;
+  border-color: #6a5a2d;
+}
+.dash.theme-dark .stock-row-bajo td,
+.dash.theme-dark .stock-row-sin td {
+  background: #47282b !important;
+  color: #ffe0df;
+  border-color: #704044;
+}
+.dash.theme-dark .stock-row-ok:hover td { background: #1d4b38 !important; }
+.dash.theme-dark .stock-row-justo:hover td { background: #554721 !important; }
+.dash.theme-dark .stock-row-bajo:hover td,
+.dash.theme-dark .stock-row-sin:hover td { background: #583034 !important; }
+.dash.theme-dark .stock-value.ok {
+  color: #9af0bb;
+  background: #123c2b;
+}
+.dash.theme-dark .stock-value.justo {
+  color: #ffd98c;
+  background: #493a1a;
+}
+.dash.theme-dark .stock-value.bajo,
+.dash.theme-dark .stock-value.sin {
+  color: #ffaaa7;
+  background: #5a2d31;
+}
+
+/* Estados y paginación: contraste consistente en todo el panel oscuro. */
+.dash.theme-dark .dash-pager button,
+.dash.theme-dark .gallery-pager button {
+  border-color: #35506c;
+  background: #15263a;
+  color: #d7e7f6;
+  box-shadow: 0 2px 8px rgba(2, 9, 17, .18);
+}
+.dash.theme-dark .dash-pager button:hover:not(:disabled),
+.dash.theme-dark .gallery-pager button:hover:not(:disabled) {
+  border-color: #58a6ff;
+  background: #193b5c;
+  color: #f1f7fd;
+}
+.dash.theme-dark .dash-pager button:disabled,
+.dash.theme-dark .gallery-pager button:disabled {
+  border-color: #263e55;
+  background: #101f31;
+  color: #607894;
+}
+.dash.theme-dark .dash-pager span,
+.dash.theme-dark .gallery-pager span { color: #afc0d4; }
+
+.dash.theme-dark .status-tag.on,
+.dash.theme-dark .status-tag.status-approved {
+  color: #9af0bb;
+  border-color: #286744;
+  background: #123c2b;
+}
+.dash.theme-dark .status-tag.off,
+.dash.theme-dark .status-tag.status-muted {
+  color: #9aacc0;
+  border-color: #35506c;
+  background: #132337;
+}
+.dash.theme-dark .status-tag.status-cancelled,
+.dash.theme-dark .status-tag.status-rejected {
+  color: #ffaaa7;
+  border-color: #7d393d;
+  background: #472326;
+}
+.dash.theme-dark .status-tag.status-refunded {
+  color: #ffd58a;
+  border-color: #80602a;
+  background: #493a1a;
+}
+.dash.theme-dark .status-tag.status-pending {
+  color: #a9d3ff;
+  border-color: #315d88;
+  background: #173653;
+}
+.dash.theme-dark .status-tag.status-in_process {
+  color: #8fe8dc;
+  border-color: #23645d;
+  background: #123d3a;
+}
+.dash.theme-dark .status-tag.status-charged_back {
+  color: #d8baff;
+  border-color: #654c88;
+  background: #302448;
+}
+
+.dash.theme-dark .sale-chip.status-filter-approved,
+.dash.theme-dark .sale-chip.status-filter-confirmed {
+  color: #9af0bb;
+  border-color: #286744;
+  background: #123c2b;
+}
+.dash.theme-dark .sale-chip.status-filter-pending,
+.dash.theme-dark .sale-chip.status-filter-draft {
+  color: #ffd98c;
+  border-color: #80602a;
+  background: #493a1a;
+}
+.dash.theme-dark .sale-chip.status-filter-rejected,
+.dash.theme-dark .sale-chip.status-filter-refunded,
+.dash.theme-dark .sale-chip.status-filter-cancelled {
+  color: #ffaaa7;
+  border-color: #7d393d;
+  background: #472326;
+}
+.dash.theme-dark .sale-chip.active {
+  background: #214563;
+  border-color: #58a6ff;
+  color: #f1f7fd;
+}
+.dash.theme-dark .sale-chip.status-filter-approved.active,
+.dash.theme-dark .sale-chip.status-filter-confirmed.active {
+  color: #d9ffe5;
+  border-color: #3eaa6b;
+  background: #1d6844;
+}
+.dash.theme-dark .sale-chip.status-filter-pending.active,
+.dash.theme-dark .sale-chip.status-filter-draft.active {
+  color: #fff4c7;
+  border-color: #d7ae13;
+  background: #80620f;
+}
+.dash.theme-dark .sale-chip.status-filter-rejected.active,
+.dash.theme-dark .sale-chip.status-filter-refunded.active,
+.dash.theme-dark .sale-chip.status-filter-cancelled.active {
+  color: #ffe4e3;
+  border-color: #d15d5a;
+  background: #8a3538;
+}
+.dash.theme-dark .sale-chip span { color: #91a8bf; }
+.dash.theme-dark .sale-chip.active span { color: inherit; opacity: .78; }
+
 @media (max-width: 900px) {
   .dash.theme-dark .dash-side { border-bottom-color: #27445f; }
   .dash-theme { min-width: 168px; margin: 0 5px; }

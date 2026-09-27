@@ -15,6 +15,16 @@
   border: 1px solid var(--gal-ink-soft);
   background: var(--gal-fluo);
 }
+.dash.theme-dark .promo-state.on {
+  color: #9af0bb;
+  border-color: #286744;
+  background: #123c2b;
+}
+.dash.theme-dark .promo-state:not(.on) {
+  color: #9aacc0;
+  border-color: #35506c;
+  background: #132337;
+}
 .promo-check {
   flex-direction: row;
   align-items: center;
