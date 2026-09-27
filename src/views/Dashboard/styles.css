@@ -18,6 +18,9 @@
   --gal-black: #173b5e;
   --gal-sun: #f4b740;
   display: flex;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
   min-height: 100vh;
   min-height: 100dvh;
   color: var(--gal-ink);
@@ -50,9 +53,10 @@ body:has(.dash.theme-dark),
   padding: 22px 14px 18px;
   position: sticky;
   top: 0;
-  height: auto;
-  min-height: 100vh;
-  min-height: 100dvh;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
 }
 .dash-brand {
   display: flex;
@@ -105,6 +109,10 @@ body:has(.dash.theme-dark),
   display: flex;
   flex-direction: column;
   gap: 4px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
 }
 .dash-nav-item {
   display: flex;
@@ -398,6 +406,9 @@ body:has(.dash.theme-dark),
 .dash-main {
   flex: 1;
   min-width: 0;
+  height: 100vh;
+  height: 100dvh;
+  overflow-y: auto;
   padding: clamp(20px, 3vw, 40px);
 }
 @keyframes dash-in {
@@ -413,11 +424,15 @@ body:has(.dash.theme-dark),
 @media (max-width: 900px) {
   .dash {
     flex-direction: column;
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
   }
 
   .dash-side {
     width: 100%;
     height: auto;
+    min-height: 0;
     position: static;
     flex-direction: row;
     align-items: center;
@@ -433,6 +448,8 @@ body:has(.dash.theme-dark),
 
   .dash-nav {
     flex-direction: row;
+    flex: none;
+    overflow: visible;
     margin-left: auto;
   }
 
@@ -473,6 +490,11 @@ body:has(.dash.theme-dark),
 
   .dash-cols {
     grid-template-columns: 1fr;
+  }
+
+  .dash-main {
+    height: auto;
+    overflow: visible;
   }
 }
 @media (max-width: 560px) {
