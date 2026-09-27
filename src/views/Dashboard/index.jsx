@@ -427,19 +427,16 @@ export default function Dashboard({ onExit }) {
     <div className={`dash theme-${theme}`}>
       {gate !== 'login' && (
         <aside className="dash-side">
-        <div className="dash-brand">
-          <span className={`brand-chip${storeInfo?.logoUrl ? ' chip-logo' : ''}`}>
-            {storeInfo?.logoUrl ? (
-              <img className="brand-logo" src={storeInfo.logoUrl} alt="" />
-            ) : (
-              <IconBolt />
-            )}
-          </span>
-          <div className="dash-brand-text">
-            <strong>{storeInfo?.name || user?.businessSlug || 'TechStore'}</strong>
-            <em>{storeInfo?.address || 'Panel de administración'}</em>
+        {user && (
+          <div className="dash-side-user dash-side-user-top">
+            <span className="user-avatar mono" aria-hidden="true">{initials(user.name)}</span>
+            <span className="user-meta">
+              <strong>{user.name}</strong>
+              <em>{user.email}</em>
+            </span>
+            <span className={`role-chip role-${user.role}`}>{ROLE_LABELS[user.role] || user.role}</span>
           </div>
-        </div>
+        )}
 
         <nav className="dash-nav" aria-label="Panel de administración">
           {visibleNav.map((item) => {
@@ -478,22 +475,6 @@ export default function Dashboard({ onExit }) {
             )
           })}
         </nav>
-
-        {user && (
-          <div className="dash-side-user">
-            <span
-              className="user-avatar mono"
-              aria-hidden="true"
-            >
-              {initials(user.name)}
-            </span>
-            <span className="user-meta">
-              <strong>{user.name}</strong>
-              <em>{user.email}</em>
-            </span>
-            <span className={`role-chip role-${user.role}`}>{ROLE_LABELS[user.role] || user.role}</span>
-          </div>
-        )}
 
         {user?.businessSlug && (
           <div className="dash-side-store">
