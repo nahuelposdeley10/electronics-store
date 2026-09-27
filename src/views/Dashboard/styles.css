@@ -50,8 +50,9 @@ body:has(.dash.theme-dark),
   padding: 22px 14px 18px;
   position: sticky;
   top: 0;
-  height: 100vh;
-  height: 100dvh;
+  height: auto;
+  min-height: 100vh;
+  min-height: 100dvh;
 }
 .dash-brand {
   display: flex;
