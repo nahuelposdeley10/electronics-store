@@ -23,6 +23,21 @@
   color: var(--gal-ink);
   background: radial-gradient(circle at 78% -10%, rgba(37, 99, 235, .09), transparent 32rem), var(--gal-panel);
 }
+/* El Dashboard puede ser más corto que el documento en screens con poco
+   contenido; el body no debe revelar el fondo blanco de la tienda. */
+body:has(.dash),
+#root:has(.dash) {
+  min-height: 100vh;
+  background: var(--gal-panel);
+}
+body:has(.dash.theme-dark),
+#root:has(.dash.theme-dark) {
+  background: #0d1826;
+}
+.dash-main {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
 .dash-side {
   width: 236px;
   flex-shrink: 0;
