@@ -495,7 +495,7 @@ export default function Dashboard({ onExit }) {
           </div>
         )}
 
-        {user?.role === 'admin' && (
+        {user?.businessSlug && (
           <div className="dash-side-store">
             <div className="dash-side-store-head">
               <span className="dash-side-store-status" aria-hidden="true" />
