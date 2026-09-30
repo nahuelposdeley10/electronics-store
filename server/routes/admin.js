@@ -4,7 +4,7 @@ import { Order } from '../models/Order.js'
 import { Product } from '../models/Product.js'
 import { Quote } from '../models/Quote.js'
 import { requireAuth, requirePermission } from '../middleware/auth.js'
-import { uploadToCloudinary } from '../services/cloudinary.js'
+import { uploadImage } from '../services/images.js'
 import { parsePagination, buildProductSearchFilter, escapeRegex, parseMetaFilter, buildAdminSort } from '../lib/catalog-query.js'
 import { getValidCategoryKeys } from '../lib/catalog-meta.js'
 import { changeStock } from '../lib/stock.js'
@@ -330,7 +330,7 @@ router.post('/products', requirePermission('catalog.manage'), upload.array('imag
 
   try {
     const retained = retainedProductImages(req.body.retainedImages, null, req.files?.length || 0)
-    const images = [...retained, ...await Promise.all((req.files || []).map(uploadToCloudinary))]
+    const images = [...retained, ...await Promise.all((req.files || []).map((file) => uploadImage(file, { tenant })))]
     const image = images[0] || ''
     const wantsInitialStock = Math.floor(Number(initialQty)) > 0
     const lastId = (await Product.findOne({ adminId: tenant }).sort({ id: -1 }).lean())?.id || 0
@@ -483,7 +483,7 @@ router.put('/products/:id', requirePermission('catalog.manage'), upload.array('i
 
   try {
     const retained = retainedProductImages(req.body.retainedImages, product, req.files?.length || 0)
-    patch.images = [...retained, ...await Promise.all((req.files || []).map(uploadToCloudinary))]
+    patch.images = [...retained, ...await Promise.all((req.files || []).map((file) => uploadImage(file, { tenant })))]
     patch.image = patch.images[0] || ''
     Object.assign(product, patch)
     await product.save()

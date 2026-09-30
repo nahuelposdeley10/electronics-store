@@ -19,6 +19,7 @@ dist-ssr
 .env
 .env.*
 !.env.example
+.r2-migration/
 
 # Editor directories and files
 .vscode/*

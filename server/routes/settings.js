@@ -2,7 +2,7 @@ import express from 'express'
 import multer from 'multer'
 import { requireAuth, requirePermission } from '../middleware/auth.js'
 import { getSettings, saveSettings } from '../lib/settings.js'
-import { uploadToCloudinary } from '../services/cloudinary.js'
+import { uploadImage } from '../services/images.js'
 import { publicTenantId, requirePublicTenant, requireTenantIdOf } from '../lib/tenant.js'
 import { allowedImageFilter } from '../lib/image-guard.js'
 import { User } from '../models/User.js'
@@ -114,7 +114,7 @@ router.post(
     }
     try {
       const tenant = requireTenantIdOf(req)
-      const url = await uploadToCloudinary(req.file)
+      const url = await uploadImage(req.file, { tenant })
       if (field === 'background' || field === 'gaming') return res.json({ [field]: url })
       const current = await getSettings({ tenant })
       const saved = await saveSettings({
