@@ -138,7 +138,7 @@ router.get('/', async (req, res) => {
 })
 
 router.post('/', async (req, res) => {
-  const { name, email, role, adminId, businessSlug, password } = req.body || {}
+  const { name, email, role, adminId, businessSlug, password, storeName } = req.body || {}
   if (!name || !email) {
     return res.status(400).json({ error: 'Nombre y email requeridos' })
   }
@@ -200,9 +200,22 @@ router.post('/', async (req, res) => {
     }
     const user = await User.create(createdData)
 
+    if (targetRole === 'admin') {
+      const initialSettings = await getSettings({ fresh: true, tenant: user._id })
+      if (String(storeName || '').trim()) {
+        await saveSettings({ tenant: user._id, section: 'store', value: { ...initialSettings.store, name: String(storeName).trim().slice(0, 160) } })
+      }
+      const trialUntil = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+      await Subscription.updateOne(
+        { adminId: user._id },
+        { $setOnInsert: { adminId: user._id, status: 'trial', plan: 'Prueba gratuita', price: 0, dueDate: trialUntil } },
+        { upsert: true },
+      )
+    }
+
     return res
       .status(201)
-      .json(manualPassword ? toUserDoc(user) : toUserDoc(user, { password: generatedPassword }))
+      .json(manualPassword ? toUserDoc(user, { trialDays: targetRole === 'admin' ? 14 : undefined }) : toUserDoc(user, { password: generatedPassword, trialDays: targetRole === 'admin' ? 14 : undefined }))
   } catch (error) {
     console.error('Users create error:', error)
     return res.status(500).json({ error: 'No se pudo crear el usuario' })

@@ -568,6 +568,7 @@ export default function Dashboard({ onExit }) {
         {userIsSuper && (activeScreen === 'businesses' || businessBlock) && (
           <BusinessesScreen
             current={superTenant}
+            onCreateAdmin={() => changeScreen('settings-users')}
             onPick={(id) => {
               if (id) setSuperTenant(id)
               else clearSuperTenant()
@@ -681,7 +682,7 @@ export default function Dashboard({ onExit }) {
         {gate === 'ready' && activeScreen === 'report-profit' && <ProfitReportScreen />}
         {gate === 'ready' && activeScreen === 'report-stock' && <StockReportScreen />}
         {gate === 'ready' && activeScreen === 'report-customers' && <CustomersReportScreen />}
-        {(gate === 'ready' || needsBusiness) && activeScreen === 'settings-users' && <UsersScreen />}
+        {(gate === 'ready' || needsBusiness) && activeScreen === 'settings-users' && <UsersScreen allowBusinessCreate={userIsSuper} />}
         {(gate === 'ready' || needsBusiness) && activeScreen === 'settings-roles' && <RolesScreen />}
         {gate === 'ready' && activeScreen === 'settings-payments' && <PaymentsScreen />}
         {gate === 'ready' && activeScreen === 'settings-store' && <StoreScreen />}

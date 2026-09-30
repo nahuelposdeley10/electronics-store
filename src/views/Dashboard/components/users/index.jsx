@@ -14,7 +14,7 @@ import './styles.css'
 
 const SUBSCRIPTION_LABELS = { unconfigured: 'Sin configurar', trial: 'En prueba', active: 'Activa', overdue: 'Vencida', paused: 'Pausada', cancelled: 'Cancelada' }
 
-function BusinessesScreen({ current, onPick }) {
+function BusinessesScreen({ current, onPick, onCreateAdmin }) {
   const [billingBusiness, setBillingBusiness] = useState(null)
   const [items, setItems] = useState(null)
   const [error, setError] = useState('')
@@ -52,6 +52,10 @@ function BusinessesScreen({ current, onPick }) {
           Como super admin ves todos los negocios. Elegí uno para operar su panel:
           ventas, inventario, caja, reportes y configuración.
         </p>
+        <button type="button" className="primary-btn dash-add" onClick={onCreateAdmin}>
+          <IconPlus />
+          Crear empresa
+        </button>
         <button type="button" className="ghost-btn" onClick={() => onPick(null)}>
           Todos los negocios
         </button>
@@ -106,7 +110,7 @@ function BusinessesScreen({ current, onPick }) {
 }
 
 
-function UsersScreen() {
+function UsersScreen({ allowBusinessCreate = false }) {
   const { showToast } = useToast()
   const { confirm } = useConfirm()
   const [users, setUsers] = useState(null)
@@ -154,7 +158,7 @@ function UsersScreen() {
   const openNew = () => {
     setEditing(null)
     setGeneratedPassword('')
-    const base = { name: '', email: '', role: 'admin', adminId: '', password: '', businessSlug: '' }
+    const base = { name: '', storeName: '', email: '', role: 'admin', adminId: '', password: '', businessSlug: '' }
     setForm({ ...base })
     setFormInitial({ ...base })
     setFormOpen(true)
@@ -164,7 +168,8 @@ function UsersScreen() {
     setEditing(u.id)
     setGeneratedPassword('')
     const base = {
-      name: u.name,
+          name: u.name,
+      storeName: u.storeName || '',
       email: u.email,
       role: u.role,
       password: '',
@@ -200,6 +205,7 @@ function UsersScreen() {
       } else {
         const payload = {
           name: form.name,
+          storeName: form.storeName,
           email: form.email,
           role: form.role,
         }
@@ -271,9 +277,9 @@ function UsersScreen() {
         <p className="list-note">
           Podés definir la contraseña del usuario o dejarla en blanco para generarla. Nunca se guarda en texto plano.
         </p>
-        {!isSuper && <button type="button" className="primary-btn dash-add" onClick={openNew}>
+        {(!isSuper || allowBusinessCreate) && <button type="button" className="primary-btn dash-add" onClick={openNew}>
           <IconPlus />
-          Nuevo usuario
+          {allowBusinessCreate ? 'Crear empresa' : 'Nuevo usuario'}
         </button>}
       </div>
 
@@ -312,6 +318,10 @@ function UsersScreen() {
                 required
               />
             </label>
+            {isSuper && form.role === 'admin' && <label className="inv-field">
+              <span>Nombre del negocio</span>
+              <input value={form.storeName || ''} onChange={set('storeName')} placeholder="Ej. Electrónica Store" maxLength={160} />
+            </label>}
             {isSuper && (
               <label className="inv-field">
                 <span>Rol</span>
