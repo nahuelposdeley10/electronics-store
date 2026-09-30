@@ -16,6 +16,8 @@ import { requireTenantIdOf } from '../lib/tenant.js'
 import { allowedImageFilter } from '../lib/image-guard.js'
 import { nextSequence, sequenceKey } from '../lib/counter.js'
 
+import { productImages, retainedProductImages } from '../lib/product-images.js'
+
 const router = express.Router()
 
 router.use(requireAuth)
@@ -30,6 +32,7 @@ const PENDING_STATUSES = new Set(['pending', 'in_process'])
 const REJECTED_STATUSES = new Set(['rejected', 'cancelled', 'charged_back'])
 
 function requireTenantScope(req, res) {
+  if (req.user?.role === 'superadmin' && !req.query?.tenant) return {}
   try {
     return { adminId: requireTenantIdOf(req) }
   } catch (error) {
@@ -272,6 +275,7 @@ router.get('/products', async (req, res) => {
         freeShipping: p.freeShipping,
         badge: p.badge,
         image: p.image,
+        images: productImages(p),
         description: p.description,
         specs: p.specs,
         soldUnits: sold.get(p.id) || 0,
@@ -288,7 +292,7 @@ router.get('/products', async (req, res) => {
   }
 })
 
-router.post('/products', requirePermission('catalog.manage'), upload.single('image'), async (req, res) => {
+router.post('/products', requirePermission('catalog.manage'), upload.array('image', 3), async (req, res) => {
   const {
     name,
     brand,
@@ -325,17 +329,9 @@ router.post('/products', requirePermission('catalog.manage'), upload.single('ima
   }
 
   try {
-    let image = ''
-    let imageWarning = ''
-    if (req.file) {
-      try {
-        image = await uploadToCloudinary(req.file)
-      } catch (error) {
-        if (error.status === 400) throw error
-        console.error('Product image upload error:', error)
-        imageWarning = 'El producto se creó, pero la imagen no se pudo subir'
-      }
-    }
+    const retained = retainedProductImages(req.body.retainedImages, null, req.files?.length || 0)
+    const images = [...retained, ...await Promise.all((req.files || []).map(uploadToCloudinary))]
+    const image = images[0] || ''
     const wantsInitialStock = Math.floor(Number(initialQty)) > 0
     const lastId = (await Product.findOne({ adminId: tenant }).sort({ id: -1 }).lean())?.id || 0
     const product = await Product.create({
@@ -353,6 +349,7 @@ router.post('/products', requirePermission('catalog.manage'), upload.single('ima
       freeShipping: freeShipping === 'true' || freeShipping === true,
       badge: badge ? String(badge).trim() : null,
       image,
+      images,
       description: description ? String(description).trim() : '',
       specs: specs
         ? String(specs)
@@ -370,10 +367,10 @@ router.post('/products', requirePermission('catalog.manage'), upload.single('ima
       price: product.price,
       stock: product.stock,
       image: product.image,
+      images: productImages(product),
     }
 
     const warnings = []
-    if (imageWarning) warnings.push(imageWarning)
 
     if (wantsInitialStock) {
       const canInventory = (req.user?.perms || []).includes('inventory.write')
@@ -425,7 +422,7 @@ router.post('/products', requirePermission('catalog.manage'), upload.single('ima
   }
 })
 
-router.put('/products/:id', requirePermission('catalog.manage'), upload.single('image'), async (req, res) => {
+router.put('/products/:id', requirePermission('catalog.manage'), upload.array('image', 3), async (req, res) => {
   const {
     name,
     brand,
@@ -485,16 +482,9 @@ router.put('/products/:id', requirePermission('catalog.manage'), upload.single('
   }
 
   try {
-    let imageWarning = ''
-    if (req.file) {
-      try {
-        patch.image = await uploadToCloudinary(req.file)
-      } catch (error) {
-        if (error.status === 400) return res.status(400).json({ error: error.message })
-        console.error('Product image upload error:', error)
-        imageWarning = 'El producto se actualizó, pero la imagen nueva no se pudo subir'
-      }
-    }
+    const retained = retainedProductImages(req.body.retainedImages, product, req.files?.length || 0)
+    patch.images = [...retained, ...await Promise.all((req.files || []).map(uploadToCloudinary))]
+    patch.image = patch.images[0] || ''
     Object.assign(product, patch)
     await product.save()
 
@@ -512,10 +502,10 @@ router.put('/products/:id', requirePermission('catalog.manage'), upload.single('
       freeShipping: product.freeShipping,
       badge: product.badge,
       image: product.image,
+      images: productImages(product),
       description: product.description,
       specs: product.specs,
     }
-    if (imageWarning) payload.warning = imageWarning
     return res.json(payload)
   } catch (error) {
     console.error('Products update error:', error)

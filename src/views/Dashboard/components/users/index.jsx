@@ -8,9 +8,14 @@ import { useConfirm } from '@/context/useConfirm'
 import { PERM_CODES, PERM_LABELS, ROLE_LABELS, initials, shortDate } from '../../consts.js'
 import { EmptyNote, FilterReset, ScreenBlocked, ScreenLoading, SortSelect, ToggleRow, ToggleSwitch } from '../common'
 
+import Subscription from './components/Subscription'
+
 import './styles.css'
 
-function BusinessesScreen({ current, onPick, onCreateAdmin }) {
+const SUBSCRIPTION_LABELS = { unconfigured: 'Sin configurar', trial: 'En prueba', active: 'Activa', overdue: 'Vencida', paused: 'Pausada', cancelled: 'Cancelada' }
+
+function BusinessesScreen({ current, onPick }) {
+  const [billingBusiness, setBillingBusiness] = useState(null)
   const [items, setItems] = useState(null)
   const [error, setError] = useState('')
 
@@ -27,6 +32,8 @@ function BusinessesScreen({ current, onPick, onCreateAdmin }) {
       alive = false
     }
   }, [])
+
+  if (billingBusiness) return <Subscription key={billingBusiness.id} business={billingBusiness} onBack={() => setBillingBusiness(null)} onUpdated={(subscription) => setItems((all) => all.map((b) => String(b.id) === String(billingBusiness.id) ? { ...b, subscription } : b))} />
 
   if (!items && !error) return <ScreenLoading label="Leyendo negocios…" />
   if (error) return <ScreenBlocked message={error} />
@@ -45,13 +52,8 @@ function BusinessesScreen({ current, onPick, onCreateAdmin }) {
           Como super admin ves todos los negocios. Elegí uno para operar su panel:
           ventas, inventario, caja, reportes y configuración.
         </p>
-        <button
-          type="button"
-          className="primary-btn dash-add"
-          onClick={onCreateAdmin}
-        >
-          <IconPlus />
-          Crear admin de negocio
+        <button type="button" className="ghost-btn" onClick={() => onPick(null)}>
+          Todos los negocios
         </button>
       </div>
 
@@ -63,8 +65,8 @@ function BusinessesScreen({ current, onPick, onCreateAdmin }) {
         {items.map((b) => {
           const selected = current && String(current) === String(b.id)
           return (
+            <div key={b.id} className="biz-subscription-card">
             <button
-              key={b.id}
               type="button"
               className={`biz-card${selected ? ' biz-card-active' : ''}`}
               onClick={() => onPick(b.id)}
@@ -90,6 +92,12 @@ function BusinessesScreen({ current, onPick, onCreateAdmin }) {
                 </span>
               )}
             </button>
+            <div className="biz-subscription-summary">
+              <span>{SUBSCRIPTION_LABELS[b.subscription?.effectiveStatus] || 'Sin configurar'} · {b.subscription?.plan || 'Sin plan'}</span>
+              {b.subscription?.dueDate && <small>{formatARS(b.subscription.price)} / mes · Vence {b.subscription.dueDate.split('-').reverse().join('/')}</small>}
+              <button type="button" className="ghost-btn" onClick={() => setBillingBusiness(b)}>Suscripción</button>
+            </div>
+            </div>
           )
         })}
       </div>
@@ -263,10 +271,10 @@ function UsersScreen() {
         <p className="list-note">
           Podés definir la contraseña del usuario o dejarla en blanco para generarla. Nunca se guarda en texto plano.
         </p>
-        <button type="button" className="primary-btn dash-add" onClick={openNew}>
+        {!isSuper && <button type="button" className="primary-btn dash-add" onClick={openNew}>
           <IconPlus />
           Nuevo usuario
-        </button>
+        </button>}
       </div>
 
       {generatedPassword && (
@@ -413,15 +421,15 @@ function UsersScreen() {
                 <td className="t-date">{shortDate(u.createdAt)}</td>
                 <td>
                   <span className="row-actions">
-                    <button type="button" className="row-btn" aria-label={`Editar ${u.name}`} onClick={() => openEdit(u)}>
+                    {!isSuper && <button type="button" className="row-btn" aria-label={`Editar ${u.name}`} onClick={() => openEdit(u)}>
                       <IconEdit />
-                    </button>
-                    <ToggleSwitch
+                    </button>}
+                    {!isSuper && <ToggleSwitch
                       checked={u.active}
                       label={u.active ? `Desactivar ${u.name}` : `Activar ${u.name}`}
                       onChange={() => toggleActive(u)}
-                    />
-                    {!u.isSelf && (
+                    />}
+                    {!isSuper && !u.isSelf && (
                       <button
                         type="button"
                         className="row-btn row-btn-danger"

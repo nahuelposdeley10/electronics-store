@@ -42,6 +42,13 @@ function ContentPreview({ data, appearance }) {
     </div>
     <div className="live-preview-band">{data.band || 'Tu mensaje promocional aparecerá aquí'}</div>
     </>}
+    {data.gaming && (theme.showGaming ? <div className="live-preview-gaming">
+      <span>{data.gaming.kicker}</span>
+      <h3>{data.gaming.title}</h3>
+      <p>{data.gaming.description}</p>
+      <button type="button" tabIndex={-1}>{data.gaming.buttonText}</button>
+      {data.gaming.imageUrl && <img src={data.gaming.imageUrl} alt={data.gaming.imageAlt} />}
+    </div> : <div className="live-preview-empty">Gaming está oculto desde Colores y diseño.</div>)}
   </PreviewShell>
 }
 

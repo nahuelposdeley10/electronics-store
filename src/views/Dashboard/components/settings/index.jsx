@@ -8,6 +8,9 @@ import { useConfirm } from '@/context/useConfirm'
 import { SetImageField, SettingsFetcher, ToggleRow } from '../common'
 import LiveStorePreview from './components/LiveStorePreview'
 
+import { GAMING_DEFAULTS } from '@/lib/gaming'
+import { notifySiteSettingsChanged } from '@/lib/siteSettings'
+
 import './styles.css'
 
 function PasswordInput({ label, value, onChange, ...rest }) {
@@ -252,11 +255,13 @@ function StoreScreen({ mode = 'business' }) {
   const { showToast } = useToast()
   const [saving, setSaving] = useState(false)
 
-  const save = async (store, hero) => {
+  const save = async (store, hero, gaming) => {
     setSaving(true)
     try {
       await apiPut('/api/admin/settings', { section: 'store', value: store })
       if (hero) await apiPut('/api/admin/settings', { section: 'hero', value: hero })
+      if (gaming) await apiPut('/api/admin/settings', { section: 'gaming', value: gaming })
+      notifySiteSettingsChanged()
       showToast(mode === 'content' ? 'Portada y textos guardados.' : 'Datos y contacto guardados.', 'success')
       return true
     } catch (err) {
@@ -313,6 +318,7 @@ function StoreScreenBody({ settings, saving, onSave, mode = 'business', children
     heroTitle: hero.title || '',
     heroAccent: hero.titleAccent || '',
     heroLead: hero.lead || '',
+    gaming: { ...GAMING_DEFAULTS, ...settings.gaming },
   })
   const [loadedForm, setLoadedForm] = useState(form)
   const [uploading, setUploading] = useState(null)
@@ -332,6 +338,7 @@ function StoreScreenBody({ settings, saving, onSave, mode = 'business', children
     heroTitle: f.heroTitle.trim(),
     heroAccent: f.heroAccent.trim(),
     heroLead: f.heroLead.trim(),
+    gaming: f.gaming,
   })
   const dirty = JSON.stringify(toPayload(form)) !== JSON.stringify(toPayload(loadedForm))
 
@@ -347,9 +354,9 @@ function StoreScreenBody({ settings, saving, onSave, mode = 'business', children
       fd.append('file', file)
       fd.append('field', which)
       const res = await apiUpload('/api/admin/settings/media', fd)
-      setForm((f) => ({ ...f, [`${which}Url`]: res[which] }))
+      setForm((f) => which === 'gaming' ? { ...f, gaming: { ...f.gaming, imageUrl: res.gaming } } : { ...f, [`${which}Url`]: res[which] })
       showToast(
-        `${which === 'logo' ? 'Logo' : 'Portada'} publicado en tu tienda.`,
+        which === 'gaming' ? 'Imagen cargada. Guardá los cambios para publicarla.' : `${which === 'logo' ? 'Logo' : 'Portada'} publicado en tu tienda.`,
         'success',
       )
     } catch (err) {
@@ -377,6 +384,7 @@ function StoreScreenBody({ settings, saving, onSave, mode = 'business', children
         titleAccent: form.heroAccent.trim(),
         lead: form.heroLead.trim(),
       } : null,
+      content ? form.gaming : null,
     )
     if (saved) setLoadedForm(form)
   }
@@ -487,6 +495,28 @@ function StoreScreenBody({ settings, saving, onSave, mode = 'business', children
           <code>{'{cuotas}'}</code> (máx. cuotas sin interés) y <code>{'{ciudad}'}</code>{' '}
           (dirección corta) dentro del texto.
         </p>
+
+        <h3>Sección GAMING · Sala 04</h3>
+        <p className="set-hint">Editá el bloque destacado de gaming del inicio. Podés mostrarlo u ocultarlo desde Colores y diseño. El botón lleva a las ofertas.</p>
+        {[
+          ['kicker', 'Etiqueta superior'], ['title', 'Título'],
+          ['description', 'Descripción'], ['buttonText', 'Texto del botón'],
+          ['imageAlt', 'Descripción de la imagen'],
+        ].map(([key, label]) => (
+          <label className="inv-field" key={key}>
+            <span>{label}</span>
+            <input value={form.gaming[key]} maxLength={300} onChange={(e) => setForm((f) => ({ ...f, gaming: { ...f.gaming, [key]: e.target.value } }))} />
+          </label>
+        ))}
+        <SetImageField
+          label="Imagen de gaming"
+          hint="Subí una imagen y guardá los cambios para publicarla en este bloque."
+          value={form.gaming.imageUrl}
+          uploading={uploading === 'gaming'}
+          onFile={(e) => uploadImage('gaming', e)}
+          onRemove={() => setForm((f) => ({ ...f, gaming: { ...f.gaming, imageUrl: '' } }))}
+          wide
+        />
 
         <h3>Franja del pie de página</h3>
         <label className="inv-field">

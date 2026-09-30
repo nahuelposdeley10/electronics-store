@@ -230,3 +230,21 @@ npm run test:webhooks   # firma de webhooks y transiciones
 un Mongo (service container), corre `npm ci`, lint y `npm test` con
 `MONGODB_URI=mongodb://127.0.0.1:27017`. No hace falta ninguna credencial en el
 repo.
+## Suscripciones de locales
+
+El superadmin administra el abono desde **Negocios → Suscripción**. Cada negocio
+tiene su plan, precio mensual en ARS, vencimiento y estado. Las suscripciones
+activas o en prueba se muestran vencidas al día siguiente del vencimiento, usando
+la fecha de Argentina. Los negocios existentes comienzan sin configurar.
+
+Los cobros se registran manualmente junto con la fecha de pago, medio, referencia
+y nuevo vencimiento. Registrar un pago activa la suscripción y conserva el
+historial con el usuario que lo registró. Los reintentos del mismo pago no crean
+duplicados; una revisión evita sobrescribir cambios hechos desde otra sesión.
+Estos estados son administrativos: no cobran automáticamente ni desactivan la
+tienda. Un negocio con una suscripción registrada no se puede eliminar mientras
+conserve esos datos.
+
+Las URLs públicas de negocios inexistentes o desactivados muestran **Tienda no
+disponible**. Sus APIs devuelven HTTP 404 con el código STORE_UNAVAILABLE y no
+consultan la tienda global. La URL sin prefijo de negocio conserva su comportamiento.

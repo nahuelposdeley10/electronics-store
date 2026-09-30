@@ -2,7 +2,10 @@ import { useEffect, useState } from 'react'
 import { getTenantHeaders, getTenantSlug } from './tenant.js'
 import { normalizeAppearance } from './appearance.js'
 
+import { GAMING_DEFAULTS } from './gaming.js'
+
 const FALLBACK = {
+  gaming: GAMING_DEFAULTS,
   store: {
     name: 'TechStore',
     tagline: 'galería de tecnología',
@@ -114,6 +117,7 @@ export function useSiteSettings() {
 export function mergeSettings(override) {
   return {
     appearance: normalizeAppearance(override?.appearance),
+    gaming: { ...GAMING_DEFAULTS, ...(override?.gaming || {}) },
     store: { ...FALLBACK.store, ...(override?.store || {}) },
     shipping: { ...FALLBACK.shipping, ...(override?.shipping || {}) },
     hero: { ...FALLBACK.hero, ...(override?.hero || {}) },

@@ -10,6 +10,8 @@ import { loadCatalogOptions } from '../common/catalogOptions.js'
 import { useToast } from '@/context/useToast'
 import { useConfirm } from '@/context/useConfirm'
 
+import ProductImagesEditor from './components/ProductImagesEditor'
+
 import './styles.css'
 
 function ProductsScreen({ canManage, canInventory, canCash }) {
@@ -469,7 +471,9 @@ function ProductForm({ product, onClose, onSaved, canInventory }) {
     quantity: '1',
     cost: '',
   })
-  const [image, setImage] = useState(null)
+  const [images, setImages] = useState([])
+  const [originalImages] = useState(() => product?.images?.length ? product.images : product?.image ? [product.image] : [])
+  const [retainedImages, setRetainedImages] = useState(originalImages)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [brandOptions, setBrandOptions] = useState([])
@@ -489,7 +493,7 @@ function ProductForm({ product, onClose, onSaved, canInventory }) {
     }
   }, [])
 
-  const formDirty = JSON.stringify(form) !== JSON.stringify(initial) || Boolean(image)
+  const formDirty = JSON.stringify(form) !== JSON.stringify(initial) || images.length > 0 || JSON.stringify(retainedImages) !== JSON.stringify(originalImages)
   const valid =
     (form.name || '').trim().length >= 2 &&
     (form.brand || '').trim().length >= 2 &&
@@ -515,7 +519,8 @@ function ProductForm({ product, onClose, onSaved, canInventory }) {
     Object.entries(form).forEach(([key, value]) => {
       if (value !== '' && value != null) fd.append(key, String(value))
     })
-    if (image) fd.append('image', image)
+    images.forEach((image) => fd.append('image', image))
+    fd.append('retainedImages', JSON.stringify(retainedImages))
     if (!product && initialStock.enabled && canInventory) {
       fd.append('supplier', initialStock.supplier.trim())
       if (initialStock.invoice.trim()) fd.append('supplierBill', initialStock.invoice.trim())
@@ -802,21 +807,7 @@ function ProductForm({ product, onClose, onSaved, canInventory }) {
               />
             </label>
 
-            <label className="pf-field pf-full">
-              <span>
-                {product
-                  ? 'Imagen nueva (dejá vacío para conservar la actual)'
-                  : 'Imagen (opcional · PNG, JPG o WEBP)'}
-              </span>
-              {product && !image && (
-                <img className="pf-preview" src={productImage(product.image)} alt="" />
-              )}
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => setImage(e.target.files[0] || null)}
-              />
-            </label>
+            <ProductImagesEditor retained={retainedImages} files={images} onRetained={setRetainedImages} onFiles={setImages} onError={setError} />
 
             <label className="pf-check pf-full">
               <input

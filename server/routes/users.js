@@ -2,6 +2,8 @@ import express from 'express'
 import mongoose from 'mongoose'
 import bcrypt from 'bcryptjs'
 import { User } from '../models/User.js'
+import { Subscription } from '../models/Subscription.js'
+import { subscriptionSummary } from '../lib/subscriptions.js'
 import { Order } from '../models/Order.js'
 import { Product } from '../models/Product.js'
 import { Category } from '../models/Category.js'
@@ -55,6 +57,8 @@ router.get('/businesses', async (req, res) => {
   }
   try {
     const admins = await User.find({ role: 'admin' }).sort({ createdAt: 1 }).lean()
+    const subscriptions = await Subscription.find({ adminId: { $in: admins.map((admin) => admin._id) } }).select('-payments').lean()
+    const byAdmin = new Map(subscriptions.map((s) => [String(s.adminId), s]))
     const items = []
     for (const admin of admins) {
       const tenant = admin._id
@@ -71,6 +75,7 @@ router.get('/businesses', async (req, res) => {
       items.push({
         ...toUserDoc(admin),
         storeName: settings.store?.name || admin.name,
+        subscription: subscriptionSummary(byAdmin.get(String(admin._id))),
         productCount,
         orderCount,
         revenue: revenue[0]?.total || 0,
@@ -401,6 +406,7 @@ router.delete('/:id', async (req, res) => {
         CashShift,
         CashMovement,
         CashCount,
+        Subscription,
       ]
       const operatorCount = await User.countDocuments({ role: 'operator', adminId: user._id })
       const dataCounts = await Promise.all(

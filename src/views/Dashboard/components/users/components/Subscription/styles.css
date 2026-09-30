@@ -1,0 +1,12 @@
+.subscription-forms { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.subscription-card { background: var(--gal-white); border: 1px solid var(--gal-line); border-radius: 6px; padding: 24px; margin-bottom: 20px; }
+.subscription-card h2 { margin-bottom: 12px; font-size: 21px; }
+.subscription-card p { margin-bottom: 14px; font-size: 14px; }
+.subscription-card fieldset { border: 0; padding: 0; margin: 0; display: grid; gap: 16px; min-width: 0; }
+.subscription-card label { display: grid; gap: 6px; font-size: 14px; font-weight: 600; }
+.subscription-card input, .subscription-card select { width: 100%; min-width: 0; border: 1px solid var(--gal-line-strong); border-radius: 4px; padding: 10px; color: var(--gal-ink); background: var(--gal-white); }
+.subscription-card fieldset:disabled { opacity: .65; }
+.subscription-error { color: #a51d16; margin: 12px 0; }
+.subscription-summary { margin: 16px 0; line-height: 1.7; }
+.subscription-history { overflow-x: auto; }
+@media (max-width: 760px) { .subscription-forms { grid-template-columns: 1fr; } }

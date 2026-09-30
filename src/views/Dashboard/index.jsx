@@ -131,13 +131,14 @@ export default function Dashboard({ onExit }) {
     () => localStorage.getItem('ts-guided-done') !== '1',
   )
   const userIsSuper = user?.role === 'superadmin'
-  const needsBusiness = userIsSuper && !superTenant
-  const tenantFreeScreens = ['settings-users', 'settings-roles']
   const canView = (id) =>
     (id !== 'settings-appearance' || userIsSuper || user?.role === 'admin') &&
     (userIsSuper || !SCREEN_PERMS[id] || (perms || []).includes(SCREEN_PERMS[id]))
   const activeScreen = canView(screen) ? screen : 'overview'
-  const businessBlock = needsBusiness && !tenantFreeScreens.includes(activeScreen)
+  // El superadmin trabaja en modo agregado por defecto. La selección de un local
+  // queda disponible desde la pantalla de negocios, pero nunca bloquea el panel.
+  const needsBusiness = false
+  const businessBlock = false
 
   const storeUrl = () =>
     user?.businessSlug ? `${window.location.origin}/u/${user.businessSlug}` : ''
@@ -246,7 +247,7 @@ export default function Dashboard({ onExit }) {
   }
 
   const can = (code) =>
-    user?.role === 'superadmin' || (perms || []).includes(code)
+    user?.role !== 'superadmin' && (perms || []).includes(code)
 
   const retry = () => {
     setGate('loading')
@@ -567,9 +568,9 @@ export default function Dashboard({ onExit }) {
         {userIsSuper && (activeScreen === 'businesses' || businessBlock) && (
           <BusinessesScreen
             current={superTenant}
-            onCreateAdmin={() => changeScreen('settings-users')}
             onPick={(id) => {
-              setSuperTenant(id)
+              if (id) setSuperTenant(id)
+              else clearSuperTenant()
               setSuperTenantState(id)
               setAttempt((n) => n + 1)
               changeScreen('overview')

@@ -10,6 +10,7 @@ export default function CatalogProvider({ children }) {
   const [activeBrands, setActiveBrands] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [storeUnavailable, setStoreUnavailable] = useState(false)
   const [brandsError, setBrandsError] = useState('')
 
   const loadProducts = useCallback(async ({ silent = false } = {}) => {
@@ -17,7 +18,11 @@ export default function CatalogProvider({ children }) {
     try {
       const res = await fetch(CATALOG_URL, { headers: HEADERS })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'No se pudo leer el catálogo')
+      setStoreUnavailable(data.code === 'STORE_UNAVAILABLE')
+      if (!res.ok) {
+        setProducts([])
+        throw new Error(data.error || 'No se pudo leer el catálogo')
+      }
       setProducts(data.items || [])
       setError('')
     } catch (err) {
@@ -68,7 +73,7 @@ export default function CatalogProvider({ children }) {
 
   return (
     <CatalogContext.Provider
-      value={{ products, brands, loading, error, brandsError, reload, search }}
+      value={{ products, brands, loading, error, storeUnavailable, brandsError, reload, search }}
     >
       {children}
     </CatalogContext.Provider>

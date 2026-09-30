@@ -1,4 +1,4 @@
-import { MercadoPagoConfig, Preference, Payment } from 'mercadopago'
+import { MercadoPagoConfig, Preference, Payment, PreApproval } from 'mercadopago'
 import { env } from '../config/env.js'
 import { getSettings } from '../lib/settings.js'
 
@@ -13,6 +13,7 @@ function buildMpServices(token) {
   return {
     preferenceService: new Preference(client),
     paymentService: new Payment(client),
+    preApprovalService: new PreApproval(client),
   }
 }
 
@@ -28,7 +29,7 @@ export async function getMpConfig(tenantId = null) {
   }
   const settings = await getSettings({ tenant: tenantId })
   const mp = settings?.payments?.mercadopago || {}
-  const token = mp.accessToken || env.mpAccessToken
+  const token = String(mp.accessToken || env.mpAccessToken || '').trim() || null
   return {
     configured: Boolean(mp.accessToken),
     accessToken: token || null,
@@ -48,4 +49,16 @@ export async function getMpServices(tenantId = null) {
     clientCache.set(key, buildMpServices(token))
   }
   return { configured: true, ...clientCache.get(key) }
+}
+
+export function getBillingService() {
+  const token = String(env.mpAccessToken || '').trim()
+  return token ? new PreApproval(new MercadoPagoConfig({ accessToken: token })) : null
+}
+
+export function isMercadoPagoAuthError(error) {
+  return Number(error?.status) === 401 && (
+    error?.error === 'unauthorized' ||
+    error?.causes?.some((cause) => /credential|live credentials|unauthorized/i.test(String(cause?.description || '')))
+  )
 }

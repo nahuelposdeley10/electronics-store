@@ -1,4 +1,5 @@
 import express from 'express'
+import { productImages } from '../lib/product-images.js'
 import { Category } from '../models/Category.js'
 import { Brand } from '../models/Brand.js'
 import { Variant } from '../models/Variant.js'
@@ -62,10 +63,11 @@ async function productCountBy(field, scope) {
 router.get('/categories', requirePermission('catalog.manage'), async (req, res) => {
   const tenant = requireTenantIdOf(req)
   try {
-    await ensureCatalogMeta({ tenant })
+    if (tenant) await ensureCatalogMeta({ tenant })
+    const scope = tenant ? { adminId: tenant } : {}
     const [categories, used] = await Promise.all([
-      Category.find({ adminId: tenant }).sort({ name: 1 }).lean(),
-      productCountBy('category', { adminId: tenant }),
+      Category.find(scope).sort({ name: 1 }).lean(),
+      productCountBy('category', scope),
     ])
     return res.json({
       items: categories.map((c) => publicCategory(c, used.get(c.key) || 0)),
@@ -183,10 +185,11 @@ router.delete('/categories/:key', requirePermission('catalog.manage'), async (re
 router.get('/brands', requirePermission('catalog.manage'), async (req, res) => {
   const tenant = requireTenantIdOf(req)
   try {
-    await ensureCatalogMeta({ tenant })
+    if (tenant) await ensureCatalogMeta({ tenant })
+    const scope = tenant ? { adminId: tenant } : {}
     const [brands, used] = await Promise.all([
-      Brand.find({ adminId: tenant }).sort({ name: 1 }).lean(),
-      productCountBy('brand', { adminId: tenant }),
+      Brand.find(scope).sort({ name: 1 }).lean(),
+      productCountBy('brand', scope),
     ])
     return res.json({
       items: brands.map((b) => publicBrand(b, used.get(b.name) || 0)),
@@ -293,7 +296,7 @@ router.get('/variants', requirePermission('catalog.manage'), async (req, res) =>
     const { page, limit } = parsePagination(req.query)
     const q = String(req.query.q || '').trim()
 
-    let filter = { adminId: tenant }
+    let filter = tenant ? { adminId: tenant } : {}
     if (q) {
       const regex = new RegExp(escapeRegex(q), 'i')
       const ids = await Product.find({
@@ -317,7 +320,7 @@ router.get('/variants', requirePermission('catalog.manage'), async (req, res) =>
         .lean(),
     ])
 
-    const products = await Product.find({ adminId: tenant }).lean()
+    const products = await Product.find(tenant ? { adminId: tenant } : {}).lean()
     const productMap = new Map(products.map((p) => [p.id, p]))
 
     return res.json({
@@ -451,7 +454,7 @@ router.get('/prices', requirePermission('catalog.manage'), async (req, res) => {
   const tenant = requireTenantIdOf(req)
   try {
     const { page, limit } = parsePagination(req.query)
-    const filter = { ...buildProductSearchFilter(req.query.q), adminId: tenant }
+    const filter = { ...buildProductSearchFilter(req.query.q), ...(tenant ? { adminId: tenant } : {}) }
     const [total, products] = await Promise.all([
       Product.countDocuments(filter),
       Product.find(filter)
@@ -470,6 +473,7 @@ router.get('/prices', requirePermission('catalog.manage'), async (req, res) => {
         oldPrice: p.oldPrice,
         stock: p.stock,
         image: p.image,
+    images: productImages(p),
       })),
       page,
       limit,
@@ -556,7 +560,7 @@ router.get('/offers', requirePermission('offers.manage'), async (req, res) => {
   const tenant = requireTenantIdOf(req)
   try {
     const { page, limit } = parsePagination(req.query)
-    const filter = { ...buildProductSearchFilter(req.query.q), adminId: tenant }
+    const filter = { ...buildProductSearchFilter(req.query.q), ...(tenant ? { adminId: tenant } : {}) }
 
     const categories = parseMulti(req.query.category)
     if (categories) filter.category = { $in: categories }
@@ -583,6 +587,7 @@ router.get('/offers', requirePermission('offers.manage'), async (req, res) => {
         oldPrice: p.oldPrice,
         onSale: !!p.onSale,
         image: p.image,
+    images: productImages(p),
         stock: p.stock,
         minStock: p.minStock || 0,
       })),
@@ -636,6 +641,7 @@ router.post('/offers', requirePermission('offers.manage'), async (req, res) => {
       oldPrice: product.oldPrice,
       onSale: product.onSale,
       image: product.image,
+      images: productImages(product),
       stock: product.stock,
     })
   } catch (error) {

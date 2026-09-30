@@ -43,3 +43,10 @@
 .live-preview-cart p { padding: 10px; border-radius: 4px; background: var(--gal-panel); color: var(--gal-ink-soft); font-size: 10px; line-height: 1.45; }
 .live-preview-cart p.is-success { background: #e9f6ed; color: #236744; }
 @media (max-width: 980px) { .live-store-preview { position: static; } }
+
+.live-preview-gaming { padding: 24px; background: #ffc61a; color: #101209; }
+.live-preview-gaming > span { font-size: 10px; text-transform: uppercase; }
+.live-preview-gaming h3 { margin: 8px 0; font-family: var(--font-sign); font-size: 30px; }
+.live-preview-gaming p { font-size: 12px; }
+.live-preview-gaming button { margin: 12px 0; padding: 8px 12px; background: #101209; color: white; pointer-events: none; }
+.live-preview-gaming img { display: block; width: 100%; max-height: 180px; object-fit: cover; }

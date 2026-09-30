@@ -6,10 +6,42 @@ import { payerFieldsFromPayment } from '../lib/payer.js'
 import { verifyWebhookSignature } from '../lib/webhook-signature.js'
 import { deductApprovedStock } from '../lib/order-stock.js'
 import { env } from '../config/env.js'
+import { Subscription } from '../models/Subscription.js'
+import { getBillingService } from '../services/mercadopago.js'
 
 const router = express.Router()
 
 const AMOUNT_TOLERANCE = 0.01
+
+router.post('/webhooks/mercadopago/subscriptions', async (req, res) => {
+  const id = req.body?.data?.id || req.query?.['data.id'] || req.query?.id
+  if (!id) return res.sendStatus(200)
+  if (!env.mpWebhookSecret || !verifyWebhookSignature({
+    xSignature: req.get('x-signature'),
+    xRequestId: req.get('x-request-id'),
+    paymentId: String(id),
+    secret: env.mpWebhookSecret,
+  })) return res.sendStatus(401)
+  try {
+    const billing = getBillingService()
+    if (!billing) return res.sendStatus(503)
+    const remote = await billing.get({ id: String(id) })
+    const status = String(remote.status || '').toLowerCase()
+    const mapped = status === 'authorized' || status === 'active'
+      ? 'active'
+      : status === 'paused' ? 'paused'
+        : status === 'cancelled' ? 'cancelled' : null
+    if (!mapped) return res.sendStatus(200)
+    await Subscription.updateOne(
+      { 'billing.preapprovalId': String(id) },
+      { $set: { 'billing.status': status, status: mapped }, $inc: { revision: 1 } },
+    )
+    return res.sendStatus(200)
+  } catch (error) {
+    console.error('Subscription webhook error:', error)
+    return res.sendStatus(200)
+  }
+})
 
 function extractPaymentId(req) {
   if (req.body?.type === 'payment' && req.body?.data?.id) {

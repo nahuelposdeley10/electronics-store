@@ -1,12 +1,12 @@
 import express from 'express'
 import { Order } from '../models/Order.js'
 import { buildCart } from '../services/pricing.js'
-import { getMpConfig, getMpServices } from '../services/mercadopago.js'
+import { getMpConfig, getMpServices, isMercadoPagoAuthError } from '../services/mercadopago.js'
 import { verifyOrderPayment } from '../lib/order-verify.js'
 import { trackOrder } from '../lib/order-tracker.js'
 import { getSettings } from '../lib/settings.js'
 import { env, isAllowedOrigin } from '../config/env.js'
-import { publicTenantId } from '../lib/tenant.js'
+import { publicTenantId, requirePublicTenant } from '../lib/tenant.js'
 import { createRefreshToken, verifyRefreshToken } from '../lib/order-token.js'
 
 const router = express.Router()
@@ -50,11 +50,14 @@ router.post('/orders/:id/refresh', async (req, res) => {
     return res.json(orderPayload(order))
   } catch (error) {
     console.error('Order refresh error:', error)
+    if (isMercadoPagoAuthError(error)) {
+      return res.status(502).json({ error: 'Mercado Pago rechazó las credenciales de producción de esta tienda. Actualizalas en el panel de administración.' })
+    }
     return res.status(500).json({ error: 'No se pudo corroborar el pago' })
   }
 })
 
-router.post('/checkout', async (req, res) => {
+router.post('/checkout', requirePublicTenant, async (req, res) => {
   try {
     const tenant = await publicTenantId(req)
     const cart = await buildCart(req.body.items, req.body.coupon, tenant)

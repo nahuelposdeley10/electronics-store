@@ -1,8 +1,6 @@
 import mongoose from 'mongoose'
 import { User } from '../models/User.js'
 
-const slugCache = new Map()
-const CACHE_MS = 60 * 1000
 
 export function castId(value) {
   if (!value) return null
@@ -38,6 +36,7 @@ export function tenantScopeOf(req) {
 export function requireTenantIdOf(req) {
   const tenant = tenantIdOf(req)
   if (!tenant) {
+    if (req.user?.role === 'superadmin' && req.method === 'GET' && !req.query?.tenant) return null
     const error = new Error('Elegí un negocio para esta operación')
     error.status = 400
     throw error
@@ -48,8 +47,6 @@ export function requireTenantIdOf(req) {
 export async function slugToAdminId(slug) {
   const clean = String(slug || '').trim().toLowerCase()
   if (!clean) return null
-  const cached = slugCache.get(clean)
-  if (cached && Date.now() - cached.at < CACHE_MS) return cached.id
   const admin = await User.findOne({
     role: 'admin',
     businessSlug: clean,
@@ -58,11 +55,24 @@ export async function slugToAdminId(slug) {
     .select('_id')
     .lean()
   const id = admin ? admin._id : null
-  slugCache.set(clean, { id, at: Date.now() })
   return id
 }
 
 export async function publicTenantId(req) {
+  if (Object.hasOwn(req, 'resolvedPublicTenant')) return req.resolvedPublicTenant
   const slug = String(req.get('x-tenant-slug') || '').trim().toLowerCase()
-  return slug ? slugToAdminId(slug) : null
+  if (!slug) return null
+  const tenant = await slugToAdminId(slug)
+  if (!tenant) throw Object.assign(new Error('Tienda no disponible'), { status: 404, code: 'STORE_UNAVAILABLE' })
+  req.resolvedPublicTenant = tenant
+  return tenant
+}
+export async function requirePublicTenant(req, res, next) {
+  try {
+    await publicTenantId(req)
+    next()
+  } catch (error) {
+    if (error.code === 'STORE_UNAVAILABLE') return res.status(404).json({ error: 'Tienda no disponible', code: error.code })
+    next(error)
+  }
 }

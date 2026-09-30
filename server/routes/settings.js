@@ -3,7 +3,7 @@ import multer from 'multer'
 import { requireAuth, requirePermission } from '../middleware/auth.js'
 import { getSettings, saveSettings } from '../lib/settings.js'
 import { uploadToCloudinary } from '../services/cloudinary.js'
-import { publicTenantId, requireTenantIdOf } from '../lib/tenant.js'
+import { publicTenantId, requirePublicTenant, requireTenantIdOf } from '../lib/tenant.js'
 import { allowedImageFilter } from '../lib/image-guard.js'
 import { User } from '../models/User.js'
 
@@ -15,7 +15,7 @@ const upload = multer({
   fileFilter: allowedImageFilter,
 })
 
-const PUBLIC_SECTIONS = ['store', 'shipping', 'general', 'payments', 'hero', 'appearance']
+const PUBLIC_SECTIONS = ['store', 'shipping', 'general', 'payments', 'hero', 'appearance', 'gaming']
 
 function requireTenant(req, res, next) {
   try {
@@ -26,7 +26,7 @@ function requireTenant(req, res, next) {
   }
 }
 
-router.get('/settings/public', async (req, res) => {
+router.get('/settings/public', requirePublicTenant, async (req, res) => {
   try {
     const tenant = await publicTenantId(req)
     const settings = await getSettings({ tenant })
@@ -50,9 +50,14 @@ router.get('/settings/public', async (req, res) => {
   }
 })
 
-router.get('/admin/settings', requireAuth, requirePermission('settings.manage'), requireTenant, async (req, res) => {
+router.get('/admin/settings', requireAuth, requirePermission('settings.manage'), async (req, res) => {
   try {
-    const settings = await getSettings({ tenant: requireTenantIdOf(req) })
+    // El superadmin puede consultar la configuración global en modo
+    // "Todos los negocios"; guardar cambios sigue exigiendo un tenant.
+    const tenant = req.user?.role === 'superadmin' && !req.query?.tenant
+      ? null
+      : requireTenantIdOf(req)
+    const settings = await getSettings({ tenant })
     return res.json(settings)
   } catch (error) {
     console.error('Settings read error:', error)
@@ -95,8 +100,8 @@ router.post(
   upload.single('file'),
   async (req, res) => {
     const field = String(req.body.field || '').trim()
-    if (!['logo', 'cover', 'background'].includes(field)) {
-      return res.status(400).json({ error: 'Campo inválido (logo, cover o background)' })
+    if (!['logo', 'cover', 'background', 'gaming'].includes(field)) {
+      return res.status(400).json({ error: 'Campo inválido (logo, cover, background o gaming)' })
     }
     if (field === 'background') {
       const currentUser = await User.findById(req.user.sub).lean()
@@ -110,7 +115,7 @@ router.post(
     try {
       const tenant = requireTenantIdOf(req)
       const url = await uploadToCloudinary(req.file)
-      if (field === 'background') return res.json({ background: url })
+      if (field === 'background' || field === 'gaming') return res.json({ [field]: url })
       const current = await getSettings({ tenant })
       const saved = await saveSettings({
         section: 'store',

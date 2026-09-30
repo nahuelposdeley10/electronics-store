@@ -45,7 +45,7 @@ router.get('/stock', async (req, res) => {
   try {
     const tenant = requireTenantIdOf(req)
     const { page, limit } = parsePagination(req.query)
-    const filter = { ...buildProductSearchFilter(req.query.q), adminId: tenant }
+    const filter = { ...buildProductSearchFilter(req.query.q), ...(tenant ? { adminId: tenant } : {}) }
 
     const categories = parseMetaFilter(req.query.category)
     if (categories) filter.category = { $in: categories }
@@ -96,7 +96,7 @@ router.get('/movements', async (req, res) => {
   try {
     const tenant = requireTenantIdOf(req)
     const { page, limit } = parsePagination(req.query)
-    const filter = { adminId: tenant }
+    const filter = tenant ? { adminId: tenant } : {}
 
     if (MOVEMENT_TYPES.has(req.query.type)) {
       filter.type = req.query.type

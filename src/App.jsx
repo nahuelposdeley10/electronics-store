@@ -14,6 +14,7 @@ import ProductCard from '@/components/ProductCard'
 import DashboardLoading from '@/components/DashboardLoading'
 import { IconSearchOff } from '@/components/Icons'
 import Home from '@/views/Home'
+import StoreUnavailable from '@/views/StoreUnavailable'
 import CartView from '@/views/CartView'
 import ProductDetail from '@/views/ProductDetail'
 import OrderStatus from '@/views/OrderStatus'
@@ -49,7 +50,7 @@ function productFromView(view, products) {
 }
 
 function AppContent() {
-  const { products, loading, search } = useCatalog()
+  const { products, loading, search, storeUnavailable, error: catalogError } = useCatalog()
   const settings = mergeSettings(useSiteSettings())
   const [view, setView] = useState(() => parseLocation())
   const [product, setProduct] = useState(() => productFromView(parseLocation(), []))
@@ -218,6 +219,10 @@ function AppContent() {
       window.removeEventListener('resize', onScroll)
     }
   }, [view.name])
+
+  if (view.name !== 'dashboard' && storeUnavailable) return <StoreUnavailable />
+  if (view.name !== 'dashboard' && loading) return <CatalogLoading />
+  if (view.name !== 'dashboard' && catalogError) return <StoreUnavailable temporary />
 
   const needsCatalog = ['home', 'product', 'results'].includes(view.name)
   if (needsCatalog && loading && products.length === 0) {

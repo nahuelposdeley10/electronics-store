@@ -41,7 +41,7 @@ function toCouponDoc(c) {
 router.get('/coupons', requirePermission('coupons.manage'), async (req, res) => {
   try {
     const tenant = requireTenantIdOf(req)
-    const items = await Coupon.find({ adminId: tenant }).sort({ createdAt: -1 }).lean()
+    const items = await Coupon.find(tenant ? { adminId: tenant } : {}).sort({ createdAt: -1 }).lean()
     return res.json({ items: items.map(toCouponDoc), total: items.length })
   } catch (error) {
     console.error('Coupons error:', error)

@@ -1,5 +1,6 @@
 import { Order } from '../models/Order.js'
 import { verifyOrderPayment } from './order-verify.js'
+import { isMercadoPagoAuthError } from '../services/mercadopago.js'
 
 const PENDING = new Set(['pending', 'in_process'])
 const TRACK_INTERVAL = 4000
@@ -42,6 +43,11 @@ async function runOnce(id) {
       queue.delete(id)
     }
   } catch (error) {
+    if (isMercadoPagoAuthError(error)) {
+      console.error(`Order track stopped (${id}): Mercado Pago rechazó el Access Token de la tienda. Revisá las credenciales de producción en el panel.`)
+      queue.delete(id)
+      return
+    }
     console.error('Order track error:', error)
     schedule(id)
   }

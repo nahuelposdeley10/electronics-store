@@ -1,4 +1,5 @@
 import mongoose from 'mongoose'
+import { GAMING_DEFAULTS } from '../../src/lib/gaming.js'
 import { Setting } from '../models/Setting.js'
 import { roundMoney } from './money.js'
 import { APPEARANCE_DEFAULTS, normalizeAppearance } from '../../src/lib/appearance.js'
@@ -41,6 +42,7 @@ export const OPERATOR_DEFAULT_PERMISSIONS = [
 export function defaults() {
   return {
     appearance: { ...APPEARANCE_DEFAULTS },
+    gaming: { ...GAMING_DEFAULTS },
     store: {
       name: 'TechStore',
       tagline: 'caja · Villa Urquiza',

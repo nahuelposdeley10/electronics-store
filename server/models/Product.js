@@ -22,6 +22,7 @@ const productSchema = new mongoose.Schema(
     minStock: { type: Number, default: 0 },
     badge: { type: String, default: null },
     image: { type: String, default: '' },
+    images: { type: [String], default: [], validate: { validator: (images) => images.length <= 3, message: 'Máximo 3 imágenes por producto' } },
     description: { type: String, default: '' },
     specs: { type: [String], default: [] },
   },

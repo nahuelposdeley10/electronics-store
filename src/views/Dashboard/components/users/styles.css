@@ -118,3 +118,8 @@
   border-radius: 3px;
   padding: 4px 8px;
 }
+
+.biz-subscription-card { min-width: 0; }
+.biz-subscription-card > .biz-card { width: 100%; }
+.biz-subscription-summary { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 12px 16px; border: 1px solid var(--gal-line); border-top: 0; }
+.biz-subscription-summary small { color: var(--gal-ink-soft); }

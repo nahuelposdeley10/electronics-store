@@ -7,6 +7,7 @@ function slugFromPathname() {
   try {
     const match = window.location.pathname.match(PATH_SLUG_RE)
     if (match && SLUG_RE.test(match[1])) return match[1]
+    if (/^\/u(?:\/|$)/.test(window.location.pathname)) return '__invalid__'
   } catch { /* no-op */ }
   return null
 }

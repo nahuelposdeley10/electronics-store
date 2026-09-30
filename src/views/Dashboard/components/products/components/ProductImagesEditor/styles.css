@@ -1,0 +1,4 @@
+.product-images-editor > p { font-size: 13px; margin: 6px 0 12px; }
+.product-images-list { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 12px; }
+.product-images-list > div { width: 130px; display: flex; flex-direction: column; }
+.product-images-list img { width: 130px; height: 110px; object-fit: contain; border: 1px solid var(--gal-line); }

@@ -192,26 +192,26 @@ export default function Home({ onView }) {
 
       {appearance.showGaming && <section className="gaming-bay" data-reveal="up">
         <div className="gaming-copy">
-          <span className="gaming-kicker">Sala 04</span>
-          <h2>GAMING</h2>
-          <p>Consolas, periféricos y sillas para llevar tu juego al siguiente nivel.</p>
+          <span className="gaming-kicker">{settings.gaming.kicker}</span>
+          <h2>{settings.gaming.title}</h2>
+          <p>{settings.gaming.description}</p>
           <button
             type="button"
             className="hero-btn dark"
             onClick={() => document.querySelector('#ofertas')?.scrollIntoView({ behavior: 'smooth' })}
           >
-            Ver gaming
+            {settings.gaming.buttonText}
             <IconArrow />
           </button>
         </div>
-        <div className="gaming-media">
+        {settings.gaming.imageUrl && <div className="gaming-media">
           <img
             className="gaming-img"
-            src="https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?w=700&h=500&fit=crop"
-            alt="Consola 4K con mando"
+            src={settings.gaming.imageUrl || undefined}
+            alt={settings.gaming.imageAlt}
             loading="lazy"
           />
-        </div>
+        </div>}
       </section>}
 
       <GallerySection onView={onView} brands={brands} />

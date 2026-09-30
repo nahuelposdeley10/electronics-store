@@ -1,4 +1,5 @@
 import express from 'express'
+import { productImages } from '../lib/product-images.js'
 import { Product } from '../models/Product.js'
 import { Brand } from '../models/Brand.js'
 import { Category } from '../models/Category.js'
@@ -10,7 +11,7 @@ import {
   buildCatalogSort,
   buildPublicCatalogFilter,
 } from '../lib/catalog-query.js'
-import { publicTenantId } from '../lib/tenant.js'
+import { publicTenantId, requirePublicTenant } from '../lib/tenant.js'
 
 const router = express.Router()
 
@@ -28,12 +29,13 @@ function toPublicProduct(p) {
     badge: p.badge,
     onSale: !!p.onSale,
     image: p.image,
+    images: productImages(p),
     description: p.description,
     specs: p.specs,
   }
 }
 
-router.get('/products', async (req, res) => {
+router.get('/products', requirePublicTenant, async (req, res) => {
   try {
     const tenant = await publicTenantId(req)
     const { page, limit } = parsePagination(req.query)
@@ -69,7 +71,7 @@ router.get('/products', async (req, res) => {
   }
 })
 
-router.get('/products/:id', async (req, res) => {
+router.get('/products/:id', requirePublicTenant, async (req, res) => {
   try {
     const id = Number(req.params.id)
     if (!Number.isFinite(id)) {
@@ -90,7 +92,7 @@ router.get('/products/:id', async (req, res) => {
   }
 })
 
-router.get('/coupons', async (req, res) => {
+router.get('/coupons', requirePublicTenant, async (req, res) => {
   try {
     const tenant = await publicTenantId(req)
     const coupons = await Coupon.find({ active: true, adminId: tenant }).sort({ createdAt: -1 }).lean()
@@ -107,7 +109,7 @@ router.get('/coupons', async (req, res) => {
   }
 })
 
-router.get('/categories', async (req, res) => {
+router.get('/categories', requirePublicTenant, async (req, res) => {
   try {
     const tenant = await publicTenantId(req)
     if (tenant) await ensureCatalogMeta({ tenant })
@@ -121,7 +123,7 @@ router.get('/categories', async (req, res) => {
   }
 })
 
-router.get('/brands', async (req, res) => {
+router.get('/brands', requirePublicTenant, async (req, res) => {
   try {
     const tenant = await publicTenantId(req)
     if (tenant) await ensureCatalogMeta({ tenant })
