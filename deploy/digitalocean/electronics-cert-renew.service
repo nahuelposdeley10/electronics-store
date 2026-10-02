@@ -1,0 +1,7 @@
+[Unit]
+Description=Renew Electronics Store TLS certificate
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/electronics-certbot/bin/certbot renew --quiet --no-random-sleep-on-renew --deploy-hook "nginx -t && systemctl reload nginx"

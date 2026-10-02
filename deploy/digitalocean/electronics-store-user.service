@@ -1,0 +1,23 @@
+[Unit]
+Description=Electronics Store production web and API (app user supervisor)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/var/www/electronics-store
+Environment=NODE_ENV=production
+Environment=PORT=3000
+Environment=HOST=127.0.0.1
+ExecStart=/opt/electronics-runtime/node_modules/node/bin/node server/index.js
+Restart=always
+RestartSec=5
+TimeoutStopSec=15
+KillSignal=SIGTERM
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+SyslogIdentifier=electronics-store-user
+
+[Install]
+WantedBy=default.target

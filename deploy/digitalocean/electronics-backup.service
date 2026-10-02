@@ -1,0 +1,14 @@
+[Unit]
+Description=Daily Electronics Store database backup
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=appuser
+Group=appuser
+WorkingDirectory=/var/www/electronics-store
+ExecStart=/opt/electronics-runtime/node_modules/node/bin/node /usr/local/lib/electronics-store/backup.cjs
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+TimeoutStartSec=1800

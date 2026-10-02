@@ -5,6 +5,13 @@ import { resolve } from 'node:path'
 import { imageReferences, downloadImage } from './lib/image-migration.js'
 import { imageHash, imageKey, r2Config, uploadToR2 } from './services/r2.js'
 
+function legacyContentType(url) {
+  const path = new URL(url).pathname.toLowerCase()
+  if (path.endsWith('.svg')) return 'image/svg+xml'
+  if (path.endsWith('.avif')) return 'image/avif'
+  return undefined
+}
+
 const mode = process.argv[2] || 'inventory'
 const modes = ['inventory', 'copy', 'apply', 'rollback']
 const directory = resolve('.r2-migration')
@@ -50,7 +57,12 @@ async function main() {
       if (!result) {
         // Repeat copies safely with deterministic keys. No DB changes in this phase.
         const buffer = await downloadImage(entry.source)
-        const target = await uploadToR2({ buffer }, { tenant: entry.tenant, key: entry.key })
+        const target = await uploadToR2({ buffer }, {
+          tenant: entry.tenant,
+          key: entry.key,
+          allowLegacy: true,
+          contentType: legacyContentType(entry.source),
+        })
         const hash = imageHash(buffer)
         if (imageHash(await downloadImage(target)) !== hash) throw new Error(`Verificación falló para ${entry.key}`)
         result = { target, hash, bytes: buffer.length }

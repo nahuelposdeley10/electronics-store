@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { apiPut } from '@/lib/api'
 import { APPEARANCE_DEFAULTS, normalizeAppearance, appearanceVariables } from '@/lib/appearance'
 import { notifySiteSettingsChanged } from '@/lib/siteSettings'
@@ -24,10 +24,13 @@ const PREVIEW_PRODUCTS = [
 
 function ColorField({ label, hint, value, onChange }) {
   const [draft, setDraft] = useState(value)
+  const [previousValue, setPreviousValue] = useState(value)
+  if (value !== previousValue) {
+    setPreviousValue(value)
+    setDraft(value)
+  }
   const normalizedDraft = draft.startsWith('#') ? draft : `#${draft}`
   const valid = /^#[0-9a-f]{6}$/i.test(normalizedDraft)
-
-  useEffect(() => setDraft(value), [value])
 
   const changeHex = (event) => {
     const nextDraft = event.target.value.replace(/\s/g, '').slice(0, 7)

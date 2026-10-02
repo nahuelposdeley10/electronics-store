@@ -23,8 +23,8 @@ export function imageKey(tenant, name = randomUUID()) {
 
 export const imageHash = (buffer) => createHash('sha256').update(buffer).digest('hex')
 
-export async function uploadToR2(file, { tenant, key = imageKey(tenant) } = {}) {
-  const mime = detectImageMime(file?.buffer)
+export async function uploadToR2(file, { tenant, key = imageKey(tenant), allowLegacy = false, contentType } = {}) {
+  const mime = detectImageMime(file?.buffer) || (allowLegacy ? contentType : null)
   if (!mime) throw Object.assign(new Error('El archivo no es una imagen válida (PNG, JPG, WEBP o GIF)'), { status: 400 })
   const config = r2Config()
   const client = new S3Client({

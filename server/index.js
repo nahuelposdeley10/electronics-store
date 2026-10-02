@@ -6,6 +6,7 @@ import { initTracker } from './lib/order-tracker.js'
 import { validateEnv } from './config/env.js'
 
 const port = Number(process.env.PORT || 4000)
+const host = process.env.HOST || '0.0.0.0'
 
 function logError(label, error) {
   console.error(`[${label}]`, error?.stack || error)
@@ -47,7 +48,7 @@ async function start() {
     logError('listen', error)
   })
 
-  server.listen(port, () => {
+  server.listen(port, host, () => {
     console.log(`API lista en http://localhost:${port}`)
   })
 }

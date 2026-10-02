@@ -4,7 +4,6 @@ import { useOrderEvents } from '@/lib/useOrderEvents'
 import { clearSuperTenant, getSuperTenant, setSuperTenant } from '@/lib/tenant'
 import {
   IconBack,
-  IconBolt,
   IconBox,
   IconCard,
   IconCash,
@@ -124,7 +123,6 @@ export default function Dashboard({ onExit }) {
   const [attempt, setAttempt] = useState(0)
   const [superTenant, setSuperTenantState] = useState(() => getSuperTenant())
   const [copiedStoreUrl, setCopiedStoreUrl] = useState(false)
-  const [storeInfo, setStoreInfo] = useState(null)
   const [mpNeedSetup, setMpNeedSetup] = useState(false)
   const [mpWarningClosed, setMpWarningClosed] = useState(false)
   const [guideOpen, setGuideOpen] = useState(
@@ -223,11 +221,6 @@ export default function Dashboard({ onExit }) {
     apiGet('/api/admin/settings')
       .then((data) => {
         if (!alive) return
-        setStoreInfo({
-          name: data?.store?.name || null,
-          address: data?.store?.addressShort || null,
-          logoUrl: data?.store?.logoUrl || null,
-        })
         setMpNeedSetup(
           getSession().user?.role === 'admin' &&
             data?.payments?.online !== false &&

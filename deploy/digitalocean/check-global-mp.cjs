@@ -1,0 +1,6 @@
+const fs = require('node:fs')
+const dotenv = require('/var/www/electronics-store/node_modules/dotenv')
+const env = dotenv.parse(fs.readFileSync('/var/www/electronics-store/.env'))
+fetch('https://api.mercadopago.com/users/me', { headers: { Authorization: `Bearer ${env.MP_ACCESS_TOKEN}` } })
+  .then(async response => { const body = await response.json(); console.log(JSON.stringify({ status: response.status, id: body.id || null, nickname: body.nickname || null, site_id: body.site_id || null, live_mode: body.live_mode ?? null, error: body.error || null })) })
+  .catch(error => { console.error(error.message); process.exitCode = 1 })
