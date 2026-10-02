@@ -63,6 +63,22 @@ async function main() {
     'el seed no pisa un webhookSecret ya cargado',
   )
 
+  await saveSettings({
+    tenant: tenantA,
+    section: 'payments',
+    value: {
+      online: true,
+      methods: { efectivo: true, tarjeta: true, transferencia: true },
+      mercadopago: { accessToken: null, publicKey: null, webhookSecret: null },
+    },
+  })
+  const sA4 = await getSettings({ fresh: true, tenant: tenantA })
+  check(
+    sA4?.payments?.mercadopago?.accessToken === 'APP_USR_test' &&
+      sA4?.payments?.mercadopago?.webhookSecret === 'secret-copiado-de-mp',
+    'un guardado posterior con campos vacíos no borra las credenciales de MP',
+  )
+
   const sB = await getSettings({ fresh: true, tenant: tenantB })
   check(
     sB?.payments?.mercadopago?.webhookSecret == null,

@@ -247,7 +247,30 @@ export async function saveSettings({ section, value, tenant } = {}) {
     throw new Error(`Sección de configuración desconocida: ${section}`)
   }
   const current = await getSettings({ fresh: true, tenant })
-  const merged = section ? { ...current, [section]: value } : { ...current, ...value }
+  let nextValue = value
+
+  // Credential fields are intentionally not clearable from ordinary settings
+  // saves. A stale admin form (or a second save made by the same screen) can
+  // legitimately send null/empty values while the stored credentials are
+  // still valid; never turn that into a destructive overwrite.
+  if (section === 'payments' && value && typeof value === 'object') {
+    const currentMp = current.payments?.mercadopago || {}
+    const incomingMp = value.mercadopago && typeof value.mercadopago === 'object'
+      ? value.mercadopago
+      : {}
+    nextValue = {
+      ...value,
+      mercadopago: {
+        ...currentMp,
+        ...incomingMp,
+        accessToken: incomingMp.accessToken?.trim?.() ? incomingMp.accessToken : currentMp.accessToken,
+        publicKey: incomingMp.publicKey?.trim?.() ? incomingMp.publicKey : currentMp.publicKey,
+        webhookSecret: incomingMp.webhookSecret?.trim?.() ? incomingMp.webhookSecret : currentMp.webhookSecret,
+      },
+    }
+  }
+
+  const merged = section ? { ...current, [section]: nextValue } : { ...current, ...value }
 
   if (merged.shipping) {
     if (merged.shipping.cost !== undefined) {
