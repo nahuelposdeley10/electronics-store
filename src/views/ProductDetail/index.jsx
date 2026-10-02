@@ -33,7 +33,7 @@ export default function ProductDetail({ product, onBack, onHome }) {
     .slice(0, 4)
 
   const handleBuyNow = () => {
-    addItem(product)
+    if (!addItem(product)) return
     setBuyNow(true)
     setTimeout(() => setBuyNow(false), 2000)
   }

@@ -148,9 +148,20 @@ export default function CartProvider({ children }) {
   }, [appliedCoupon])
 
   const addItem = (product) => {
+    const stock = Math.max(0, Number(product.stock) || 0)
+    if (stock <= 0) {
+      showToast('No hay stock disponible de este producto', 'warn')
+      return false
+    }
+
+    let added = false
     setItems((prev) => {
       const existing = prev.find((item) => item.id === product.id)
       if (existing) {
+        if (existing.quantity >= stock) {
+          return prev
+        }
+        added = true
         return prev.map((item) =>
           item.id === product.id
             ? { ...item, quantity: item.quantity + 1 }
@@ -169,7 +180,13 @@ export default function CartProvider({ children }) {
         },
       ]
     })
+    if (added === false && !items.some((item) => item.id === product.id)) added = true
+    if (!added) {
+      showToast(`No podés agregar más de este producto (stock: ${stock})`, 'warn')
+      return false
+    }
     showToast(`${product.name} agregado al carrito`, 'success')
+    return true
   }
 
   const removeItem = (id) => {
