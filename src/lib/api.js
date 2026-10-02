@@ -79,7 +79,11 @@ export async function apiGet(path) {
 
   let res
   try {
-    res = await fetch(tenantUrl(path, user), { headers, signal: requestSignal() })
+    res = await fetch(tenantUrl(path, user), {
+      headers,
+      cache: 'no-store',
+      signal: requestSignal(),
+    })
   } catch {
     throw netError('No se pudo conectar con el servidor')
   }

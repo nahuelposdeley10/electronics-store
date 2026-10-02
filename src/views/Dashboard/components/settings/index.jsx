@@ -37,6 +37,7 @@ function PaymentsScreen() {
     try {
       await apiPut('/api/admin/settings', { section: 'payments', value: { methods, mercadopago, online } })
       await apiPut('/api/admin/settings', { section: 'checkout', value: checkout })
+      notifySiteSettingsChanged()
       showToast('Medios de pago guardados.', 'success')
     } catch (err) {
       showToast(err.message, 'error')
