@@ -27,7 +27,9 @@ export async function getMpConfig(tenantId = null) {
       publicKey: env.mpPublicKey || null,
     }
   }
-  const settings = await getSettings({ tenant: tenantId })
+  // Payment credentials can be changed from another process or tab. Never
+  // use the short-lived settings cache for checkout authorization.
+  const settings = await getSettings({ fresh: true, tenant: tenantId })
   const mp = settings?.payments?.mercadopago || {}
   const token = String(mp.accessToken || env.mpAccessToken || '').trim() || null
   return {

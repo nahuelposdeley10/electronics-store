@@ -29,7 +29,7 @@ function requireTenant(req, res, next) {
 router.get('/settings/public', requirePublicTenant, async (req, res) => {
   try {
     const tenant = await publicTenantId(req)
-    const settings = await getSettings({ tenant })
+    const settings = await getSettings({ fresh: true, tenant })
     const body = {}
     for (const section of PUBLIC_SECTIONS) {
       body[section] = settings[section] || {}
@@ -57,7 +57,7 @@ router.get('/admin/settings', requireAuth, requirePermission('settings.manage'),
     const tenant = req.user?.role === 'superadmin' && !req.query?.tenant
       ? null
       : requireTenantIdOf(req)
-    const settings = await getSettings({ tenant })
+    const settings = await getSettings({ fresh: true, tenant })
     return res.json(settings)
   } catch (error) {
     console.error('Settings read error:', error)

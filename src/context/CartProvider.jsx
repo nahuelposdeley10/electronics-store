@@ -37,7 +37,7 @@ export default function CartProvider({ children }) {
   const [storeWhatsapp, setStoreWhatsapp] = useState('')
 
   useEffect(() => {
-    fetchSiteSettings().then((data) => {
+    fetchSiteSettings({ fresh: true }).then((data) => {
       if (data.shipping) {
         setShippingConfig({
           enabled: data.shipping.enabled !== false,
