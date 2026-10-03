@@ -1,0 +1,10 @@
+.bnp-start { background: var(--bnp-ink); color: white; }
+.bnp-start .bnp-eyebrow { color: #b5c9ff; }
+.bnp-start .bnp-section-intro p { color: #b8c5d9; }
+.bnp-start-steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 34px; padding: 0; margin: 54px 0 0; list-style: none; }
+.bnp-start-steps li { border-top: 1px solid #41516b; padding-top: 22px; }
+.bnp-start-steps li > span { color: #9cb9ff; font-family: 'Sora', sans-serif; font-size: 12px; }
+.bnp-start-steps h3 { margin-top: 30px; font-size: 18px; }
+.bnp-start-steps p { color: #b8c5d9; margin-top: 16px; font-size: 13px; }
+@media (max-width: 900px) { .bnp-start-steps { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 520px) { .bnp-start-steps { grid-template-columns: 1fr; gap: 30px; } .bnp-start-steps h3 { margin-top: 16px; } }

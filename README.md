@@ -4,9 +4,10 @@
   Screenshots: agregá capturas en docs/screenshots/ y referencialas abajo.
 -->
 
-# Electronics Store
+# Tienda BNP
 
-Plataforma web de e-commerce **multi-tenant**: una sola base de datos, muchas
+Tienda BNP es una plataforma de software para comercios: e-commerce y gestión
+del local en un mismo lugar. Es **multi-tenant**: una sola base de datos, muchas
 tiendas completamente aisladas, y cada tienda con su **tienda online pública** y
 un **panel de administración completo** (ventas, stock, caja, reportes, pagos).
 
@@ -14,15 +15,143 @@ Construida como sistema monolítico full-stack que sirve frontend + API en un
 solo deploy: React 19 + Express 5 + MongoDB, con pagos reales de Mercado Pago,
 estado en vivo por Socket.IO y una suite de tests que corre en CI.
 
-Ya no es "una tienda": es la plataforma sobre la que corren muchas — cada
+No es una tienda aislada: es la plataforma sobre la que pueden correr muchas — cada
 negocio con su propia URL, marca, productos, precios y cuenta de Mercado Pago
 que cobra directo a su caja.
 
+## Sitio comercial
+
+### Puesta en marcha del comercio (local, sin despliegue)
+
+En `/admin` → **Puesta en marcha**, el titular configura su negocio con una
+guía de seis pasos: datos y URL, catálogo, stock, canal de cobro, entregas y
+revisión final. No es una demo ni un registro público; la contratación del
+servicio sigue por WhatsApp desde `/home`.
+
+- El nombre, contactos y entrega se guardan en los ajustes reales del negocio.
+  Los contactos de ejemplo se muestran vacíos para reemplazarlos; la dirección
+  `/u/<slug>` solo puede asignarse desde la guía cuando todavía no existe, y se
+  comprueba su unicidad. Una URL existente no se cambia.
+- Catálogo y stock se verifican contra productos visibles (marca y categoría),
+  con precio positivo y, para disponibilidad, stock positivo. Se usan las
+  pantallas existentes para cargar/importar productos y ajustar inventario.
+- Mercado Pago requiere Access Token y clave de webhook **guardados**. Esto no
+  verifica su validez ni realiza una transacción. WhatsApp requiere un número
+  propio y desactiva el pago online sin borrar las credenciales. La API de la
+  guía devuelve indicadores de presencia, nunca las claves.
+- La entrega se confirma explícitamente aunque conserve los valores actuales.
+  El mínimo 0 desactiva el envío gratis por importe; el costo 0 significa envío
+  sin cargo. No se integra ni contrata logística.
+- La revisión final ofrece el enlace real de la tienda y copiarlo; exige que
+  los cinco pasos anteriores estén completos. No publica una tienda nueva ni
+  bloquea una existente: `/u/<slug>` conserva su funcionamiento actual. Caja,
+  diseño y equipo son accesos opcionales, no requisitos para vender online.
+- `Onboarding` persiste por `adminId` el último paso, la pausa y las revisiones.
+  Se puede retomar después de recargar o iniciar otra sesión. Los requisitos se
+  recalculan: si cambian los datos o ya no hay productos disponibles, se solicita
+  una revisión; no se altera el funcionamiento del negocio.
+- **Entrada por rol:** el admin del comercio entra automáticamente a la guía
+  pendiente al iniciar sesión. Se decide una sola vez por sesión/pestaña: volver
+  al panel, cambiar de pantalla o recargar no lo redirige de nuevo. “Seguir
+  después” y una guía terminada impiden la apertura automática en futuros
+  ingresos. Una guía completada que necesita revisión solo muestra un aviso.
+- El superadmin tiene **Asistir a negocio**, un acceso manual que requiere
+  seleccionar un comercio. No recibe banners ni consultas automáticas de
+  onboarding en otras pantallas. Volver al panel no pausa la guía del comercio,
+  y recorrer sus pasos no revoca una pausa elegida por el titular. Los vendedores
+  no tienen acceso a esta configuración.
+- `GET/PUT /api/admin/onboarding`: administrador activo con `settings.manage`
+  o superadmin con negocio seleccionado; operadores y modo agregado no pueden
+  configurar la guía. Los administradores no pueden seleccionar otro tenant.
+  El superadmin puede usar las pantallas de edición solo con negocio elegido,
+  según los permisos ya existentes del servidor.
+- Sustituye el banner descartable basado en `ts-guided-done` y el aviso modal de
+  Mercado Pago. No cambia planes, suscripciones ni permisos del backend. El
+  menú del panel ahora permite desplazamiento horizontal en pantallas pequeñas.
+
+Componentes y lógica en `src/views/Dashboard/components/onboarding/`; modelo,
+servicio y rutas en `server/models/Onboarding.js`, `server/lib/onboarding.js`
+y `server/routes/onboarding.js`. Sin dependencias nuevas ni migración manual.
+
+Pruebas específicas: `node --test server/tests/onboarding.test.js` (base temporal
+aislada `bnp-test-onboarding-…`, eliminada al terminar). Cubren el flujo completo,
+persistencia, permisos, aislamiento, slugs, productos ocultos, conservación de
+credenciales y regresión de requisitos. Suite general: `npm test`; frontend:
+`npm run lint` y `npm run build`.
+La política de apertura por rol y reinicio de sesión se verifica con
+`node --test tests/onboarding-entry.test.mjs`.
+
+### Rutas públicas y comerciales
+
+- `/home`: landing principal de Tienda BNP, orientada a presentar el servicio,
+  sus beneficios, módulos y planes.
+- `/planes`: acceso heredado que reemplaza la URL por `/home#planes`; los
+  precios y prestaciones se muestran una sola vez en la landing.
+- `/u/<slug>`: tienda pública individual de cada comercio.
+- `/admin`: panel privado del administrador o del equipo del comercio.
+
+La plataforma se vende como servicio mensual. Cada comercio puede comenzar con
+una tienda online y sumar gestión de productos, ventas presenciales, stock,
+caja, reportes, promociones y pagos online.
+
+### Rediseño comercial (revisión local, sin despliegue)
+
+`CompanyHome` contiene navegación móvil, portada con ilustración 3D original,
+vistas representativas con pestañas, funcionalidades, cobros/personalización,
+puesta en marcha, planes, preguntas frecuentes y contacto. Los ejemplos son
+**datos ficticios**, no una demo operativa y no crean pedidos ni ventas.
+
+- Datos comerciales centralizados en `src/views/CompanyHome/content.js`:
+  Inicial **$49.900/mes**, Profesional **$89.900/mes**, Negocio **$149.900/mes**
+  (ARS). Configuración inicial **desde $250.000**, separada del abono.
+- Contacto comercial: **+54 9 11 7673-1388**. “Quiero probarlo” lleva a planes;
+  “Elegir plan” abre WhatsApp con nombre y precio para revisar antes de enviar.
+  No usa el contacto ni los ajustes de ningún comercio.
+- La oferta es comercial: **no implementa ni cambia restricciones de
+  suscripción, permisos ni cobros recurrentes del backend**.
+- `App` separa, mediante carga diferida, `CompanyHome` de `StoreApp`.
+  En `/home` no se montan catálogo, carrito, ajustes ni autenticación de la
+  tienda, y no se necesita que su API esté disponible. `/admin` y `/u/<slug>`
+  conservan el árbol de proveedores y la lógica de tienda anterior.
+- Sora/Manrope y estilos propios; seguimiento de cursor con `requestAnimationFrame`,
+  inclinación limitada y restablecimiento al salir. Se desactiva para entrada
+  táctil y movimiento reducido. Pestañas con flechas/Home/End, FAQ nativa,
+  menú con Escape, foco visible y enlace para saltar al contenido.
+- Imagen hero con dimensiones reservadas y WebP 480/960/1280; la única imagen
+  raster de contenido está en la portada. Las vistas de ejemplo son HTML/SVG,
+  sin solicitudes de imágenes ni datos al backend. Metadatos sociales propios.
+- Referencias, prompt original y procedencia: [Recursos visuales](docs/company-home-assets.md).
+
+No se anuncian como disponibles facturación ARCA, logística integrada,
+cuentas corrientes, variantes en checkout, dominio automático ni newsletter
+funcional. No hay testimonios ni cifras comerciales inventadas.
+
+### Efectos de la web comercial
+
+- Entrada escalonada del título y de la ilustración; fondo con luz y retícula.
+- Profundidad de imagen, luz y etiqueta que responde al cursor con interpolación
+  suave. Sin seguimiento táctil ni ciclos de animación permanentes.
+- Apariciones de secciones y tarjetas al desplazarse, una vez por visita;
+  barra de progreso de lectura y encabezado con sombra al hacer scroll.
+- Indicador deslizante en las pestañas, transiciones de sus vistas y gráfico de
+  ejemplo, tarjetas de planes con elevación, respuestas FAQ y botones reactivos.
+- `prefers-reduced-motion` desactiva animaciones y seguimiento. Las apariciones
+  nunca ocultan el contenido por defecto y se cancelan si un control recibe foco.
+  No se agregaron dependencias. La lógica vive en los módulos `motion.js` de la view.
+
+Pruebas locales sin MongoDB: `node --test tests/company-home.test.mjs tests/company-motion.test.mjs`.
+
 ## Capturas
 
-> Falta agregar pantallazos: `docs/screenshots/tienda.png`, `.panel.png`,
-> `.pagos.png`. Sin imágenes, un reclutador no abre un repo por más bueno que
-> sea el código.
+Rediseño comercial local:
+
+- [Escritorio](docs/screenshots/company-home-desktop.png)
+- [Página completa](docs/screenshots/company-home-full-desktop.png)
+- [Celular](docs/screenshots/company-home-mobile.png)
+- [Planes](docs/screenshots/company-plans-desktop.png)
+
+Detalle de las pruebas realizadas: [Validación de la landing](docs/company-home-validation.md).
+Las capturas del panel, tienda y pagos se pueden agregar por separado.
 
 ## Lo que más vale la pena mirar
 
@@ -39,7 +168,8 @@ que cobra directo a su caja.
   instante (Socket.IO + change streams de Mongo), sin recargar.
 - **Panel de negocio completo, no solo CRUDs**: POS con caja, stock con
   inventario físico, compras a proveedores, reportes de ganancia, presupuestos,
-  cupones, roles y permisos granulares.
+  cupones, roles y permisos granulares. También incluye importación de productos
+  desde JSON o CSV y onboarding de primeros pasos.
 - **Testeado y con CI**: suites de webhooks, tenancy, checkout, stock, caja,
   cupones, settings y secuencias atómicas; GitHub Actions levanta MongoDB y
   corre lint + tests sin credenciales.
@@ -49,7 +179,8 @@ que cobra directo a su caja.
 ### Tienda online (lo que ve el cliente)
 
 - Home con hero, ofertas, recién llegados, galería filtrable por categoría /
-  marca / precio, marcas y newsletter.
+  marca / precio y marcas. La presentación de newsletter no incluye un
+  servicio funcional de suscripción o envíos.
 - Detalle de producto con cuotas, stock, rating, especificaciones y
   relacionados.
 - Carrito con cupones, control de stock real y barra de envío gratis; persiste
@@ -68,7 +199,7 @@ que cobra directo a su caja.
 - **Devoluciones**: restaura stock y registra el egreso de caja.
 - **Presupuestos**: numeración secuencial, estados, búsqueda y paginación.
 - **Productos / Categorías / Marcas / Ofertas**: CRUD completo, ajuste de
-  precios masivo por categoría e importación desde JSON.
+  precios masivo por categoría e importación desde JSON o CSV con plantilla.
 - **Stock**: movimientos, ajustes con motivo, inventario físico con
   sobras/faltas, stock mínimo y compras a proveedores.
 - **Caja**: apertura de turno, arqueos y cierre con diferencia (sobra/falta).
@@ -77,6 +208,21 @@ que cobra directo a su caja.
 - **Configuración**: datos del negocio, envío, métodos de pago (credenciales de
   Mercado Pago por tienda) y tramos de cuotas.
 - **Usuarios**: roles superadmin / admin / operator con permisos por código.
+
+### Propuesta de valor para el comercio
+
+- **Una tienda propia sin programadores**: URL, marca, catálogo, carrito y
+  configuración desde el panel.
+- **Venta online y mostrador conectados**: el POS y la web comparten stock y
+  registran el origen de cada venta.
+- **Cobros directos**: cada comercio conecta sus propias credenciales de
+  Mercado Pago; la plataforma no retiene el dinero.
+- **WhatsApp como alternativa de venta**: si el comercio no quiere cobrar
+  online, el pedido se arma y se envía directamente al WhatsApp del local.
+- **Control del negocio**: caja, compras, inventario físico, devoluciones,
+  presupuestos, promociones y reportes de margen.
+- **Escala multi-tienda**: el operador de la plataforma puede administrar
+  múltiples comercios aislados desde una misma instalación.
 
 ## Stack
 

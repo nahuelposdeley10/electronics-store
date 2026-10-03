@@ -88,7 +88,7 @@ function upsertMeta(attr, key, content) {
     el.setAttribute(attr, key)
     document.head.appendChild(el)
   }
-  if (content) el.setAttribute('content', content)
+  el.setAttribute('content', content || '')
 }
 
 export function applySEO(meta) {
@@ -113,10 +113,10 @@ export function applySEO(meta) {
   upsertMeta('property', 'og:site_name', meta.siteName || 'TechStore')
   upsertMeta('property', 'og:title', meta.title || document.title)
   upsertMeta('property', 'og:description', meta.description || '')
-  if (meta.image) upsertMeta('property', 'og:image', meta.image)
+  upsertMeta('property', 'og:image', meta.image || '')
 
   upsertMeta('name', 'twitter:card', meta.image ? 'summary_large_image' : 'summary')
   upsertMeta('name', 'twitter:title', meta.title || document.title)
   upsertMeta('name', 'twitter:description', meta.description || '')
-  if (meta.image) upsertMeta('name', 'twitter:image', meta.image)
+  upsertMeta('name', 'twitter:image', meta.image || '')
 }

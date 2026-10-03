@@ -1,0 +1,12 @@
+.bnp-closing { background: var(--bnp-blue); color: white; position: relative; isolation: isolate; overflow: clip; }
+.bnp-closing::before { content: ''; position: absolute; z-index: -1; width: 520px; height: 520px; right: -190px; top: -130px; border: 1px solid #ffffff30; border-radius: 50%; box-shadow: 0 0 0 65px #ffffff08, 0 0 0 130px #ffffff05; transition: transform 1s cubic-bezier(.2,.7,.2,1); pointer-events: none; }
+.bnp-closing:hover::before { transform: translateX(-24px) scale(1.05); }
+.bnp-closing-inner { display: flex; align-items: center; justify-content: space-between; gap: 60px; padding-block: 76px; }
+.bnp-closing .bnp-eyebrow { color: #f5f7fc; }
+.bnp-closing h2 { font-size: clamp(30px, 3vw, 41px); }
+.bnp-closing p { font-size: 14px; color: #f5f7fc; margin-top: 22px; }
+.bnp-closing-actions { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; }
+.bnp-closing-actions > span { margin-top: 12px; font-size: 12px; color: #f5f7fc; }
+.bnp-closing-actions .bnp-text-link { font-size: 12px; color: white; margin-top: 18px; }
+.bnp-closing a:focus-visible { outline-color: white; }
+@media (max-width: 760px) { .bnp-closing-inner { flex-direction: column; align-items: flex-start; gap: 34px; padding-block: 60px; } .bnp-closing-actions { align-items: flex-start; } }

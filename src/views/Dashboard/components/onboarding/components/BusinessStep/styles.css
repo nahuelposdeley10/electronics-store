@@ -1,0 +1,9 @@
+.onboard-business { display: grid; gap: 20px; }
+.onboard-business-contact { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.onboard-business p { margin: 0; color: var(--gal-ink-soft); font-size: 14px; line-height: 1.65; }
+.onboard-business strong { overflow-wrap: anywhere; }
+.onboard-business-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.onboard-business-extra { border-block: 1px solid var(--gal-line); padding-block: 16px; }
+.onboard-business-extra summary { cursor: pointer; font-weight: 600; font-size: 14px; line-height: 1.5; }
+.onboard-business-extra > div { display: grid; gap: 18px; padding-top: 22px; }
+@media (max-width: 650px) { .onboard-business-contact { grid-template-columns: 1fr; } }

@@ -1,0 +1,45 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Sora:wght@400;500;600;700&display=swap');
+
+.bnp-home {
+  --bnp-paper: #f5f7fc;
+  --bnp-ink: #14243e;
+  --bnp-blue: #315cf5;
+  --bnp-ice: #dce8ff;
+  --bnp-mint: #cef3df;
+  --bnp-muted: #617089;
+  --bnp-line: #dbe2ee;
+  --gal-focus: #315cf5;
+  --gal-selection: #dce8ff;
+  --gal-tag-ink: #14243e;
+  font-family: 'Manrope', sans-serif;
+  color: var(--bnp-ink);
+  background: var(--bnp-paper);
+  line-height: 1.65;
+  isolation: isolate;
+}
+:where(.bnp-home) h1, :where(.bnp-home) h2, :where(.bnp-home) h3 { font-family: 'Sora', sans-serif; color: inherit; font-weight: 600; letter-spacing: -.045em; line-height: 1.17; }
+:where(.bnp-home) h2 { font-size: clamp(30px, 3.5vw, 46px); }
+:where(.bnp-home) h3 { font-size: 21px; letter-spacing: -.025em; }
+:where(.bnp-home) a { text-decoration: none; }
+.bnp-home a, .bnp-home button { -webkit-tap-highlight-color: transparent; }
+.bnp-home :focus-visible { outline: 3px solid var(--bnp-blue); outline-offset: 5px; }
+.bnp-home section[id] { scroll-margin-top: 105px; }
+:where(.bnp-home) svg { width: 22px; height: 22px; flex-shrink: 0; }
+.bnp-skip { position: fixed; top: -100px; left: 20px; z-index: 100; padding: 12px 20px; background: white; border: 2px solid var(--bnp-blue); }
+.bnp-skip:focus { top: 12px; }
+.bnp-footer { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 30px; padding-block: 54px 30px; }
+.bnp-footer p { color: var(--bnp-muted); font-size: 14px; }
+.bnp-footer nav { display: flex; justify-content: flex-end; gap: 24px; font-size: 14px; font-weight: 700; }
+.bnp-footer small { grid-column: 1 / -1; border-top: 1px solid var(--bnp-line); padding-top: 26px; color: var(--bnp-muted); font-size: 12px; }
+@media (max-width: 650px) {
+  .bnp-footer { grid-template-columns: 1fr 1fr; }
+  .bnp-footer nav { justify-content: flex-start; grid-column: 1 / -1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html:has(.bnp-home) { scroll-behavior: auto; }
+  .bnp-home *, .bnp-home *::before, .bnp-home *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  .bnp-home .bnp-plan:hover, .bnp-home .bnp-button:hover,
+  .bnp-home .bnp-button svg, .bnp-home .bnp-text-link svg,
+  .bnp-home .bnp-features-grid article:hover > svg,
+  .bnp-home .bnp-closing:hover::before { transform: none !important; }
+}

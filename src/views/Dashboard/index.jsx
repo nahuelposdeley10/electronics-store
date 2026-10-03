@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { apiGet, clearSession, getSession, login as apiLogin } from '@/lib/api'
 import { useOrderEvents } from '@/lib/useOrderEvents'
 import { clearSuperTenant, getSuperTenant, setSuperTenant } from '@/lib/tenant'
+import { onboardingMode } from '@/lib/onboardingEntry'
 import {
   IconBack,
   IconBox,
@@ -9,7 +10,6 @@ import {
   IconCash,
   IconChart,
   IconChevron,
-  IconCross,
   IconInventory,
   IconLock,
   IconLogout,
@@ -57,11 +57,13 @@ import { BusinessesScreen, UsersScreen, RolesScreen } from './components/users'
 import { PaymentsScreen, StoreScreen, GeneralScreen } from './components/settings'
 import AppearanceScreen from './components/appearance'
 import StoreHub from './components/storeHub'
+import Onboarding from './components/onboarding'
 import { STORE_PAGES, isNavGroupActive } from './storeNavigation.js'
 
 import './styles.css'
 
 const SCREEN_PERMS = {
+  onboarding: 'settings.manage',
   products: 'catalog.manage',
   'product-categories': 'catalog.manage',
   'product-brands': 'catalog.manage',
@@ -123,16 +125,14 @@ export default function Dashboard({ onExit }) {
   const [attempt, setAttempt] = useState(0)
   const [superTenant, setSuperTenantState] = useState(() => getSuperTenant())
   const [copiedStoreUrl, setCopiedStoreUrl] = useState(false)
-  const [mpNeedSetup, setMpNeedSetup] = useState(false)
-  const [mpWarningClosed, setMpWarningClosed] = useState(false)
-  const [guideOpen, setGuideOpen] = useState(
-    () => localStorage.getItem('ts-guided-done') !== '1',
-  )
   const userIsSuper = user?.role === 'superadmin'
+  const canOnboard = (userIsSuper || user?.role === 'admin') && (userIsSuper || perms.includes('settings.manage'))
   const canView = (id) =>
+    (id !== 'onboarding' || canOnboard) &&
     (id !== 'settings-appearance' || userIsSuper || user?.role === 'admin') &&
     (userIsSuper || !SCREEN_PERMS[id] || (perms || []).includes(SCREEN_PERMS[id]))
   const activeScreen = canView(screen) ? screen : 'overview'
+  const setupMode = onboardingMode({ role: user?.role, canConfigure: canOnboard, screen: activeScreen, tenantId: superTenant })
   // El superadmin trabaja en modo agregado por defecto. La selección de un local
   // queda disponible desde la pantalla de negocios, pero nunca bloquea el panel.
   const needsBusiness = false
@@ -215,24 +215,6 @@ export default function Dashboard({ onExit }) {
     }
   }, [attempt, needsBusiness])
 
-  useEffect(() => {
-    let alive = true
-    if (!getSession().token) return undefined
-    apiGet('/api/admin/settings')
-      .then((data) => {
-        if (!alive) return
-        setMpNeedSetup(
-          getSession().user?.role === 'admin' &&
-            data?.payments?.online !== false &&
-            !data?.payments?.mercadopago?.accessToken,
-        )
-      })
-      .catch(() => undefined)
-    return () => {
-      alive = false
-    }
-  }, [attempt])
-
   const changeScreen = (id) => {
     if (!canView(id)) return
     setScreen(id)
@@ -240,7 +222,7 @@ export default function Dashboard({ onExit }) {
   }
 
   const can = (code) =>
-    user?.role !== 'superadmin' && (perms || []).includes(code)
+    userIsSuper ? Boolean(superTenant) : (perms || []).includes(code)
 
   const retry = () => {
     setGate('loading')
@@ -256,6 +238,8 @@ export default function Dashboard({ onExit }) {
       .then((loggedUser) => {
         if (getSession().token) {
           setUser(loggedUser)
+          setScreen('overview')
+          sessionStorage.setItem('ts-admin-screen', 'overview')
           setLoginAttempts(0)
           setAttempt((n) => n + 1)
         }
@@ -275,18 +259,12 @@ export default function Dashboard({ onExit }) {
     clearSession()
     clearSuperTenant()
     sessionStorage.removeItem('ts-admin-screen')
+    setScreen('overview')
     setSuperTenantState(null)
     setUser(null)
     setPerms([])
     setOverview(null)
-    setMpNeedSetup(false)
-    setMpWarningClosed(false)
     setGate('login')
-  }
-
-  const dismissGuide = () => {
-    localStorage.setItem('ts-guided-done', '1')
-    setGuideOpen(false)
   }
 
   useOrderEvents(
@@ -314,6 +292,7 @@ export default function Dashboard({ onExit }) {
         ]
       : []),
     { id: 'overview', label: 'Panel', icon: IconChart },
+    ...(canOnboard ? [{ id: 'onboarding', label: userIsSuper ? 'Asistir a negocio' : 'Puesta en marcha', icon: IconWrench }] : []),
     {
       id: 'products',
       label: 'Productos',
@@ -549,15 +528,8 @@ export default function Dashboard({ onExit }) {
             </a>}
           </div>
         )}
-        {gate === 'ready' && !needsBusiness && overview && overview.counts?.all === 0 && guideOpen && (
-          <FirstRunBanner
-            onGo={(id) => {
-              dismissGuide()
-              changeScreen(id)
-            }}
-            onClose={dismissGuide}
-          />
-        )}
+        {gate === 'ready' && setupMode && <Onboarding key={`${user?.id}:${superTenant || 'own'}`} screen={activeScreen} role={user?.role} userId={user?.id} assistance={setupMode === 'assistance'} onView={changeScreen} canView={canView} onBusinessSaved={() => setAttempt((n) => n + 1)} />}
+        {gate === 'ready' && activeScreen === 'onboarding' && userIsSuper && !superTenant && <section className="dash-screen"><h1>Asistir a un negocio</h1><p>Elegí el comercio al que querés ayudar. Esta guía configura su tienda, no tu cuenta de dueño general.</p><button className="primary-btn" type="button" onClick={() => changeScreen('businesses')}>Elegir negocio</button></section>}
         {userIsSuper && (activeScreen === 'businesses' || businessBlock) && (
           <BusinessesScreen
             current={superTenant}
@@ -685,97 +657,11 @@ export default function Dashboard({ onExit }) {
         {gate === 'ready' && activeScreen === 'settings-appearance' && <AppearanceScreen key={superTenant || user?.id} />}
       </main>
 
-      {gate === 'ready' && !needsBusiness && mpNeedSetup && !mpWarningClosed && (
-        <MpSetupWarning
-          onConfigure={() => {
-            setMpWarningClosed(true)
-            changeScreen('settings-payments')
-          }}
-          onClose={() => setMpWarningClosed(true)}
-        />
-      )}
     </div>
   )
 }
 
 
-function FirstRunBanner({ onGo, onClose }) {
-  const steps = [
-    { id: 'products', title: 'Cargá tus productos', hint: 'Ficha de venta, precio y foto' },
-    { id: 'stock-purchases', title: 'Agregá stock', hint: 'Comprá a proveedores' },
-    { id: 'cash-current', title: 'Abrí la caja', hint: 'Para cobrar en efectivo' },
-    { id: 'sales-pos', title: 'Vendé', hint: 'Registrá tu primera venta' },
-  ]
-  return (
-    <div className="first-run">
-      <div className="first-run-head">
-        <div>
-          <span className="dash-eyebrow">Primeros pasos</span>
-          <h2>Tu tienda está lista, ¡empezá a vender!</h2>
-        </div>
-        <button type="button" className="first-run-close" onClick={onClose} aria-label="Cerrar guía">
-          <IconCross />
-        </button>
-      </div>
-      <p className="first-run-sub">
-        Completá estos pasos en el orden que quieras; cada uno te lleva directo a la pantalla.
-      </p>
-      <div className="first-run-steps">
-        {steps.map((step, i) => (
-          <button
-            type="button"
-            key={step.id}
-            className="first-run-step"
-            onClick={() => onGo(step.id)}
-          >
-            <span className="first-run-num mono">{i + 1}</span>
-            <span className="first-run-step-text">
-              <strong>{step.title}</strong>
-              <em>{step.hint}</em>
-            </span>
-          </button>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-
-function MpSetupWarning({ onConfigure, onClose }) {
-  return (
-    <div className="product-overlay" role="dialog" aria-modal="true" aria-labelledby="mp-warning-title">
-      <div className="product-panel mp-warning">
-        <h2 id="mp-warning-title">Necesitás conectar Mercado Pago</h2>
-        <p>
-          Tu tienda todavía no tiene cargado el Access Token de Mercado Pago (
-          <code>APP_USR-...</code>). Hasta que lo configures, el check-out de tu
-          web no va a poder cobrar pagos online.
-        </p>
-        <div className="mp-warning-actions">
-          <button type="button" className="primary-btn" onClick={onConfigure}>
-            Configurar Mercado Pago
-          </button>
-          <a
-            className="ghost-btn"
-            href="https://www.mercadopago.com.ar/developers/panel/app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Ver mi Access Token en MP
-          </a>
-        </div>
-        <p className="mp-warning-hint">
-          En Mercado Pago: <em>Panel de desarrolladores → tu aplicación → Credenciales →
-          Access Token</em>. Pegá ese token (empieza con <code>APP_USR-</code>) en{' '}
-          <em>Administración → Medios de pago</em>.
-        </p>
-        <button type="button" className="mp-warning-skip" onClick={onClose}>
-          Ahora no
-        </button>
-      </div>
-    </div>
-  )
-}
 
 
 function LoginPanel({ attempts, error, onLogin }) {

@@ -1,4 +1,5 @@
 import { tenantUrl } from './tenant.js'
+import { ONBOARDING_ENTRY_KEY } from './onboardingEntry.js'
 
 export class ApiError extends Error {
   constructor(message, code) {
@@ -28,6 +29,7 @@ const USER_STORAGE = 'ts-user'
 export function storeSession({ token, user }) {
   sessionStorage.setItem(TOKEN_STORAGE, token)
   sessionStorage.setItem(USER_STORAGE, JSON.stringify(user))
+  sessionStorage.removeItem(ONBOARDING_ENTRY_KEY)
 }
 
 export function getSession() {
@@ -44,6 +46,7 @@ export function getSession() {
 export function clearSession() {
   sessionStorage.removeItem(TOKEN_STORAGE)
   sessionStorage.removeItem(USER_STORAGE)
+  sessionStorage.removeItem(ONBOARDING_ENTRY_KEY)
 }
 
 export async function login(email, password) {

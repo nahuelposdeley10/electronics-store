@@ -1,0 +1,12 @@
+.onboard-payments { display: grid; gap: 20px; }
+.onboard-payment-options { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.onboard-payment-options button { text-align: left; display: grid; gap: 12px; padding: 22px; border: 2px solid var(--gal-line); border-radius: 16px; background: var(--gal-white); color: var(--gal-ink); cursor: pointer; }
+.onboard-payment-options button[aria-pressed="true"] { border-color: var(--gal-facade); background: var(--gal-panel-2); }
+.onboard-payment-options svg { width: 24px; height: 24px; }
+.onboard-payment-options span, .onboard-payments p { color: var(--gal-ink-soft); font-size: 14px; line-height: 1.65; }
+.onboard-payments p { margin: 0; }
+.onboard-payment-checks { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.onboard-payment-checks li { display: flex; align-items: center; gap: 10px; }
+.onboard-payment-checks svg { width: 18px; height: 18px; }
+.onboard-payments > button { justify-self: start; }
+@media (max-width: 650px) { .onboard-payment-options { grid-template-columns: 1fr; } }

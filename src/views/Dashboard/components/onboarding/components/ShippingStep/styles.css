@@ -1,0 +1,9 @@
+.onboard-shipping { display: grid; gap: 20px; }
+.onboard-shipping fieldset { margin: 0; padding: 18px; border: 1px solid var(--gal-line); border-radius: 12px; display: grid; gap: 18px; }
+.onboard-shipping legend { padding: 0 6px; font-weight: 700; }
+.onboard-shipping fieldset label { display: flex; align-items: center; gap: 10px; line-height: 1.5; cursor: pointer; }
+.onboard-shipping input[type="radio"] { width: 18px; height: 18px; flex: 0 0 auto; accent-color: var(--gal-facade); }
+.onboard-shipping-prices { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.onboard-shipping p { margin: 0; color: var(--gal-ink-soft); font-size: 14px; line-height: 1.65; }
+.onboard-shipping > button { justify-self: start; }
+@media (max-width: 650px) { .onboard-shipping-prices { grid-template-columns: 1fr; } }

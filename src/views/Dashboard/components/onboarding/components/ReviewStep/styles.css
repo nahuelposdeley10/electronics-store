@@ -1,0 +1,23 @@
+.onboard-review { display: grid; gap: 22px; }
+.onboard-review-success { display: flex; gap: 14px; padding: 20px; border-radius: 14px; background: #e2f6eb; color: #174e37; }
+.onboard-review-success > svg { width: 26px; height: 26px; flex-shrink: 0; }
+.onboard-review-success p { margin: 8px 0 0; line-height: 1.6; }
+.onboard-review dl { margin: 0; }
+.onboard-review dl > div { display: grid; grid-template-columns: 100px 1fr; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--gal-line); }
+.onboard-review dt { color: var(--gal-ink-soft); }
+.onboard-review dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
+.onboard-review-pending { display: flex; flex-wrap: wrap; gap: 10px; }
+.onboard-review-pending strong { flex-basis: 100%; }
+.onboard-review-link { display: grid; gap: 12px; }
+.onboard-review-link a { display: flex; align-items: center; gap: 10px; color: var(--gal-facade); font-weight: 700; }
+.onboard-review-link svg { width: 20px; height: 20px; }
+.onboard-review-link input { width: 100%; min-width: 0; padding: 12px; border: 1px solid var(--gal-line); background: var(--gal-panel); color: var(--gal-ink); border-radius: 8px; }
+.onboard-review-link button, .onboard-review > button { justify-self: start; }
+.onboard-review-link [role="status"] { font-size: 13px; }
+.onboard-review-confirm { display: flex; gap: 12px; line-height: 1.65; cursor: pointer; }
+.onboard-review-confirm input { width: 19px; height: 19px; margin-top: 4px; flex-shrink: 0; accent-color: var(--gal-facade); }
+.onboard-review-extras { border-top: 1px solid var(--gal-line); padding-top: 22px; }
+.onboard-review-extras h3 { margin: 0; font-size: 17px; }
+.onboard-review-extras p { color: var(--gal-ink-soft); font-size: 14px; }
+.onboard-review-extras > div { display: flex; flex-wrap: wrap; gap: 10px; }
+.onboard-review-notice { margin: 0; font-size: 13px; line-height: 1.7; color: var(--gal-ink-soft); }

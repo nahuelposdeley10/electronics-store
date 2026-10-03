@@ -1,0 +1,5 @@
+export const tabs = [
+  { id: 'tienda', label: 'Tienda online', eyebrow: 'UNA VIDRIERA QUE PODÉS COMPARTIR', title: 'Tus productos, listos para descubrir.', text: 'Un catálogo con fotos, categorías y ofertas. Tus clientes eligen, arman su carrito y continúan por el canal de compra que configures.', bullets: ['Tu marca al frente', 'Carrito y cupones', 'Mercado Pago o pedidos por WhatsApp'] },
+  { id: 'ventas', label: 'Ventas y caja', eyebrow: 'DEL MOSTRADOR AL CIERRE DEL DÍA', title: 'Menos cosas sueltas. Más orden.', text: 'Registrá ventas presenciales, consultá el historial y llevá el movimiento de tu caja. Presupuestos y devoluciones también tienen su lugar.', bullets: ['Punto de venta presencial', 'Apertura, arqueo y cierre', 'Historial y presupuestos'] },
+  { id: 'inventario', label: 'Inventario y reportes', eyebrow: 'SABÉ QUÉ TENÉS Y CÓMO VAS', title: 'La información para decidir mejor.', text: 'Seguí el stock, registrá compras y revisá las diferencias del recuento físico. Los reportes te ayudan a entender las ventas de tu negocio.', bullets: ['Compras y movimientos', 'Recuentos y stock mínimo', 'Reportes de ventas y ganancias'] },
+]

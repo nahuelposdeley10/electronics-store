@@ -1,0 +1,15 @@
+.bnp-faq { background: white; border-top: 1px solid var(--bnp-line); }
+.bnp-faq-layout { display: grid; grid-template-columns: .8fr 1.2fr; gap: 90px; }
+.bnp-faq .bnp-section-intro p { font-size: 14px; }
+.bnp-faq .bnp-section-intro a { color: var(--bnp-blue); text-decoration: underline; }
+.bnp-faq-list details { border-bottom: 1px solid var(--bnp-line); }
+.bnp-faq-list details:first-child { border-top: 1px solid var(--bnp-line); }
+.bnp-faq-list summary { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding-block: 23px; font-size: 14px; font-weight: 800; cursor: pointer; list-style: none; }
+.bnp-faq-list summary::-webkit-details-marker { display: none; }
+.bnp-faq-list summary > svg { width: 18px; height: 18px; transition: transform .2s; color: var(--bnp-blue); }
+.bnp-faq-list details[open] summary > svg { transform: rotate(45deg); }
+.bnp-faq-list details > p { padding-bottom: 24px; color: var(--bnp-muted); font-size: 14px; line-height: 1.8; }
+.bnp-faq-list details[open] > p { animation: bnp-answer-enter .3s ease-out; }
+@keyframes bnp-answer-enter { from { opacity: 0; translate: 0 -5px; } to { opacity: 1; translate: 0 0; } }
+@media (max-width: 900px) { .bnp-faq-layout { gap: 36px; grid-template-columns: 1fr 1.2fr; } }
+@media (max-width: 760px) { .bnp-faq-layout { grid-template-columns: 1fr; gap: 0; } }

@@ -19,6 +19,7 @@ import authRouter from './routes/auth.js'
 import settingsRouter from './routes/settings.js'
 import cashRouter from './routes/cash.js'
 import subscriptionsRouter from './routes/subscriptions.js'
+import onboardingRouter from './routes/onboarding.js'
 
 const DIST_DIR = path.resolve('dist')
 
@@ -88,6 +89,7 @@ export function createApp() {
   app.use('/api', catalogRouter)
   app.use('/api/auth', authRouter)
   app.use('/api', settingsRouter)
+  app.use('/api/admin/onboarding', onboardingRouter)
   app.use('/api/admin', adminRouter)
   app.use('/api/admin/subscriptions', subscriptionsRouter)
   app.use('/api/admin/users', usersRouter)

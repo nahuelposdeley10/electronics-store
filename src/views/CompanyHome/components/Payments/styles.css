@@ -1,0 +1,18 @@
+.bnp-payments { display: grid; grid-template-columns: 1fr 1.1fr; gap: 95px; align-items: center; }
+.bnp-payments-copy > p { font-size: 15px; color: var(--bnp-muted); margin-top: 22px; }
+.bnp-payments-copy .bnp-text-link { margin-top: 14px; }
+.bnp-payment-paths { background: var(--bnp-ice); border-radius: 18px; padding: 30px; }
+.bnp-payment-source { display: flex; gap: 16px; align-items: center; padding-bottom: 28px; }
+.bnp-payment-monogram { background: white; color: var(--bnp-blue); width: 60px; height: 60px; display: grid; place-content: center; font-family: 'Sora', sans-serif; font-size: 16px; font-weight: 600; line-height: 1.1; letter-spacing: -.04em; border-radius: 12px; }
+.bnp-payment-source strong { display: block; font-size: 17px; }
+.bnp-payment-source div > span { display: block; font-size: 11px; color: #4b5e7d; margin-top: 4px; }
+.bnp-payment-options { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.bnp-payment-options article { border-radius: 10px; background: white; padding: 22px 18px; }
+.bnp-payment-options article > svg { color: var(--bnp-blue); margin-bottom: 18px; }
+.bnp-payment-options h3 { font-size: 16px; letter-spacing: -.03em; }
+.bnp-payment-options p { font-size: 11px; color: var(--bnp-muted); margin-block: 13px 22px; }
+.bnp-payment-options article > span { display: flex; align-items: center; gap: 4px; color: #256647; font-size: 9px; font-weight: 700; }
+.bnp-payment-options article > span svg { width: 13px; height: 13px; }
+.bnp-payment-note { font-size: 10px; color: #4b5e7d; margin-top: 22px; }
+@media (max-width: 1000px) { .bnp-payments { gap: 35px; } .bnp-payment-paths { padding: 22px; } }
+@media (max-width: 760px) { .bnp-payments { grid-template-columns: 1fr; } .bnp-payment-options article { padding: 18px 14px; } }

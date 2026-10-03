@@ -1672,3 +1672,25 @@ html.anim-off [data-reveal="sweep"] {
     box-sizing: border-box;
   }
 }
+/* Shared commercial-site primitives, isolated from storefront styles. */
+.app-route-loading { padding: 48px; font-family: system-ui, sans-serif; }
+.bnp-home .bnp-wrap { width: min(1200px, calc(100% - 80px)); margin-inline: auto; }
+.bnp-home .bnp-section { padding-block: 100px; }
+.bnp-home .bnp-eyebrow { display: block; margin-bottom: 18px; color: var(--bnp-blue); font-size: 11px; font-weight: 800; letter-spacing: .15em; text-transform: uppercase; }
+.bnp-home .bnp-section-intro { max-width: 630px; margin-bottom: 44px; }
+.bnp-home .bnp-section-intro p { margin-top: 20px; color: var(--bnp-muted); font-size: 17px; }
+.bnp-home .bnp-button { display: inline-flex; justify-content: center; align-items: center; gap: 16px; min-height: 52px; padding: 14px 24px; border: 1px solid var(--bnp-line); border-radius: 9px; background: white; color: var(--bnp-ink); font-size: 14px; font-weight: 800; line-height: 1.4; transition: background .2s, transform .2s; }
+.bnp-home .bnp-button:hover { background: var(--bnp-ice); transform: translateY(-2px); }
+.bnp-home .bnp-button-blue { color: white; background: var(--bnp-blue); border-color: var(--bnp-blue); }
+.bnp-home .bnp-button-blue:hover { background: #2347cb; }
+.bnp-home .bnp-button svg, .bnp-home .bnp-text-link svg { transition: transform .25s cubic-bezier(.2,.7,.2,1); }
+.bnp-home .bnp-button:hover svg, .bnp-home .bnp-button:focus-visible svg, .bnp-home .bnp-text-link:hover svg, .bnp-home .bnp-text-link:focus-visible svg { transform: translateX(4px); }
+.bnp-home .bnp-button-blue { position: relative; overflow: hidden; isolation: isolate; box-shadow: 0 5px 16px #315cf519; }
+.bnp-home .bnp-button-blue::before { content: ''; position: absolute; z-index: -1; inset: -50% 0; background: linear-gradient(110deg, transparent 25%, #ffffff24 48%, transparent 72%); transform: translateX(-130%); transition: transform .65s; pointer-events: none; }
+.bnp-home .bnp-button-blue:hover::before, .bnp-home .bnp-button-blue:focus-visible::before { transform: translateX(130%); }
+.bnp-home .bnp-text-link { display: inline-flex; gap: 12px; align-items: center; font-size: 14px; font-weight: 800; padding-block: 12px; }
+.bnp-home .bnp-text-link:hover { color: var(--bnp-blue); }
+.bnp-home .bnp-brand { display: inline-flex; align-items: baseline; font-family: 'Sora', sans-serif; font-weight: 500; font-size: 23px; letter-spacing: -.06em; white-space: nowrap; }
+.bnp-home .bnp-brand span { margin-left: 4px; font-weight: 700; color: var(--bnp-blue); }
+@media (max-width: 900px) { .bnp-home .bnp-wrap { width: calc(100% - 48px); } .bnp-home .bnp-section { padding-block: 76px; } }
+@media (max-width: 520px) { .bnp-home .bnp-wrap { width: calc(100% - 40px); } .bnp-home .bnp-section { padding-block: 64px; } }

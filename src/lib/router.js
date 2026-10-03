@@ -2,6 +2,9 @@ import { storePathPrefix } from './tenant.js'
 import { homeUrl, productUrl, cartUrl, infoUrl, orderStatusUrl } from './urls.js'
 
 export function parseLocation() {
+  const path = window.location.pathname.replace(/\/$/, '') || '/'
+  if (path === '/home') return { name: 'company-home' }
+  if (path === '/planes') return { name: 'plans' }
   const params = new URLSearchParams(window.location.search)
   const status = params.get('status') || params.get('collection_status')
   if (status) {
@@ -14,7 +17,6 @@ export function parseLocation() {
     }
   }
 
-  const path = window.location.pathname
   if (path === '/admin') return { name: 'dashboard' }
 
   const prefix = storePathPrefix()
@@ -36,6 +38,10 @@ export function urlForView(name, payload) {
   switch (name) {
     case 'dashboard':
       return '/admin'
+    case 'company-home':
+      return '/home'
+    case 'plans':
+      return '/home#planes'
     case 'product':
       return payload && payload.id !== undefined
         ? productUrl(payload.id)

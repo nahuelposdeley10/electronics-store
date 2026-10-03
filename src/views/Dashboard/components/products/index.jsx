@@ -1848,6 +1848,69 @@ function ImportScreen({ canManage }) {
   const [result, setResult] = useState(null)
   const [error, setError] = useState('')
 
+  const parseCsv = (value) => {
+    const rows = []
+    let row = []
+    let cell = ''
+    let quoted = false
+    for (let i = 0; i < value.length; i += 1) {
+      const char = value[i]
+      const next = value[i + 1]
+      if (char === '"' && quoted && next === '"') {
+        cell += '"'
+        i += 1
+      } else if (char === '"') {
+        quoted = !quoted
+      } else if (char === ',' && !quoted) {
+        row.push(cell)
+        cell = ''
+      } else if ((char === '\n' || char === '\r') && !quoted) {
+        if (char === '\r' && next === '\n') i += 1
+        row.push(cell)
+        if (row.some((part) => part.trim())) rows.push(row)
+        row = []
+        cell = ''
+      } else {
+        cell += char
+      }
+    }
+    row.push(cell)
+    if (row.some((part) => part.trim())) rows.push(row)
+    if (rows.length < 2) throw new Error('El CSV debe tener encabezados y al menos una fila.')
+    const headers = rows[0].map((header) => header.trim())
+    if (!headers.includes('name') || !headers.includes('brand') || !headers.includes('category') || !headers.includes('price')) {
+      throw new Error('El CSV debe incluir las columnas name, brand, category y price.')
+    }
+    return rows.slice(1).map((values) => Object.fromEntries(headers.map((header, index) => [header, values[index]?.trim() || ''])))
+  }
+
+  const loadCsv = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      try {
+        setText(JSON.stringify(parseCsv(String(reader.result || '')), null, 2))
+        setResult(null)
+        setError('')
+      } catch (err) {
+        setError(err.message)
+      }
+      e.target.value = ''
+    }
+    reader.readAsText(file)
+  }
+
+  const downloadTemplate = () => {
+    const csv = 'name,brand,category,price,stock,oldPrice,freeShipping,image,description\nTeclado Gamer,Logitech,computacion,45000,5,,false,,,Producto de ejemplo\n'
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
+    const link = document.createElement('a')
+    link.href = url
+    link.download = 'plantilla-productos.csv'
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+
   const loadExample = () => {
     setText(JSON.stringify(IMPORT_EXAMPLE, null, 2))
     setResult(null)
@@ -1911,6 +1974,16 @@ function ImportScreen({ canManage }) {
             Opcionales: oldPrice, stock, rating, freeShipping, badge, image,
             description y specs (arreglo o texto separado por coma).
           </p>
+
+          <div className="import-tools">
+            <label className="ghost-btn import-file-btn">
+              Cargar CSV
+              <input type="file" accept=".csv,text/csv" onChange={loadCsv} />
+            </label>
+            <button type="button" className="ghost-btn" onClick={downloadTemplate}>
+              Descargar plantilla CSV
+            </button>
+          </div>
 
           <div className="pf-actions">
             <button type="button" className="ghost-btn" onClick={loadExample}>

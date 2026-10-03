@@ -1,0 +1,68 @@
+.bnp-hero { display: grid; grid-template-columns: 1fr 1.05fr; align-items: center; column-gap: 24px; padding-top: 52px; }
+.bnp-hero-copy { padding-block: 34px 48px; position: relative; z-index: 1; }
+.bnp-hero-copy .bnp-eyebrow { font-size: 10px; display: flex; align-items: center; gap: 10px; }
+.bnp-hero-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--bnp-blue); }
+.bnp-home .bnp-hero h1 { font-size: clamp(40px, 4.3vw, 62px); font-weight: 600; line-height: 1.1; letter-spacing: -.06em; }
+.bnp-title-line { display: block; overflow: clip; padding-bottom: .08em; margin-bottom: -.08em; }
+.bnp-title-line > span { display: block; }
+.bnp-title-accent { color: var(--bnp-blue); }
+.bnp-hero-copy > p { max-width: 460px; color: var(--bnp-muted); font-size: 17px; margin-top: 26px; }
+.bnp-hero-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 16px 22px; margin-top: 32px; }
+.bnp-hero-actions .bnp-text-link { font-size: 12px; }
+.bnp-hero-actions .bnp-text-link svg { width: 16px; }
+.bnp-hero-note { display: flex; align-items: center; gap: 8px; color: var(--bnp-muted); font-size: 11px; margin-top: 24px; }
+.bnp-hero-note svg { width: 16px; color: #297554; }
+.bnp-hero-scene { position: relative; aspect-ratio: 1; background: #e8efff; border-radius: 48% 48% 24px 24px; min-width: 0; isolation: isolate; }
+.bnp-hero-atmosphere { position: absolute; inset: 0; border-radius: inherit; overflow: hidden; pointer-events: none; }
+.bnp-hero-grid { position: absolute; inset: 0; background-image: linear-gradient(#315cf511 1px, transparent 1px), linear-gradient(90deg, #315cf511 1px, transparent 1px); background-size: 40px 40px; mask-image: radial-gradient(ellipse at 55% 50%, black, transparent 72%); }
+.bnp-hero-light { position: absolute; inset: -18%; background: radial-gradient(ellipse at 52% 38%, #ffffffed 0, #c5d9ff99 33%, #a9c2ff00 64%); transform: translate3d(var(--bnp-light-x, 0px), var(--bnp-light-y, 0px), 0); opacity: .65; transition: opacity .6s; }
+.bnp-depth-active .bnp-hero-light { opacity: 1; }
+.bnp-hero-orbit { position: absolute; inset: 11%; border: 1px solid #b9cdf7; border-radius: 50%; }
+.bnp-hero-orbit::before, .bnp-hero-orbit::after { content: ''; position: absolute; width: 9px; height: 9px; background: var(--bnp-blue); border: 2px solid var(--bnp-paper); border-radius: 50%; box-shadow: 0 0 0 6px #315cf50c; }
+.bnp-hero-orbit::before { top: 17%; left: 10%; }
+.bnp-hero-orbit::after { bottom: 22%; right: 6%; background: #5aa984; }
+.bnp-hero-caption { position: absolute; top: 7%; left: 0; width: 100%; text-align: center; font-size: 9px; font-weight: 800; letter-spacing: .2em; color: #4e628a; }
+.bnp-hero-art { position: absolute; inset: 0 -5%; }
+.bnp-hero-art img { width: 100%; height: auto; }
+.bnp-hero-label { position: absolute; bottom: 7%; left: 0; display: flex; align-items: center; gap: 12px; padding: 14px 18px; background: #ffffffed; border: 1px solid white; box-shadow: 0 12px 36px #14243e12; border-radius: 12px; transform: translate3d(var(--bnp-depth-x, 0px), var(--bnp-depth-y, 0px), 0); }
+.bnp-hero-label > span { background: var(--bnp-mint); border-radius: 8px; display: grid; place-items: center; width: 36px; height: 36px; }
+.bnp-hero-label strong { display: block; font-size: 11px; }
+.bnp-hero-label small { display: block; color: var(--bnp-muted); font-size: 10px; margin-top: 2px; }
+.bnp-hero-scene-note { position: absolute; bottom: -20px; right: 0; font-size: 9px; color: #4e628a; }
+.bnp-hero-bottom { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 24px; padding-block: 32px; border-top: 1px solid var(--bnp-line); border-bottom: 1px solid var(--bnp-line); margin-top: 54px; }
+.bnp-hero-bottom > span { color: var(--bnp-muted); font-size: 11px; line-height: 1.6; }
+.bnp-hero-bottom strong { color: var(--bnp-ink); font-weight: 700; }
+.bnp-hero-bottom > p { font-size: 10px; font-weight: 800; letter-spacing: .09em; }
+@media (min-width: 761px) and (max-width: 1050px) { .bnp-hero-actions { gap: 8px; } .bnp-home .bnp-hero h1 { font-size: 40px; } .bnp-hero-copy > p { font-size: 15px; } .bnp-hero-label { left: -10px; bottom: 4%; } }
+@media (max-width: 760px) {
+  .bnp-hero { grid-template-columns: 1fr; padding-top: 30px; gap: 12px; }
+  .bnp-hero-copy { padding-block: 10px 18px; }
+  .bnp-home .bnp-hero h1 { font-size: clamp(39px, 7vw, 58px); }
+  .bnp-hero-copy > p { font-size: 16px; }
+  .bnp-hero-scene { width: 100%; max-width: 530px; justify-self: center; margin-top: 12px; }
+  .bnp-hero-actions { margin-top: 26px; }
+  .bnp-hero-bottom { margin-top: 22px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .bnp-hero-bottom > span { grid-column: 1 / -1; }
+  .bnp-hero-bottom br { display: none; }
+  .bnp-hero-bottom strong { margin-left: 4px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .bnp-title-line > span { animation: bnp-title-enter .95s cubic-bezier(.16,1,.3,1) both; }
+  .bnp-title-line:nth-child(2) > span { animation-delay: .12s; }
+  .bnp-title-line:nth-child(3) > span { animation-delay: .24s; }
+  .bnp-hero-copy > .bnp-eyebrow { animation: bnp-hero-enter .7s .05s both; }
+  .bnp-hero-copy > p { animation: bnp-hero-enter .75s .25s both; }
+  .bnp-hero-actions { animation: bnp-hero-enter .75s .38s both; }
+  .bnp-hero-note { animation: bnp-hero-enter .75s .48s both; }
+  .bnp-hero-art img { animation: bnp-store-arrive 1.25s .15s cubic-bezier(.16,1,.3,1) both; }
+  .bnp-hero-orbit { animation: bnp-orbit-arrive 1.5s .1s cubic-bezier(.16,1,.3,1) both; }
+  .bnp-hero-label { animation: bnp-hero-enter .95s .6s both; }
+  .bnp-hero-atmosphere { animation: bnp-atmosphere-enter 1.7s both; }
+  .bnp-hero-copy :focus-visible { animation: none; }
+  .bnp-hero-copy > :has(:focus-visible) { animation: none; }
+}
+@keyframes bnp-title-enter { from { opacity: 0; transform: translateY(105%); } to { opacity: 1; transform: translateY(0); } }
+@keyframes bnp-hero-enter { from { opacity: 0; translate: 0 16px; } to { opacity: 1; translate: 0 0; } }
+@keyframes bnp-store-arrive { from { opacity: 0; transform: translate3d(0, 38px, 0) scale(.91) rotate(-3deg); } to { opacity: 1; transform: translate3d(0, 0, 0) scale(1) rotate(0); } }
+@keyframes bnp-orbit-arrive { from { opacity: 0; transform: rotate(-35deg) scale(.8); } to { opacity: 1; transform: rotate(0) scale(1); } }
+@keyframes bnp-atmosphere-enter { from { opacity: .2; } to { opacity: 1; } }
