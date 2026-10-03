@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { apiPost } from '@/lib/api'
+import BrandLogo from '@/components/BrandLogo'
 import './styles.css'
 
 export default function AccountActivation({ token }) {
@@ -23,7 +24,7 @@ export default function AccountActivation({ token }) {
 
   return <main className="activation-page">
     <section className="activation-card" aria-labelledby="activation-title">
-      <a className="activation-brand" href="/home">tienda<span>bnp.</span></a>
+      <a className="activation-brand" href="/home" aria-label="Tienda BNP, inicio"><BrandLogo /></a>
       {state.done ? <>
         <span className="activation-kicker">Cuenta activada</span>
         <h1 id="activation-title">Ya podés entrar a tu panel.</h1>

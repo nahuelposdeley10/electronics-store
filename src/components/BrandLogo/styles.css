@@ -1,0 +1,15 @@
+.brand-logo {
+  display: block;
+  object-fit: contain;
+  object-position: center;
+}
+
+.brand-logo-full {
+  width: 156px;
+  height: auto;
+}
+
+.brand-logo-mark {
+  width: 42px;
+  height: 42px;
+}

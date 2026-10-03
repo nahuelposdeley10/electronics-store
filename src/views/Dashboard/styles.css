@@ -61,11 +61,15 @@ body:has(.dash.theme-dark),
 .dash-brand {
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 11px;
+  min-height: 42px;
   padding: 2px 8px 18px;
   border-bottom: 1px solid #d5e3f0;
   margin-bottom: 16px;
 }
+.dash-brand .brand-logo { width: 176px; height: auto; }
+.unlock-brand { width: 188px; height: auto; margin: 0 auto 24px; }
 .dash-brand .brand-chip {
   width: 36px;
   height: 36px;
@@ -752,6 +756,7 @@ body:has(.dash.theme-dark),
   box-shadow: 10px 0 34px rgba(2, 9, 17, .24);
 }
 .dash.theme-dark .dash-brand { border-color: #29465f; }
+.dash.theme-dark .dash-brand .brand-logo { filter: brightness(0) invert(1); opacity: .95; }
 .dash.theme-dark .dash-brand-text strong { color: #f1f7fd; }
 .dash.theme-dark .dash-brand-text em,
 .dash.theme-dark .dash-exit,

@@ -9,6 +9,7 @@ import GettingStarted from './components/GettingStarted'
 import Pricing from './components/Pricing'
 import Faq from './components/Faq'
 import Closing from './components/Closing'
+import BrandLogo from '@/components/BrandLogo'
 import { companyMeta } from './content.js'
 import { setupCompanyMotion } from './motion.js'
 import './styles.css'
@@ -40,7 +41,7 @@ export default function CompanyHome({ legacyPlans = false }) {
         <Closing />
       </main>
       <footer className="bnp-footer bnp-wrap">
-        <a className="bnp-brand" href="/home" aria-label="Tienda BNP, inicio">tienda<span>bnp.</span></a>
+        <a className="bnp-brand" href="/home" aria-label="Tienda BNP, inicio"><BrandLogo /></a>
         <p>Software para comercios.<br />Hecho para tu día a día.</p>
         <nav aria-label="Enlaces del pie"><a href="#planes">Planes</a><a href="/admin">Acceso al panel</a></nav>
         <small>© {new Date().getFullYear()} Tienda BNP · Argentina</small>

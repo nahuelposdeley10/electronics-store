@@ -24,7 +24,7 @@ function absolute(href) {
 }
 
 export function seoMeta({ view, product, settings }) {
-  const name = settings?.store?.name || 'TechStore'
+  const name = settings?.store?.name || 'Tienda BNP'
   const tagline = settings?.store?.tagline || 'electrónica y tecnología'
   const baseDescription =
     settings?.store?.band ||
@@ -110,7 +110,7 @@ export function applySEO(meta) {
   }
 
   upsertMeta('property', 'og:type', meta.type || 'website')
-  upsertMeta('property', 'og:site_name', meta.siteName || 'TechStore')
+  upsertMeta('property', 'og:site_name', meta.siteName || 'Tienda BNP')
   upsertMeta('property', 'og:title', meta.title || document.title)
   upsertMeta('property', 'og:description', meta.description || '')
   upsertMeta('property', 'og:image', meta.image || '')

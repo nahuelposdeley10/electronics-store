@@ -21,6 +21,7 @@ import {
   IconEye,
 } from '@/components/Icons'
 import DashboardLoading from '@/components/DashboardLoading'
+import BrandLogo from '@/components/BrandLogo'
 import { initials, ROLE_LABELS } from './consts.js'
 import {
   CashCurrentScreen,
@@ -422,6 +423,9 @@ export default function Dashboard({ onExit }) {
     <div className={`dash theme-${theme}`}>
       {gate !== 'login' && (
         <aside className="dash-side">
+        <a className="dash-brand" href="/home" aria-label="Tienda BNP, volver al inicio">
+          <BrandLogo variant="full" />
+        </a>
         {user && (
           <div className="dash-side-user dash-side-user-top">
             <span className="user-avatar mono" aria-hidden="true">{initials(user.name)}</span>
@@ -698,6 +702,7 @@ function LoginPanel({ attempts, error, onLogin }) {
   return (
     <div className="dash-screen dash-unlock">
       <div className="unlock-card">
+        <BrandLogo className="unlock-brand" />
         <span className="unlock-icon">
           <IconLock />
         </span>

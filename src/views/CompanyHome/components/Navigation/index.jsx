@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { IconArrow, IconClose } from '@/components/Icons'
+import BrandLogo from '@/components/BrandLogo'
 import './styles.css'
 
 import { links } from './data.js'
@@ -28,7 +29,7 @@ export default function Navigation() {
   return (
     <header className="bnp-header" ref={header}>
       <div className="bnp-nav bnp-wrap">
-        <a className="bnp-brand" href="/home" aria-label="Tienda BNP, inicio">tienda<span>bnp.</span></a>
+        <a className="bnp-brand" href="/home" aria-label="Tienda BNP, inicio"><BrandLogo /></a>
         <button ref={toggle} type="button" className="bnp-menu-toggle" aria-expanded={open} aria-controls="bnp-navigation" aria-label={open ? 'Cerrar menú' : 'Abrir menú'} onClick={() => setOpen(!open)}>
           {open ? <IconClose /> : <span className="bnp-menu-lines" aria-hidden="true" />}
         </button>

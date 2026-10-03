@@ -2,6 +2,8 @@
 .bnp-is-scrolled .bnp-header { background: #ffffffed; box-shadow: 0 8px 30px #14243e0a; }
 .bnp-header::after { content: ''; position: absolute; bottom: -1px; left: 0; width: 100%; height: 2px; background: var(--bnp-blue); transform: scaleX(var(--bnp-reading-progress, 0)); transform-origin: left; pointer-events: none; }
 .bnp-nav { height: 84px; display: flex; align-items: center; justify-content: space-between; gap: 32px; }
+.bnp-nav .bnp-brand { display: inline-flex; align-items: center; width: 156px; flex: 0 0 156px; }
+.bnp-nav .bnp-brand .brand-logo { width: 100%; height: auto; }
 .bnp-nav-links { display: flex; align-items: center; gap: 28px; font-size: 12px; font-weight: 700; }
 .bnp-nav-links > a { padding-block: 12px; position: relative; }
 .bnp-nav-links > a:not(.bnp-nav-login)::after { content: ''; position: absolute; left: 0; bottom: 5px; width: 100%; height: 1px; background: var(--bnp-blue); transform: scaleX(0); transform-origin: left; transition: transform .25s; }
@@ -12,6 +14,7 @@
 .bnp-menu-lines { width: 20px; height: 12px; border-top: 2px solid currentColor; border-bottom: 2px solid currentColor; }
 @media (max-width: 999px) {
   .bnp-nav { height: 72px; }
+  .bnp-nav .bnp-brand { width: 137px; flex-basis: 137px; }
   .bnp-menu-toggle { display: grid; }
   .bnp-nav-links { display: none; position: absolute; top: 72px; left: 0; width: 100%; background: var(--bnp-paper); border-bottom: 1px solid var(--bnp-line); padding: 18px 24px 26px; box-shadow: 0 22px 30px #14243e12; }
   .bnp-nav-links.is-open { display: flex; flex-direction: column; align-items: stretch; gap: 2px; animation: bnp-menu-enter .24s ease-out; }
