@@ -8,11 +8,16 @@ export const companyMeta = {
   description: 'Tienda online y gestión para comercios argentinos: catálogo, WhatsApp, Mercado Pago, ventas presenciales, stock, caja y reportes. Conocé los planes de Tienda BNP.',
   siteName: 'Tienda BNP', type: 'website', noIndex: false,
 }
-export const commercialContact = { whatsapp: '5491176731388', displayPhone: '+54 9 11 7673-1388' }
+export const commercialContact = {
+  whatsapp: '5491176731388',
+  displayPhone: '+54 9 11 7673-1388',
+  email: 'tiendabnp@gmail.com',
+}
 export const setupPrice = 250000
 export const formatPrice = (value) => `$${new Intl.NumberFormat('es-AR').format(value)}`
 export const whatsappUrl = (message) => `https://wa.me/${commercialContact.whatsapp}?text=${encodeURIComponent(message)}`
 export const contactUrl = whatsappUrl('Hola, quiero conocer Tienda BNP y encontrar un plan para mi negocio.')
+export const emailUrl = `mailto:${commercialContact.email}?subject=${encodeURIComponent('Consulta sobre Tienda BNP')}&body=${encodeURIComponent('Hola, quiero conocer Tienda BNP y los planes disponibles para mi negocio.')}`
 export const planMessage = (plan) => `Hola, quiero conocer el plan ${plan.name} de Tienda BNP, de ${formatPrice(plan.price)} por mes. ¿Cómo podemos comenzar?`
 
 // Oferta comercial: no modifica permisos ni suscripciones del backend.

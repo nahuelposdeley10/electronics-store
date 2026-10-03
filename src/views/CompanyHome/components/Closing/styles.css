@@ -6,7 +6,14 @@
 .bnp-closing h2 { font-size: clamp(30px, 3vw, 41px); }
 .bnp-closing p { font-size: 14px; color: #f5f7fc; margin-top: 22px; }
 .bnp-closing-actions { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; }
-.bnp-closing-actions > span { margin-top: 12px; font-size: 12px; color: #f5f7fc; }
+.bnp-contact-options { display: grid; width: min(100%, 270px); gap: 10px; }
+.bnp-contact-options .bnp-button { width: 100%; box-sizing: border-box; justify-content: space-between; }
+.bnp-contact-email { background: var(--bnp-ice); border-color: transparent; }
+.bnp-contact-email:hover, .bnp-contact-email:focus-visible { background: var(--bnp-mint); }
+.bnp-contact-details { display: grid; gap: 4px; margin-top: 12px; text-align: center; }
+.bnp-contact-details span { color: #f5f7fc; font-size: 12px; }
 .bnp-closing-actions .bnp-text-link { font-size: 12px; color: white; margin-top: 18px; }
+.bnp-home .bnp-closing .bnp-closing-actions .bnp-text-link:hover,
+.bnp-home .bnp-closing .bnp-closing-actions .bnp-text-link:focus-visible { color: var(--bnp-ice); text-decoration: underline; text-underline-offset: 4px; }
 .bnp-closing a:focus-visible { outline-color: white; }
-@media (max-width: 760px) { .bnp-closing-inner { flex-direction: column; align-items: flex-start; gap: 34px; padding-block: 60px; } .bnp-closing-actions { align-items: flex-start; } }
+@media (max-width: 760px) { .bnp-closing-inner { flex-direction: column; align-items: flex-start; gap: 34px; padding-block: 60px; } .bnp-closing-actions { align-items: flex-start; } .bnp-contact-details { text-align: left; } }

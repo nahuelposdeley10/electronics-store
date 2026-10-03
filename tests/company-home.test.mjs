@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { parseLocation, urlForView } from '../src/lib/router.js'
-import { commercialContact, formatPrice, planMessage, plans, setupPrice, whatsappUrl } from '../src/views/CompanyHome/content.js'
+import { commercialContact, emailUrl, formatPrice, planMessage, plans, setupPrice, whatsappUrl } from '../src/views/CompanyHome/content.js'
 
 function at(path) {
   const url = new URL(path, 'http://localhost:5173')
@@ -36,6 +36,9 @@ test('admin and scoped store routes retain their behavior', () => {
 
 test('all plan links use the company contact and exact monthly prices', () => {
   assert.equal(commercialContact.whatsapp, '5491176731388')
+  assert.equal(commercialContact.email, 'tiendabnp@gmail.com')
+  assert.match(emailUrl, /^mailto:tiendabnp@gmail\.com\?subject=/)
+  assert.match(emailUrl, /body=Hola%2C%20quiero%20conocer%20Tienda%20BNP/)
   assert.deepEqual(plans.map(({ price }) => price), [49900, 89900, 149900])
   assert.equal(setupPrice, 250000)
   for (const plan of plans) {

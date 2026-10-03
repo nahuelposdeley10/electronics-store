@@ -22,6 +22,8 @@ test('commercial HTML is complete on the first response and isolated from tenant
     assert.match(html, /<h1[^>]*>.*Tu tienda online\./)
     assert.match(html, /<details><summary>¿Necesito saber programar\?/)
     assert.match(html, /Administrás el catálogo/)
+    assert.match(html, /Escribinos por Gmail/)
+    assert.match(html, /tiendabnp@gmail\.com/)
     assert.equal((html.match(/rel="canonical"/g) || []).length, 1)
     assert.ok(html.includes(`<link rel="canonical" href="${companyUrl}"`))
     assert.equal((html.match(/<title>/g) || []).length, 1)
