@@ -1,48 +1,183 @@
-# Product
+# Producto — Tienda BNP
 
-<!-- impeccable:product-schema 1 -->
+## Resumen
 
-## Platform
+Tienda BNP es una plataforma SaaS multi-tenant para comercios pequeños y
+medianos. Cada negocio obtiene una tienda online pública y un panel privado
+para administrar catálogo, ventas presenciales, stock, caja, compras,
+reportes, promociones y cobros.
 
-web
+La propuesta combina e-commerce y gestión del local en una sola herramienta.
+Cada comercio mantiene su marca, URL, catálogo y cuenta de Mercado Pago. La
+plataforma no retiene el dinero de las ventas.
 
-## Users
+## Usuarios
 
-Primary users are Buenos Aires (CABA/GBA) shoppers buying consumer electronics. Their job: find a device, compare price on the spot, and buy with minimal friction — favoring stores that offer good prices, installment plans, and a local safety net (pickup, warranty, technical service). All copy and interaction language is Argentine Spanish (Rioplatense, voseo).
+### Comercios clientes
 
-## Product Purpose
+Dueños y equipos de locales que necesitan vender por internet y ordenar la
+operación diaria sin depender de un desarrollador.
 
-TechStore is an online electronics storefront: browse a catalog, search, open product details, add to cart, apply coupons, and complete an order that is fulfilled via WhatsApp and local pickup. Success is a shopper moving from interest to a confirmed order with no uncertainty about price, installments, or shipping.
+### Clientes de cada tienda
 
-## Positioning
+Personas que navegan el catálogo, agregan productos al carrito, aplican cupones
+y compran con Mercado Pago o envían el pedido por WhatsApp si el comercio no
+tiene habilitado el pago online.
 
-Price + installments + local service. Up to 12 cuotas sin interés, free shipping above a threshold, official warranty, in-house technical service, and physical pickup in Villa Urquiza, CABA — the confidence of a neighborhood store paired with broad reach across the country.
+### Operador de la plataforma
 
-## Operating Context
+Superadmin que crea y administra negocios, asigna planes, revisa suscripciones
+y puede asistir a una tienda seleccionada sin mezclar sus datos con otros
+comercios.
 
-- Currency is ARS, formatted for the `es-AR` locale ($1.234.567).
-- Installments are computed from price tiers: 12 cuotas ≥ $100.000, 6 cuotas ≥ $50.000, else 3 cuotas.
-- Free shipping kicks in above a $300.000 subtotal; otherwise a flat shipping cost applies.
-- Orders are not a payment gateway: checkout completes the cart and the store follows up by WhatsApp/phone.
-- Two coupon codes exist and validate in-app: `BIENVENIDA10` (10%) and `STORE15` (15%).
+## Propuesta de valor
 
-## Capabilities and Constraints
+- Tienda online propia con marca, catálogo, precios, ofertas y URL del negocio.
+- POS para ventas presenciales conectado al mismo stock de la tienda web.
+- Control de inventario, movimientos, compras, recuentos y stock mínimo.
+- Caja con apertura, arqueos, movimientos y cierre.
+- Reportes de ventas, productos, ganancias, stock y clientes.
+- Cobros directos mediante la cuenta de Mercado Pago de cada comercio.
+- WhatsApp como canal alternativo de venta.
+- Usuarios con roles y permisos para distribuir tareas dentro del negocio.
+- Arquitectura multi-tenant con aislamiento por comercio.
 
-Catalog of 12 products across audio, móviles, computación, wearables, entretenimiento, periféricos, and fotografía; each product has ARS price, optional old price and discount, rating, stock, specs, image (remote Unsplash), and badges. Views: home (hero, benefits, sections, brands, newsletter), search results, product detail (installments, specs, stock urgency, related items), and cart (quantity control, coupons, free-shipping progress, order completion). Cart and coupon state persist in `localStorage`. The app is built with React 19 + Vite; no router library — navigation is state-based.
+## Oferta comercial actual
 
-No backend, accounts, or payment integration. Product images are remote Unsplash URLs and must not be re-hosted within this exercise.
+Los planes comerciales se presentan en `/home` y se contratan desde la landing
+con Mercado Pago. Los importes son mensuales y están expresados en pesos
+argentinos:
 
-## Brand Commitments
+| Plan | Precio mensual | Alcance principal |
+| --- | ---: | --- |
+| Inicial | $49.900 | Tienda, catálogo, stock básico y pedidos por WhatsApp |
+| Profesional | $89.900 | Inicial + Mercado Pago, POS, caja y reportes |
+| Negocio | $149.900 | Profesional + equipo, permisos, compras e inventario avanzado |
 
-Name: TechStore. Tagline context: "TechStore — Electrónica". Voice is casual Argentine Spanish with voseo ("Buscá", "agregá") and light emoji use throughout copy. Nothing beyond the name and voice was confirmed as binding.
+La configuración inicial se presenta por separado, desde $250.000. Los cargos
+de Mercado Pago son independientes y los paga cada comercio según las
+condiciones del procesador.
 
-## Evidence on Hand
+El alta comercial funciona así:
 
-The full catalog, copy, prices, badges, coupons, contact details, and address currently in the codebase are demo/fiction — confirmed by the owner as "por el momento nada es real." Future work must not present them as real commitments. No logos, brand assets, photography, testimonials, or legal documents exist.
+1. La persona elige un plan y completa sus datos en `/home`.
+2. Mercado Pago confirma la suscripción mediante un webhook firmado.
+3. El sistema envía un enlace de activación al email informado.
+4. El cliente crea su contraseña desde `/activar-cuenta`.
+5. Se crea el usuario administrador, el negocio y la suscripción con el plan
+   contratado.
 
-## Product Principles
+El enlace de activación es de un solo uso y tiene vencimiento. La contraseña no
+es temporal: la define el cliente durante la activación y luego puede cambiarla
+desde su panel. El contacto comercial de la landing es +54 9 11 7673-1388.
 
-1. Buenos Aires shoppers first: prices in ARS and installments front and center; never bury the price.
-2. Local service is the trust story: pickup, official warranty, and in-house technical service are the differentiators to surface.
-3. Browse-to-cart-to-order is one continuous, frictionless line: search, detail, and cart must never feel disconnected.
-4. Honest demo: the catalog and contact data are fictional; design must not fabricate credibility claims (testimonials, real stock guarantees, licensing).
+## Superficies del producto
+
+### Landing comercial — `/home`
+
+Presenta la propuesta de Tienda BNP, funcionalidades, vistas representativas,
+planes, preguntas frecuentes y el flujo de contratación. Los ejemplos de la
+landing son datos ficticios y no crean una tienda ni una cuenta operativa.
+
+### Activación — `/activar-cuenta`
+
+Permite que un cliente confirmado por Mercado Pago cree su contraseña y
+complete el alta de su cuenta de administración.
+
+### Tienda pública — `/u/<slug>`
+
+Cada comercio tiene su propio catálogo, carrito, checkout, información de
+contacto, envíos, cuotas y métodos de pago. La tienda pública no expone las
+credenciales privadas del negocio.
+
+### Panel — `/admin`
+
+El panel cambia sus accesos según el rol, los permisos y el plan del negocio.
+Incluye puesta en marcha para administradores, configuración del negocio,
+catálogo, ventas, stock, caja, reportes, promociones, usuarios y suscripción.
+
+## Capacidades actuales
+
+### Catálogo y tienda
+
+- Productos, categorías, marcas, ofertas y fotos.
+- Creación de marca o categoría desde el alta de un producto cuando todavía no
+  existe.
+- Importación de productos desde JSON y herramientas de ajuste de precios.
+- Búsqueda, filtros, detalle, relacionados, carrito y cupones.
+- Validación server-side de precio, descuento y stock.
+- Protección contra agregar al carrito productos sin stock.
+
+### Ventas y cobros
+
+- POS con descuentos por ticket y medios efectivo, tarjeta y transferencia.
+- Checkout online con Mercado Pago por comercio.
+- Pedido alternativo por WhatsApp.
+- Webhooks firmados, verificación de monto y tenant, y actualización del
+  estado del pedido en vivo.
+- Refresh de órdenes con token único anti-IDOR.
+- Historial, re-chequeo de pagos, devoluciones y presupuestos.
+
+### Inventario y operación
+
+- Movimientos de stock con motivo y responsable.
+- Ajustes, inventario físico, sobras, faltas y stock mínimo.
+- Compras a proveedores y actualización del costo del producto.
+- Apertura, arqueo, movimientos y cierre de caja.
+- Reportes de ventas, productos, ganancias, stock y clientes.
+- Cupones de descuento porcentual.
+
+### Equipo y puesta en marcha
+
+- Roles `superadmin`, `admin` y `operator`.
+- Permisos por módulo y operación.
+- El administrador puede cambiar su contraseña y la del operador según sus
+  permisos.
+- Onboarding persistente por negocio para configurar datos, catálogo, cobros,
+  entregas y revisión final.
+- El onboarding conserva las credenciales existentes y nunca muestra secretos
+  completos en el frontend.
+
+### Emails comerciales
+
+La activación de cuentas usa Resend. El dominio verificado es `tiendabnp.com` y
+el remitente configurado es `Tienda BNP <accesos@tiendabnp.com>`. Las respuestas
+se dirigen a `tiendabnp@gmail.com`. Las claves permanecen en variables de
+entorno y no se versionan.
+
+## Límites y funcionalidades no anunciadas
+
+No presentar como disponibles, salvo que se implementen y validen
+explícitamente:
+
+- Facturación ARCA.
+- Logística integrada.
+- Cuentas corrientes o crédito de clientes.
+- Variantes en el checkout.
+- Dominio personalizado automatizado.
+- Newsletter funcional.
+- Testimonios, métricas comerciales o clientes ficticios presentados como
+  reales.
+
+El catálogo y los datos de la tienda de ejemplo son material de demostración.
+
+## Arquitectura y seguridad
+
+- Frontend React 19 + Vite.
+- Backend Node.js + Express + Socket.IO.
+- MongoDB + Mongoose.
+- Multi-tenancy por `adminId` y `x-tenant-slug`.
+- JWT, bcrypt, roles y permisos.
+- Mercado Pago con credenciales por tienda guardadas en settings.
+- Firma HMAC de webhooks, validación de tenant y monto.
+- Cloudinary para imágenes.
+- Render y Vercel documentados como targets; producción actual en DigitalOcean.
+
+## Criterios de producto
+
+1. El comercio debe poder operar catálogo, venta y stock desde un mismo panel.
+2. La información y el dinero de un negocio nunca deben cruzarse con otro.
+3. El checkout debe recalcular precios y disponibilidad en el servidor.
+4. La landing debe distinguir claramente ejemplos de funcionalidades reales.
+5. Los planes comerciales deben mantenerse centralizados para evitar diferencias
+   entre la landing, el backend y los mensajes de contacto.

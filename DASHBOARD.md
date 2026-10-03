@@ -1,79 +1,99 @@
-# Visión: Dashboard completo de administración
+# Panel de administración
 
-Objetivo a largo plazo del proyecto. La tienda actual (web + admin de productos/ventas) va evolucionando hacia este panel. Cada módulo de los que existen hoy o se agreguen debe encajar en esta estructura.
+El panel vive en `/admin` y se adapta al rol, permisos y plan del negocio. La
+navegación se conserva en `sessionStorage` para que el usuario pueda retomar la
+última pantalla después de recargar.
 
-## Ventas
+## Módulos disponibles
 
-- Nueva venta / POS
-- Historial de ventas
-- Devoluciones
-- Presupuestos
+### Ventas
 
-## Productos
+- Nueva venta / POS.
+- Historial de ventas.
+- Devoluciones.
+- Presupuestos.
 
-- Productos
-- Categorías
-- Marcas
-- Variantes
-- Precios
-- Importar productos
+### Productos
 
-## Inventario
+- Productos.
+- Categorías.
+- Marcas.
+- Ofertas.
+- Importación JSON.
+- Ajuste masivo de precios por categoría.
 
-- Stock
-- Movimientos
-- Ajustes
-- Stock mínimo
-- Inventario físico
+Al crear o editar un producto, el administrador puede crear una marca o
+categoría sin salir de la pantalla si todavía no existe.
 
-## Compras
+### Inventario
 
-- Nueva compra
-- Historial
-- Proveedores
+- Stock y movimientos.
+- Ajustes con motivo.
+- Stock mínimo.
+- Inventario físico con sobras y faltas.
+- Compras y actualización de costo.
 
-## Clientes
+### Caja
 
-- Clientes
-- Historial de compras
-- Créditos / cuentas corrientes
+- Apertura de turno.
+- Movimientos de caja.
+- Arqueos.
+- Cierre con diferencia entre monto esperado y contado.
 
-## Caja
+### Reportes
 
-- Caja actual
-- Movimientos
-- Apertura / cierre
-- Arqueos
+- Ventas por fecha, método y origen.
+- Productos y facturación.
+- Ganancias y margen.
+- Valor y estado del stock.
+- Clientes y ticket promedio.
 
-## Reportes
+### Marketing
 
-- Ventas
-- Productos
-- Ganancias
-- Stock
-- Clientes
+- Cupones porcentuales.
+- Activación y desactivación de códigos.
 
-## Promociones
+### Configuración
 
-- Descuentos
-- Cupones
+- Datos y marca del negocio.
+- Envíos, cuotas y métodos de pago.
+- Credenciales de Mercado Pago por tienda.
+- Usuarios, roles y permisos.
+- Cambio de contraseña del administrador y operadores autorizados.
+- Estado de suscripción y plan.
 
-## Configuración
+### Puesta en marcha
 
-- Usuarios
-- Roles y permisos
-- Métodos de pago
-- Datos del negocio
-- Configuración general
+El onboarding del administrador guía la configuración de datos del negocio,
+URL, catálogo, stock, canal de cobro, entregas y revisión final. Se guarda por
+negocio, se puede pausar y retomar, y no elimina credenciales existentes.
 
-## Estado actual (septiembre 2026)
+## Roles
 
-- Inicio: no existe aún.
-- Ventas: el submenú Ventas del Dashboard tiene 4 entradas:
-  - "Nueva venta / POS" (`PosScreen`): catálogo con buscador, líneas con cantidades/descuento por ticket, cliente y método de pago (efectivo/tarjeta/transferencia). Al cobrar descuenta stock y registra la orden con `source: 'pos'` y `payment` (`POST /api/admin/pos`).
-  - "Historial de ventas" (`SalesScreen`), con captura de datos del pagador (email, nombre, DNI) y re-check del estado en Mercado Pago.
-  - "Devoluciones" (`ReturnsScreen`): chips Todas/Aprobadas/Devueltas; "Devolver" marca la orden como `refunded` con `returnedAt` y, solo si la venta fue `source: 'pos'`, restaura el stock (`POST /api/admin/orders/:id/return`).
-  - "Presupuestos" (`QuotesScreen` + `QuoteForm`): CRUD completo, numeración secuencial (base 1000), estados borrador/confirmado/cancelado, búsqueda por cliente/producto/nota y paginación (`/api/admin/quotes`).
-- Productos: existen "Productos" (CRUD con buscador y paginación server-side, más ajuste masivo de precios por categoría), "Categorías", "Marcas", "Ofertas" (estantería de ofertas de la web, cableada a `onSale`) e "Importar productos" (JSON). No existen pantallas "Precios" ni "Variantes": los precios individuales se editan en Productos/Ofertas, el ajuste masivo vive en Productos, y las variantes quedaron afuera del admin (el modelo y endpoints siguen en el server, sin UI). Todo bajo `server/routes/catalog-admin.js` y el submenú de Productos en el Dashboard.
-- Configuración: existe "Usuarios" (roles superadmin/admin).
-- Inventario, Compras, Clientes, Caja, Reportes, Promociones: pendientes.
+- `superadmin`: propietario de la plataforma. Puede crear negocios, asignar
+  planes y asistir a un negocio seleccionado.
+- `admin`: administra exclusivamente su propio negocio y las funciones
+  habilitadas por sus permisos y plan.
+- `operator`: trabaja con las pantallas autorizadas por el administrador; no
+  configura el negocio ni gestiona credenciales.
+
+## Principios de aislamiento
+
+Cada documento de negocio lleva `adminId`. El backend resuelve el tenant desde
+`x-tenant-slug` y aplica el filtro en cada operación. Un administrador nunca
+puede leer ni modificar los datos de otro negocio.
+
+## Funcionalidades que no deben anunciarse como disponibles
+
+Variantes de producto en checkout, facturación ARCA, logística integrada,
+cuentas corrientes, dominio automatizado y newsletter funcional siguen fuera
+del alcance comercial validado.
+
+## Ubicación del código
+
+- Vista: `src/views/Dashboard/`.
+- Pantallas: `src/views/Dashboard/components/<screen>/`.
+- Helpers compartidos: `src/views/Dashboard/components/common/`.
+- Rutas API: `server/routes/`.
+- Modelos: `server/models/`.
+- Autorización: `server/middleware/auth.js` y permisos del usuario.

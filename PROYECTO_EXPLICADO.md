@@ -1,4 +1,4 @@
-# Projecto explicado: Tienda online + panel de administración para locales
+# Proyecto explicado: Tienda BNP — tienda online + panel de administración
 
 > Este documento describe **todo** lo que hace este proyecto, pensado para que
 > una IA ayude a presentarlo **en persona a negocios locales** y prepare un
@@ -243,10 +243,24 @@ teléfono (así lo pide el modelo de negocio).
 
 ## 6. Estado real del proyecto
 
+### Oferta comercial y alta de cuentas
+
+La landing `/home` ofrece tres planes mensuales: Inicial ($49.900), Profesional
+($89.900) y Negocio ($149.900). La configuración inicial se informa por
+separado, desde $250.000. Los planes se centralizan en la landing y el backend
+comercial para evitar que cambien entre pantallas.
+
+El cliente selecciona un plan, paga la suscripción en Mercado Pago y recibe un
+enlace de activación por email. Desde `/activar-cuenta` define una contraseña
+permanente; no se crea una contraseña temporal. El enlace es de un solo uso y
+vence. El email se envía con Resend desde `accesos@tiendabnp.com`, cuyo dominio
+`tiendabnp.com` está verificado.
+
 ### Listo y funcionando
 - Tienda pública completa (home, catálogo, búsqueda, detalle, carrito,
   cupones, checkout online y por WhatsApp, estado de pedido).
-- Panel de administración completo con las 9 pantallas del punto 4.
+- Panel de administración completo con ventas, productos, inventario, caja,
+  reportes, promociones, configuración, usuarios y puesta en marcha.
 - Pagos Mercado Pago por tienda, webhooks firmados, refresh anti-IDOR,
   tracking en vivo.
 - Multi-tenancy total, roles y permisos, settings por tienda.

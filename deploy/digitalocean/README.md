@@ -1,27 +1,28 @@
 # Producción en DigitalOcean
 
-Despliegue verificado el 1 de octubre de 2026.
+Despliegue verificado el 3 de octubre de 2026.
 
-- Panel: https://137.184.155.228/admin
-- Tiendas existentes: https://137.184.155.228/u/local y https://137.184.155.228/u/mi-tienda
+- Sitio: https://tiendabnp.com
+- Panel: https://tiendabnp.com/admin
+- Tiendas existentes: https://tiendabnp.com/u/local y https://tiendabnp.com/u/mi-tienda
 - SSH desde esta PC: `ssh digitalocean` (usuario `appuser`).
 - Proyecto: `/var/www/electronics-store`.
 - Runtime aislado: Node 22.23.3 en `/opt/electronics-runtime/node_modules/node/bin/node`.
 - Backend: `127.0.0.1:3000`; Nginx expone solamente HTTP/HTTPS.
-- Servicio: `electronics-store.service`, habilitado al iniciar el servidor, ejecutado como `appuser`.
+- Servicio: `electronics-store-user.service`, ejecutado como servicio de usuario de `appuser`.
 - El proceso anterior de PM2 quedó detenido y su servicio de inicio deshabilitado.
 
 ## Operación
 
 ```bash
-sudo systemctl status electronics-store
-sudo systemctl restart electronics-store
-sudo journalctl -u electronics-store -n 100 --no-pager
-curl --fail https://137.184.155.228/api/health
+systemctl --user status electronics-store-user.service
+systemctl --user restart electronics-store-user.service
+journalctl --user -u electronics-store-user.service -n 100 --no-pager
+curl --fail https://tiendabnp.com/api/health
 sudo nginx -t
 ```
 
-`sudo` requiere la contraseña existente de `appuser`. No se habilitó acceso SSH de root ni sudo sin contraseña.
+El servicio se opera con `systemctl --user` como `appuser`; no requiere sudo.
 
 ## HTTPS
 
@@ -56,8 +57,9 @@ Se conservaron copias previas de Nginx, configuración y frontend en `/root/elec
 
 ## Pendientes para cobrar y lanzar comercialmente
 
-- `/u/local` usa una cuenta de prueba de Mercado Pago (verificado contra su API). Las demás tiendas inspeccionadas no tienen credenciales de cobro online.
-- Conectar credenciales reales de cada comercio y su secreto de webhook desde el panel; hacer una compra controlada y verificar notificación, stock y devolución con autorización del dueño.
+- Las credenciales de Mercado Pago se configuran por tienda desde el panel; no se deben subir al repositorio.
+- La suscripción comercial usa Mercado Pago global de Tienda BNP y webhook separado para crear nuevas cuentas.
+- Resend está verificado para `tiendabnp.com` y el remitente de activación es `accesos@tiendabnp.com`.
 - Revisar datos de contacto, políticas, stock y precios: hay productos a $1 y textos/contactos de ejemplo. No se modificaron datos comerciales sin instrucciones del dueño.
 - La tienda global `/` no tiene productos; cada comercio tiene su propia URL `/u/<slug>`.
 - Elegir dominio y tienda a lanzar, completar copias externas y ensayar restauración antes de operar a escala.
