@@ -19,8 +19,11 @@ import { CashMovement } from '../models/CashMovement.js'
 import { CashCount } from '../models/CashCount.js'
 import { requireAuth, requirePermission } from '../middleware/auth.js'
 import { generatePassword } from '../lib/passwords.js'
-import { getSettings, saveSettings, ALL_PERMISSIONS, permissionsForRole } from '../lib/settings.js'
+import { getSettings, saveSettings, ALL_PERMISSIONS, permissionsForUser } from '../lib/settings.js'
+import { planByCode, normalizePlanCode } from '../lib/plans.js'
 import { requireTenantIdOf, tenantIdOf } from '../lib/tenant.js'
+import { env } from '../config/env.js'
+import { sendAdminWelcomeEmail } from '../services/email.js'
 
 const router = express.Router()
 
@@ -120,14 +123,21 @@ router.get('/', async (req, res) => {
     const tenant = tenantIdOf(req)
     const filter = tenant ? { $or: [{ _id: tenant }, { adminId: tenant }] } : {}
     const users = await User.find(filter).sort({ role: 1, createdAt: 1 }).lean()
+    const adminIds = users.filter((u) => u.role === 'admin').map((u) => u._id)
+    const subscriptions = await Subscription.find({ adminId: { $in: adminIds } }).select('-payments').lean()
+    const byAdmin = new Map(subscriptions.map((s) => [String(s.adminId), s]))
     const self = String(req.user.sub)
     const mapped = await Promise.all(
       users.map(async (u) => {
         const tenant = u.role === 'admin' ? u._id : u.adminId
-        const perms = await permissionsForRole(u.role, tenant)
+        const perms = await permissionsForUser(u, tenant)
         const explicit = Array.isArray(u.permissions) ? u.permissions : []
         const effective = explicit.length ? explicit : perms
-        return toUserDoc(u, { permissions: effective, isSelf: String(u._id) === self })
+        return toUserDoc(u, {
+          permissions: effective,
+          isSelf: String(u._id) === self,
+          ...(u.role === 'admin' ? { subscription: subscriptionSummary(byAdmin.get(String(u._id))) } : {}),
+        })
       }),
     )
     return res.json(mapped)
@@ -138,7 +148,7 @@ router.get('/', async (req, res) => {
 })
 
 router.post('/', async (req, res) => {
-  const { name, email, role, adminId, businessSlug, password, storeName } = req.body || {}
+  const { name, email, role, adminId, businessSlug, password, storeName, planCode } = req.body || {}
   if (!name || !email) {
     return res.status(400).json({ error: 'Nombre y email requeridos' })
   }
@@ -150,6 +160,10 @@ router.post('/', async (req, res) => {
 
   const isSuperadmin = req.user.role === 'superadmin'
   const targetRole = isSuperadmin ? parseRole(role) || 'admin' : 'operator'
+
+  if (targetRole === 'admin' && !manualPassword) {
+    return res.status(400).json({ error: 'Definí una contraseña para el administrador' })
+  }
 
   if (targetRole === 'operator') {
     const tenant = isSuperadmin ? adminId : requireTenantIdOf(req)
@@ -165,6 +179,8 @@ router.post('/', async (req, res) => {
   if (targetRole === 'admin' && businessSlug && !cleanSlug(businessSlug)) {
     return res.status(400).json({ error: 'El slug usa minúsculas, números y guiones' })
   }
+
+  const selectedPlan = targetRole === 'admin' ? planByCode(normalizePlanCode(planCode) || 'inicial') : null
 
   try {
     const normalizedEmail = String(email).trim().toLowerCase()
@@ -208,14 +224,41 @@ router.post('/', async (req, res) => {
       const trialUntil = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
       await Subscription.updateOne(
         { adminId: user._id },
-        { $setOnInsert: { adminId: user._id, status: 'trial', plan: 'Prueba gratuita', price: 0, dueDate: trialUntil } },
+        { $setOnInsert: { adminId: user._id, status: 'trial', planCode: selectedPlan.code, plan: selectedPlan.name, price: selectedPlan.price, dueDate: trialUntil } },
         { upsert: true },
       )
     }
 
+    let emailDelivery = null
+    if (targetRole === 'admin') {
+      const settings = await getSettings({ fresh: true, tenant: user._id })
+      const storeNameForEmail = settings.store?.name || createdData.name
+      const panelUrl = new URL('/admin', env.clientUrl).toString()
+      const storeUrl = user.businessSlug
+        ? new URL(`/u/${user.businessSlug}`, env.clientUrl).toString()
+        : null
+      try {
+        emailDelivery = await sendAdminWelcomeEmail({
+          name: user.name,
+          email: user.email,
+          storeName: storeNameForEmail,
+          planName: selectedPlan.name,
+          planPrice: `$${selectedPlan.price.toLocaleString('es-AR')}`,
+          panelUrl,
+          storeUrl,
+          password: manualPassword || generatedPassword,
+        })
+      } catch (emailError) {
+        console.error('Admin welcome email error:', emailError.message)
+        emailDelivery = { sent: false, skipped: false, reason: 'email_send_failed' }
+      }
+    }
+
     return res
       .status(201)
-      .json(manualPassword ? toUserDoc(user, { trialDays: targetRole === 'admin' ? 14 : undefined }) : toUserDoc(user, { password: generatedPassword, trialDays: targetRole === 'admin' ? 14 : undefined }))
+      .json(manualPassword
+        ? toUserDoc(user, { trialDays: targetRole === 'admin' ? 14 : undefined, planCode: selectedPlan?.code, emailDelivery })
+        : toUserDoc(user, { password: generatedPassword, trialDays: targetRole === 'admin' ? 14 : undefined, planCode: selectedPlan?.code, emailDelivery }))
   } catch (error) {
     console.error('Users create error:', error)
     return res.status(500).json({ error: 'No se pudo crear el usuario' })
@@ -223,12 +266,16 @@ router.post('/', async (req, res) => {
 })
 
 router.put('/:id', async (req, res) => {
-  const { name, role, active, password, businessSlug, adminId, email } = req.body || {}
+  const { name, role, active, password, businessSlug, adminId, email, planCode } = req.body || {}
   const self = String(req.user.sub) === String(req.params.id)
   const isSuperadmin = req.user.role === 'superadmin'
 
   if (role && !parseRole(role)) {
     return res.status(400).json({ error: 'Rol inválido' })
+  }
+  const selectedPlan = planCode !== undefined ? planByCode(normalizePlanCode(planCode)) : null
+  if (planCode !== undefined && !selectedPlan) {
+    return res.status(400).json({ error: 'Plan inválido' })
   }
 
   try {
@@ -327,7 +374,19 @@ router.put('/:id', async (req, res) => {
     }
     await user.save()
 
-    return res.json(toUserDoc(user))
+    if (isSuperadmin && nextRole === 'admin' && selectedPlan) {
+      const trialUntil = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+      await Subscription.updateOne(
+        { adminId: user._id },
+        {
+          $set: { planCode: selectedPlan.code, plan: selectedPlan.name, price: selectedPlan.price },
+          $setOnInsert: { adminId: user._id, status: 'trial', dueDate: trialUntil },
+        },
+        { upsert: true },
+      )
+    }
+
+    return res.json(toUserDoc(user, { planCode: selectedPlan?.code }))
   } catch (error) {
     console.error('Users update error:', error)
     return res.status(500).json({ error: 'No se pudo actualizar el usuario' })

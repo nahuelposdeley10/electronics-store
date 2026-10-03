@@ -29,6 +29,10 @@ export const env = {
   cloudinaryCloudName: process.env.CLOUDINARY_CLOUD_NAME,
   cloudinaryApiKey: process.env.CLOUDINARY_API_KEY,
   cloudinaryApiSecret: process.env.CLOUDINARY_API_SECRET,
+  emailProvider: String(process.env.EMAIL_PROVIDER || 'none').trim().toLowerCase(),
+  resendApiKey: process.env.RESEND_API_KEY,
+  emailFrom: process.env.EMAIL_FROM,
+  emailReplyTo: process.env.EMAIL_REPLY_TO,
   bodyLimit: process.env.BODY_LIMIT || '100kb',
   movementRetentionDays: Number(process.env.MOVEMENT_RETENTION_DAYS) || 365,
   loginRateLimit: {

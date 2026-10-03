@@ -11,10 +11,13 @@ export default function SearchSelect({
   allLabel = 'Todas',
   allValue = '',
   placeholder,
+  createLabel,
+  onCreate,
 }) {
   const [open, setOpen] = useState(false)
   const [text, setText] = useState('')
   const [hi, setHi] = useState(0)
+  const [creating, setCreating] = useState(false)
   const inputRef = useRef(null)
 
   const selected = options.find((o) => o.value === value)
@@ -23,6 +26,13 @@ export default function SearchSelect({
   const filtered = list.filter(
     (o) => o.value === allValue || !q || o.label.toLowerCase().includes(q),
   )
+  const hasExactMatch = options.some(
+    (o) => o.label.trim().toLowerCase() === q || String(o.value).trim().toLowerCase() === q,
+  )
+  const canCreate = Boolean(onCreate && q && !hasExactMatch && !creating)
+  const menuItems = canCreate
+    ? [...filtered, { value: '__create__', label: createLabel || `Crear “${text.trim()}”`, create: true }]
+    : filtered
 
   const shown = open ? text : selected ? selected.label : ''
 
@@ -31,6 +41,17 @@ export default function SearchSelect({
     setOpen(false)
     setText('')
     inputRef.current?.blur()
+  }
+
+  const createOption = async () => {
+    if (!canCreate) return
+    setCreating(true)
+    try {
+      const created = await onCreate(text.trim())
+      if (created?.value !== undefined) selectOption(created)
+    } finally {
+      setCreating(false)
+    }
   }
 
   const onKeyDown = (e) => {
@@ -49,8 +70,9 @@ export default function SearchSelect({
     } else if (e.key === 'Enter') {
       e.preventDefault()
       if (open) {
-        const o = filtered[Math.min(hi, filtered.length - 1)]
-        if (o) selectOption(o)
+        const o = menuItems[Math.min(hi, menuItems.length - 1)]
+        if (o?.create) createOption()
+        else if (o) selectOption(o)
       } else {
         setOpen(true)
         setText('')
@@ -97,21 +119,22 @@ export default function SearchSelect({
         />
         {open && (
           <ul className="filter-combo-menu" id={`${id}-menu`} role="listbox">
-            {filtered.length === 0 && (
+            {menuItems.length === 0 && (
               <li className="filter-combo-empty" role="option" aria-disabled="true">
                 Sin resultados
               </li>
             )}
-            {filtered.map((o, i) => (
+            {menuItems.map((o, i) => (
               <li key={`${o.value}-${o.label}`} role="option" aria-selected={o.value === value}>
                 <button
                   id={`${id}-opt-${i}`}
                   type="button"
-                  className={`filter-combo-option${i === hi ? ' hi' : ''}`}
+                  className={`filter-combo-option${i === hi ? ' hi' : ''}${o.create ? ' filter-combo-create' : ''}`}
                   onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => selectOption(o)}
+                  onClick={() => (o.create ? createOption() : selectOption(o))}
+                  disabled={creating}
                 >
-{o.label}
+                  {creating && o.create ? 'Creando…' : o.label}
                   {o.tag && <span className="filter-combo-tag">{o.tag}</span>}
                 </button>
               </li>

@@ -104,11 +104,13 @@ puesta en marcha, planes, preguntas frecuentes y contacto. Los ejemplos son
 - Datos comerciales centralizados en `src/views/CompanyHome/content.js`:
   Inicial **$49.900/mes**, Profesional **$89.900/mes**, Negocio **$149.900/mes**
   (ARS). Configuración inicial **desde $250.000**, separada del abono.
-- Contacto comercial: **+54 9 11 7673-1388**. “Quiero probarlo” lleva a planes;
-  “Elegir plan” abre WhatsApp con nombre y precio para revisar antes de enviar.
-  No usa el contacto ni los ajustes de ningún comercio.
-- La oferta es comercial: **no implementa ni cambia restricciones de
-  suscripción, permisos ni cobros recurrentes del backend**.
+- Contacto comercial: **+54 9 11 7673-1388**. Cada plan permite iniciar una
+  suscripción mensual con Mercado Pago usando las credenciales globales de
+  Tienda BNP, sin reutilizar las credenciales de ningún comercio.
+- Cuando Mercado Pago confirma la suscripción, el backend envía un link de
+  activación al email informado. El link vence en 48 horas, se puede usar una
+  sola vez y permite que el cliente cree su propia contraseña; recién entonces
+  se crea el usuario admin, su negocio y su suscripción en la base.
 - `App` separa, mediante carga diferida, `CompanyHome` de `StoreApp`.
   En `/home` no se montan catálogo, carrito, ajustes ni autenticación de la
   tienda, y no se necesita que su API esté disponible. `/admin` y `/u/<slug>`
@@ -284,6 +286,10 @@ Las capturas del panel, tienda y pagos se pueden agregar por separado.
 | `MP_ACCESS_TOKEN`         | Token de pago de Mercado Pago (solo backend)                     | —                           |
 | `MP_PUBLIC_KEY`           | Clave pública MP (checkout)                                      | —                           |
 | `MP_WEBHOOK_SECRET`       | Firma de webhooks MP; sin ella, los webhooks se rechazan (503)   | —                           |
+| `EMAIL_PROVIDER`          | Proveedor de emails de activación (`none` o `resend`)            | `none`                      |
+| `RESEND_API_KEY`          | API key del proveedor de emails (solo backend)                   | —                           |
+| `EMAIL_FROM`              | Remitente verificado de los emails comerciales                   | —                           |
+| `EMAIL_REPLY_TO`          | Dirección opcional de respuesta                                  | —                           |
 | `MONGODB_URI`             | Conexión a MongoDB                                               | —                           |
 | `MOVEMENT_RETENTION_DAYS` | TTL de movimientos de stock/caja (índice `expiresAt`)            | `365`                       |
 | `CLIENT_URL`              | URL pública del frontend (dev: `http://localhost:5173`)          | `http://localhost:5173`     |
@@ -378,18 +384,23 @@ un Mongo (service container), corre `npm ci`, lint y `npm test` con
 repo.
 ## Suscripciones de locales
 
+Desde `/home`, los nuevos clientes pueden elegir un plan y crear una
+suscripción mensual de Mercado Pago. El webhook firmado de
+`/api/webhooks/mercadopago/subscriptions` confirma la autorización y dispara el
+email de activación. El endpoint `/activar-cuenta` recibe el token de un solo
+uso, crea la cuenta del admin con una contraseña definida por el cliente y
+asigna el plan contratado.
+
 El superadmin administra el abono desde **Negocios → Suscripción**. Cada negocio
 tiene su plan, precio mensual en ARS, vencimiento y estado. Las suscripciones
 activas o en prueba se muestran vencidas al día siguiente del vencimiento, usando
 la fecha de Argentina. Los negocios existentes comienzan sin configurar.
 
-Los cobros se registran manualmente junto con la fecha de pago, medio, referencia
-y nuevo vencimiento. Registrar un pago activa la suscripción y conserva el
-historial con el usuario que lo registró. Los reintentos del mismo pago no crean
-duplicados; una revisión evita sobrescribir cambios hechos desde otra sesión.
-Estos estados son administrativos: no cobran automáticamente ni desactivan la
-tienda. Un negocio con una suscripción registrada no se puede eliminar mientras
-conserve esos datos.
+Los negocios existentes todavía pueden administrarse manualmente desde el
+panel junto con la fecha de pago, medio, referencia y nuevo vencimiento. Los
+reintentos no crean duplicados; una revisión evita sobrescribir cambios hechos
+desde otra sesión. Un negocio con una suscripción registrada no se puede
+eliminar mientras conserve esos datos.
 
 Las URLs públicas de negocios inexistentes o desactivados muestran **Tienda no
 disponible**. Sus APIs devuelven HTTP 404 con el código STORE_UNAVAILABLE y no

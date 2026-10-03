@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { apiGet, apiPost, apiPut } from '@/lib/api'
 import { formatARS } from '@/data/format'
+import { BUSINESS_PLANS } from '@/data/plans'
 import { useToast } from '@/context/useToast'
 import './styles.css'
 
@@ -9,13 +10,18 @@ const displayDate = (value) => value ? value.split('-').reverse().join('/') : 'S
 const today = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Argentina/Buenos_Aires', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
 
 function SubscriptionForms({ data, business, onChange }) {
-  const [form, setForm] = useState({ plan: data.plan, price: data.price, status: data.status === 'unconfigured' ? 'trial' : data.status, dueDate: data.dueDate })
+  const [form, setForm] = useState({ planCode: data.planCode || '', plan: data.plan, price: data.price, status: data.status === 'unconfigured' ? 'trial' : data.status, dueDate: data.dueDate })
   const [payment, setPayment] = useState(() => ({ requestId: crypto.randomUUID(), amount: data.price || '', paidAt: today(), dueDate: data.dueDate, method: 'transferencia', reference: '' }))
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const { showToast } = useToast()
   const path = `/api/admin/subscriptions/${business.id}`
   const change = (setter, key) => (event) => setter((old) => ({ ...old, [key]: event.target.value }))
+  const changePlan = (event) => {
+    const planCode = event.target.value
+    const plan = BUSINESS_PLANS.find((item) => item.code === planCode)
+    setForm((old) => ({ ...old, planCode, plan: plan?.name || old.plan, price: plan?.price ?? old.price }))
+  }
   const save = async (event, isPayment) => {
     event.preventDefault()
     if (busy) return
@@ -35,7 +41,10 @@ function SubscriptionForms({ data, business, onChange }) {
       <form onSubmit={(event) => save(event, false)} className="subscription-card">
         <h2>Plan del negocio</h2>
         <fieldset disabled={busy}>
-          <label>Plan<input value={form.plan} onChange={change(setForm, 'plan')} required maxLength={80} placeholder="Ej. Mensual estándar" /></label>
+          <label>Plan<select value={form.planCode} onChange={changePlan} required>
+            <option value="">Elegí un plan…</option>
+            {BUSINESS_PLANS.map((plan) => <option key={plan.code} value={plan.code}>{plan.name} · {formatARS(plan.price)} / mes</option>)}
+          </select></label>
           <label>Precio mensual (ARS)<input type="number" min="0" max="100000000" step="0.01" value={form.price} onChange={change(setForm, 'price')} required /></label>
           <label>Vencimiento<input type="date" value={form.dueDate} onChange={change(setForm, 'dueDate')} required /></label>
           <label>Estado<select value={form.status} onChange={change(setForm, 'status')}>

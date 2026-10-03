@@ -8,6 +8,7 @@ import { getSettings } from '../lib/settings.js'
 import { env, isAllowedOrigin } from '../config/env.js'
 import { publicTenantId, requirePublicTenant } from '../lib/tenant.js'
 import { createRefreshToken, verifyRefreshToken } from '../lib/order-token.js'
+import { getTenantPlan } from '../lib/plans.js'
 
 const router = express.Router()
 
@@ -60,6 +61,10 @@ router.post('/orders/:id/refresh', async (req, res) => {
 router.post('/checkout', requirePublicTenant, async (req, res) => {
   try {
     const tenant = await publicTenantId(req)
+    const plan = await getTenantPlan(tenant)
+    if (!plan.includes('onlinePayments')) {
+      return res.status(400).json({ error: 'Los pagos online están disponibles desde el plan Profesional' })
+    }
     const cart = await buildCart(req.body.items, req.body.coupon, tenant)
     if (cart.lineItems.length === 0) {
       return res.status(400).json({ error: 'El carrito está vacío' })

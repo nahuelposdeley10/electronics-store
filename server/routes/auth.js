@@ -6,6 +6,8 @@ import { requireAuth } from '../middleware/auth.js'
 import { User } from '../models/User.js'
 import { env } from '../config/env.js'
 import { permissionsForUser } from '../lib/settings.js'
+import { Subscription } from '../models/Subscription.js'
+import { inferPlanCode } from '../lib/plans.js'
 
 const router = express.Router()
 
@@ -48,6 +50,12 @@ router.post('/login', loginLimiter, async (req, res) => {
       { expiresIn: '12h' },
     )
 
+    const plan = user.role === 'admin'
+      ? inferPlanCode(await Subscription.findOne({ adminId: user._id }).select('planCode plan').lean())
+      : user.role === 'operator'
+        ? inferPlanCode(await Subscription.findOne({ adminId: user.adminId }).select('planCode plan').lean())
+        : null
+
     return res.json({
       token,
       user: {
@@ -57,6 +65,7 @@ router.post('/login', loginLimiter, async (req, res) => {
         role: user.role,
         adminId: user.adminId ? user.adminId.toString() : null,
         businessSlug: user.businessSlug || null,
+        planCode: plan,
       },
     })
   } catch (error) {
@@ -69,6 +78,11 @@ router.get('/me', requireAuth, async (req, res) => {
   try {
     const user = await User.findById(req.user.sub).lean()
     const perms = await permissionsForUser(user, req.user.adminId || user?.adminId)
+    const plan = user?.role === 'admin'
+      ? inferPlanCode(await Subscription.findOne({ adminId: user._id }).select('planCode plan').lean())
+      : user?.role === 'operator'
+        ? inferPlanCode(await Subscription.findOne({ adminId: user.adminId }).select('planCode plan').lean())
+        : null
     return res.json({
       user: {
         id: user ? user._id : req.user.sub,
@@ -77,6 +91,7 @@ router.get('/me', requireAuth, async (req, res) => {
         role: req.user.role || user?.role,
         adminId: req.user.adminId || (user?.adminId ? user.adminId.toString() : null),
         businessSlug: user?.businessSlug || null,
+        planCode: plan,
       },
       perms,
     })

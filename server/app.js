@@ -20,6 +20,7 @@ import settingsRouter from './routes/settings.js'
 import cashRouter from './routes/cash.js'
 import subscriptionsRouter from './routes/subscriptions.js'
 import onboardingRouter from './routes/onboarding.js'
+import commercialSubscriptionsRouter from './routes/commercial-subscriptions.js'
 
 const DIST_DIR = path.resolve('dist')
 
@@ -85,6 +86,7 @@ export function createApp() {
   })
 
   app.use('/api', checkoutRouter)
+  app.use('/api/commercial/subscriptions', commercialSubscriptionsRouter)
   app.use('/api', webhooksRouter)
   app.use('/api', catalogRouter)
   app.use('/api/auth', authRouter)

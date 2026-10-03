@@ -3,6 +3,8 @@ import { GAMING_DEFAULTS } from '../../src/lib/gaming.js'
 import { Setting } from '../models/Setting.js'
 import { roundMoney } from './money.js'
 import { APPEARANCE_DEFAULTS, normalizeAppearance } from '../../src/lib/appearance.js'
+import { Subscription } from '../models/Subscription.js'
+import { permissionsForPlan, inferPlanCode } from './plans.js'
 
 export const ALL_PERMISSIONS = [
   'settings.manage',
@@ -15,6 +17,9 @@ export const ALL_PERMISSIONS = [
   'quotes.delete',
   'cash.manage',
   'pos.manage',
+  'inventory.read',
+  'sales.read',
+  'reports.view',
 ]
 
 export const PERMISSION_LABELS = {
@@ -28,6 +33,9 @@ export const PERMISSION_LABELS = {
   'quotes.delete': 'Eliminar presupuestos',
   'cash.manage': 'Caja (apertura, movimientos y arqueos)',
   'pos.manage': 'Nueva venta / POS',
+  'inventory.read': 'Consulta de inventario',
+  'sales.read': 'Ventas e historial',
+  'reports.view': 'Reportes',
 }
 
 export const OPERATOR_DEFAULT_PERMISSIONS = [
@@ -36,6 +44,9 @@ export const OPERATOR_DEFAULT_PERMISSIONS = [
   'pos.manage',
   'coupons.manage',
   'offers.manage',
+  'inventory.read',
+  'sales.read',
+  'reports.view',
   'inventory.write',
 ]
 
@@ -321,8 +332,14 @@ export async function permissionsForRole(role, tenant) {
 export async function permissionsForUser(user, tenant) {
   if (!user) return []
   if (user.role === 'superadmin') return [...ALL_PERMISSIONS]
+  const subscription = tenant && mongoose.connection.readyState === 1 && mongoose.Types.ObjectId.isValid(tenant)
+    ? await Subscription.findOne({ adminId: tenant }).select('planCode plan').lean()
+    : null
+  const planCode = inferPlanCode(subscription)
+  const planPermissions = planCode ? permissionsForPlan(planCode) : null
   if (Array.isArray(user.permissions) && user.permissions.length) {
-    return user.permissions.filter((p) => ALL_PERMISSIONS.includes(p))
+    return user.permissions.filter((p) => ALL_PERMISSIONS.includes(p) && (!planPermissions || planPermissions.has(p)))
   }
-  return permissionsForRole(user.role, tenant)
+  const rolePermissions = await permissionsForRole(user.role, tenant)
+  return planPermissions ? rolePermissions.filter((p) => planPermissions.has(p)) : rolePermissions
 }

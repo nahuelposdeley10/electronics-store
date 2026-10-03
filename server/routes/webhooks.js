@@ -8,6 +8,8 @@ import { deductApprovedStock } from '../lib/order-stock.js'
 import { env } from '../config/env.js'
 import { Subscription } from '../models/Subscription.js'
 import { getBillingService } from '../services/mercadopago.js'
+import { CommercialSignup } from '../models/CommercialSignup.js'
+import { deliverActivation } from './commercial-subscriptions.js'
 
 const router = express.Router()
 
@@ -32,6 +34,15 @@ router.post('/webhooks/mercadopago/subscriptions', async (req, res) => {
       : status === 'paused' ? 'paused'
         : status === 'cancelled' ? 'cancelled' : null
     if (!mapped) return res.sendStatus(200)
+    const commercial = await CommercialSignup.findOne({ 'billing.preapprovalId': String(id) })
+    if (commercial) {
+      await CommercialSignup.updateOne(
+        { _id: commercial._id },
+        { $set: { 'billing.status': status, status: mapped === 'active' ? 'ready' : mapped } },
+      )
+      if (mapped === 'active') await deliverActivation(commercial)
+      return res.sendStatus(200)
+    }
     await Subscription.updateOne(
       { 'billing.preapprovalId': String(id) },
       { $set: { 'billing.status': status, status: mapped }, $inc: { revision: 1 } },

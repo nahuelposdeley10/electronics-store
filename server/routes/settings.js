@@ -6,6 +6,7 @@ import { uploadImage } from '../services/images.js'
 import { publicTenantId, requirePublicTenant, requireTenantIdOf } from '../lib/tenant.js'
 import { allowedImageFilter } from '../lib/image-guard.js'
 import { User } from '../models/User.js'
+import { getTenantPlan } from '../lib/plans.js'
 
 const router = express.Router()
 
@@ -30,6 +31,7 @@ router.get('/settings/public', requirePublicTenant, async (req, res) => {
   try {
     const tenant = await publicTenantId(req)
     const settings = await getSettings({ fresh: true, tenant })
+    const plan = await getTenantPlan(tenant)
     const body = {}
     for (const section of PUBLIC_SECTIONS) {
       body[section] = settings[section] || {}
@@ -40,6 +42,7 @@ router.get('/settings/public', requirePublicTenant, async (req, res) => {
       body.payments.mercadopago = {
         onlineEnabled:
           settings.payments?.online !== false &&
+          plan.includes('onlinePayments') &&
           Boolean(settings.payments?.mercadopago?.accessToken),
       }
     }
@@ -80,6 +83,12 @@ router.put('/admin/settings', requireAuth, requirePermission('settings.manage'),
     }
     if (section === 'roles' && req.user.role !== 'superadmin') {
       return res.status(403).json({ error: 'Los permisos ahora se editan por usuario' })
+    }
+    if (section === 'payments' && req.user.role !== 'superadmin') {
+      const plan = await getTenantPlan(requireTenantIdOf(req))
+      if (!plan.includes('onlinePayments')) {
+        return res.status(403).json({ error: 'Mercado Pago está disponible desde el plan Profesional' })
+      }
     }
     const saved = await saveSettings({ section, value, tenant: requireTenantIdOf(req) })
     return res.json(saved[section] || {})

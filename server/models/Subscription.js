@@ -14,6 +14,7 @@ const paymentSchema = new mongoose.Schema({
 
 const schema = new mongoose.Schema({
   adminId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
+  planCode: { type: String, enum: ['', 'inicial', 'profesional', 'negocio'], default: '' },
   plan: { type: String, default: '', maxlength: 80 },
   price: { type: Number, default: 0, min: 0 },
   dueDate: { type: String, default: '' },

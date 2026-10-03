@@ -1,3 +1,5 @@
+import { BUSINESS_PLANS } from '../../data/plans.js'
+
 export const companyMeta = {
   title: 'Tienda BNP — Tu tienda online. Tu negocio bajo control.',
   description: 'Tienda online y gestión para comercios argentinos: catálogo, WhatsApp, Mercado Pago, ventas presenciales, stock, caja y reportes. Conocé los planes de Tienda BNP.',
@@ -12,15 +14,15 @@ export const planMessage = (plan) => `Hola, quiero conocer el plan ${plan.name} 
 
 // Oferta comercial: no modifica permisos ni suscripciones del backend.
 export const plans = [
-  { id: 'inicial', name: 'Inicial', price: 49900, label: 'Tu primera tienda online',
+  { id: BUSINESS_PLANS[0].code, name: BUSINESS_PLANS[0].name, price: BUSINESS_PLANS[0].price, label: 'Tu primera tienda online',
     description: 'Mostrá lo que vendés y recibí pedidos por WhatsApp.', includes: 'Lo esencial para empezar',
     features: ['Tienda online con tu marca', 'Catálogo, fotos, categorías y marcas', 'Ofertas y cupones', 'Importación JSON / CSV y ajuste de precios', 'Stock básico de productos', 'Carrito y pedidos por WhatsApp'],
     scope: 'Sin cobros online, POS ni caja.' },
-  { id: 'profesional', name: 'Profesional', price: 89900, label: 'Web y mostrador conectados',
+  { id: BUSINESS_PLANS[1].code, name: BUSINESS_PLANS[1].name, price: BUSINESS_PLANS[1].price, label: 'Web y mostrador conectados',
     description: 'Sumá cobros online y ordená la operación de tu local.', includes: 'Todo lo de Inicial, más',
     features: ['Mercado Pago con tu propia cuenta', 'Punto de venta presencial (POS)', 'Historial de ventas y devoluciones', 'Presupuestos', 'Apertura, arqueo y cierre de caja', 'Reportes de ventas, ganancias y clientes'],
     scope: 'Sin equipo ni inventario avanzado.' },
-  { id: 'negocio', name: 'Negocio', price: 149900, label: 'Más control para tu equipo',
+  { id: BUSINESS_PLANS[2].code, name: BUSINESS_PLANS[2].name, price: BUSINESS_PLANS[2].price, label: 'Más control para tu equipo',
     description: 'Organizá a tu equipo, las compras y el inventario.', includes: 'Todo lo de Profesional, más',
     features: ['Accesos para tu equipo', 'Roles y permisos por función', 'Registro de compras', 'Historial de movimientos y ajustes', 'Recuentos de inventario físico', 'Control de stock mínimo'],
     scope: 'Para una operación con más personas y procesos.' },

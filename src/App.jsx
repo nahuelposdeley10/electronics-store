@@ -4,6 +4,7 @@ import './styles/ui.css'
 
 const CompanyHome = lazy(() => import('@/views/CompanyHome'))
 const StoreApp = lazy(() => import('./StoreApp'))
+const AccountActivation = lazy(() => import('@/views/AccountActivation'))
 
 export default function App() {
   const [route, setRoute] = useState(parseLocation)
@@ -15,7 +16,7 @@ export default function App() {
   const isCompany = route.name === 'company-home' || route.name === 'plans'
   return (
     <Suspense fallback={<main role="status" className="app-route-loading">Cargando…</main>}>
-      {isCompany ? <CompanyHome legacyPlans={route.name === 'plans'} /> : <StoreApp />}
+      {isCompany ? <CompanyHome legacyPlans={route.name === 'plans'} /> : route.name === 'account-activation' ? <AccountActivation token={route.payload?.token} /> : <StoreApp />}
     </Suspense>
   )
 }

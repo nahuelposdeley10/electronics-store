@@ -2,13 +2,14 @@ import express from 'express'
 import { Order } from '../models/Order.js'
 import { Product } from '../models/Product.js'
 import { Purchase } from '../models/Purchase.js'
-import { requireAuth } from '../middleware/auth.js'
+import { requireAuth, requirePermission } from '../middleware/auth.js'
 import { tenantScopeOf, requireTenantIdOf } from '../lib/tenant.js'
 import { roundMoney, roundLine } from '../lib/money.js'
 
 const router = express.Router()
 
 router.use(requireAuth)
+router.use(requirePermission('reports.view'))
 
 function requireTenant(req, res, next) {
   try {

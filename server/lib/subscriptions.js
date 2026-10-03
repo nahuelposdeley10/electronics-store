@@ -1,4 +1,6 @@
-export const subscriptionDefaults = { plan: '', price: 0, dueDate: '', status: 'unconfigured', revision: 0 }
+import { normalizePlanCode } from './plans.js'
+
+export const subscriptionDefaults = { planCode: '', plan: '', price: 0, dueDate: '', status: 'unconfigured', revision: 0 }
 
 export function subscriptionToday(now = new Date()) {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Argentina/Buenos_Aires', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now)
@@ -19,16 +21,33 @@ function amount(value, min = 0) {
 }
 
 export function subscriptionSummary(raw, today = subscriptionToday()) {
-  const { plan, price, dueDate, status, revision } = { ...subscriptionDefaults, ...raw }
+  const { planCode, plan, price, dueDate, status, revision } = { ...subscriptionDefaults, ...raw }
   const effectiveStatus = ['active', 'trial'].includes(status) && dueDate && dueDate < today ? 'overdue' : status
-  return { plan, price, dueDate, status, revision, effectiveStatus, currency: 'ARS' }
+  return {
+    ...(planCode ? { planCode } : {}),
+    plan,
+    price,
+    dueDate,
+    status,
+    revision,
+    effectiveStatus,
+    currency: 'ARS',
+  }
 }
 
 export function validateSubscription(body) {
   const plan = typeof body?.plan === 'string' ? body.plan.trim() : ''
   if (!plan || plan.length > 80) invalid('Ingresá un plan de hasta 80 caracteres')
   if (!['trial', 'active', 'paused', 'cancelled'].includes(body.status)) invalid('Estado inválido')
-  return { plan, price: amount(body.price), dueDate: date(body.dueDate), status: body.status }
+  const planCode = body.planCode === undefined ? '' : normalizePlanCode(body.planCode)
+  if (body.planCode !== undefined && !planCode) invalid('Plan inválido')
+  return {
+    ...(planCode ? { planCode } : {}),
+    plan,
+    price: amount(body.price),
+    dueDate: date(body.dueDate),
+    status: body.status,
+  }
 }
 
 export function validateSubscriptionPayment(body, current, recordedBy) {

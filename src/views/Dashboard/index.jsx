@@ -71,9 +71,12 @@ const SCREEN_PERMS = {
   'promo-coupons': 'coupons.manage',
   'promo-offers': 'offers.manage',
   'sales-pos': 'pos.manage',
+  'sales-history': 'sales.read',
   'sales-returns': 'sales.return',
   'sales-quotes': 'quotes.delete',
   'stock-adjustments': 'inventory.write',
+  'stock-overview': 'inventory.read',
+  'stock-movements': 'inventory.read',
   'stock-purchases': 'inventory.write',
   'stock-min': 'inventory.write',
   'stock-physical': 'inventory.write',
@@ -89,6 +92,17 @@ const SCREEN_PERMS = {
   'settings-hub': 'settings.manage',
   'settings-general': 'settings.manage',
   'settings-appearance': 'settings.manage',
+  'report-sales': 'reports.view',
+  'report-products': 'reports.view',
+  'report-profit': 'reports.view',
+  'report-stock': 'reports.view',
+  'report-customers': 'reports.view',
+}
+
+const PLAN_LEVEL = { inicial: 1, profesional: 2, negocio: 3 }
+const SCREEN_PLANS = {
+  'settings-payments': 'profesional',
+  'settings-roles': 'negocio',
 }
 
 export default function Dashboard({ onExit }) {
@@ -119,6 +133,9 @@ export default function Dashboard({ onExit }) {
           'sales.return',
           'quotes.delete',
           'cash.manage',
+          'inventory.read',
+          'sales.read',
+          'reports.view',
         ]
       : []
   })
@@ -127,9 +144,14 @@ export default function Dashboard({ onExit }) {
   const [copiedStoreUrl, setCopiedStoreUrl] = useState(false)
   const userIsSuper = user?.role === 'superadmin'
   const canOnboard = (userIsSuper || user?.role === 'admin') && (userIsSuper || perms.includes('settings.manage'))
+  const planAllows = (id) => {
+    if (userIsSuper || !SCREEN_PLANS[id] || !user?.planCode) return true
+    return (PLAN_LEVEL[user.planCode] || 0) >= PLAN_LEVEL[SCREEN_PLANS[id]]
+  }
   const canView = (id) =>
     (id !== 'onboarding' || canOnboard) &&
     (id !== 'settings-appearance' || userIsSuper || user?.role === 'admin') &&
+    planAllows(id) &&
     (userIsSuper || !SCREEN_PERMS[id] || (perms || []).includes(SCREEN_PERMS[id]))
   const activeScreen = canView(screen) ? screen : 'overview'
   const setupMode = onboardingMode({ role: user?.role, canConfigure: canOnboard, screen: activeScreen, tenantId: superTenant })

@@ -5,6 +5,7 @@ export function parseLocation() {
   const path = window.location.pathname.replace(/\/$/, '') || '/'
   if (path === '/home') return { name: 'company-home' }
   if (path === '/planes') return { name: 'plans' }
+  if (path === '/activar-cuenta') return { name: 'account-activation', payload: { token: new URLSearchParams(window.location.search).get('token') || '' } }
   const params = new URLSearchParams(window.location.search)
   const status = params.get('status') || params.get('collection_status')
   if (status) {

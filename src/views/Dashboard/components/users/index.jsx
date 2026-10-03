@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { formatARS } from '@/data/format'
+import { BUSINESS_PLANS } from '@/data/plans'
 import { apiDelete, apiGet, apiPost, apiPut, getSession } from '@/lib/api'
 import { getSuperTenant } from '@/lib/tenant'
 import { IconCheck, IconCross, IconEdit, IconPlus, IconSearch, IconTrash } from '@/components/Icons'
@@ -158,7 +159,7 @@ function UsersScreen({ allowBusinessCreate = false }) {
   const openNew = () => {
     setEditing(null)
     setGeneratedPassword('')
-    const base = { name: '', storeName: '', email: '', role: 'admin', adminId: '', password: '', businessSlug: '' }
+    const base = { name: '', storeName: '', email: '', role: 'admin', adminId: '', password: '', businessSlug: '', planCode: 'inicial' }
     setForm({ ...base })
     setFormInitial({ ...base })
     setFormOpen(true)
@@ -175,6 +176,7 @@ function UsersScreen({ allowBusinessCreate = false }) {
       password: '',
       adminId: u.adminId || '',
       businessSlug: u.businessSlug || '',
+      planCode: u.subscription?.planCode || 'inicial',
     }
     setForm({ ...base })
     setFormInitial({ ...base })
@@ -200,6 +202,7 @@ function UsersScreen({ allowBusinessCreate = false }) {
         if (form.password) payload.password = form.password
         if (form.role === 'operator' && form.adminId) payload.adminId = form.adminId
         if (form.role === 'admin') payload.businessSlug = String(form.businessSlug || '').trim()
+        if (form.role === 'admin') payload.planCode = form.planCode
         await apiPut(`/api/admin/users/${editing}`, payload)
         showToast('Usuario actualizado.', 'success')
       } else {
@@ -212,9 +215,18 @@ function UsersScreen({ allowBusinessCreate = false }) {
         if (form.password) payload.password = form.password
         if (form.role === 'operator' && form.adminId) payload.adminId = form.adminId
         if (form.role === 'admin') payload.businessSlug = String(form.businessSlug || '').trim()
+        if (form.role === 'admin') payload.planCode = form.planCode
         const created = await apiPost('/api/admin/users', payload)
         setGeneratedPassword(created.password || '')
-        showToast(`Usuario ${created.email} creado.`, 'success')
+        if (created.emailDelivery?.sent) {
+          showToast(`Usuario ${created.email} creado. Acceso enviado por email.`, 'success')
+        } else if (created.emailDelivery?.reason === 'email_not_configured') {
+          showToast(`Usuario ${created.email} creado. El correo automático aún no está configurado.`, 'warning')
+        } else if (created.emailDelivery) {
+          showToast(`Usuario ${created.email} creado, pero no pudimos enviar el correo.`, 'warning')
+        } else {
+          showToast(`Usuario ${created.email} creado.`, 'success')
+        }
       }
       setFormOpen(false)
       setRefresh((n) => n + 1)
@@ -275,7 +287,7 @@ function UsersScreen({ allowBusinessCreate = false }) {
 
       <div className="dash-toolbar">
         <p className="list-note">
-          Podés definir la contraseña del usuario o dejarla en blanco para generarla. Nunca se guarda en texto plano.
+          Definí la contraseña inicial del administrador. Cada admin puede cambiar su clave y la de sus operadores desde esta sección.
         </p>
         {(!isSuper || allowBusinessCreate) && <button type="button" className="primary-btn dash-add" onClick={openNew}>
           <IconPlus />
@@ -347,6 +359,19 @@ function UsersScreen({ allowBusinessCreate = false }) {
             )}
             {isSuper && form.role === 'admin' && (
               <label className="inv-field">
+                <span>Plan del negocio</span>
+                <select value={form.planCode || 'inicial'} onChange={set('planCode')}>
+                  {BUSINESS_PLANS.map((plan) => (
+                    <option key={plan.code} value={plan.code}>
+                      {plan.name} · {formatARS(plan.price)} / mes
+                    </option>
+                  ))}
+                </select>
+                <span className="set-hint">Define los módulos disponibles en el panel y los medios de cobro de esta tienda.</span>
+              </label>
+            )}
+            {isSuper && form.role === 'admin' && (
+              <label className="inv-field">
                 <span>Slug de la tienda</span>
                 <div className="slug-input">
                   <span className="mono slug-prefix">{`${window.location.origin}/u/`}</span>
@@ -364,14 +389,16 @@ function UsersScreen({ allowBusinessCreate = false }) {
             )}
             {!editing && (
               <label className="inv-field">
-                <span>Contraseña (dejala vacía para generar una)</span>
+                <span>Contraseña inicial {form.role === 'admin' ? '(requerida)' : '(opcional)'}</span>
                 <input
                   type="password"
                   value={form.password || ''}
                   onChange={set('password')}
                   autoComplete="new-password"
                   minLength={6}
+                  required={form.role === 'admin'}
                 />
+                <span className="set-hint">Se enviará al email de acceso. El administrador podrá cambiarla después desde Usuarios.</span>
               </label>
             )}
             {editing && (

@@ -17,6 +17,7 @@ import { requireTenantIdOf } from '../lib/tenant.js'
 const router = express.Router()
 
 router.use(requireAuth)
+router.use(requirePermission('inventory.read'))
 
 function requireTenant(req, res, next) {
   try {

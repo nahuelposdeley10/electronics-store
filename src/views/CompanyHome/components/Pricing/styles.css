@@ -24,6 +24,20 @@
 @media (min-width: 761px) and (max-width: 1050px) { .bnp-plan { padding: 22px 16px; } .bnp-plan-profesional { padding: 21px 15px; } .bnp-plan-price strong { font-size: 27px; } .bnp-plan-description { min-height: 66px; } .bnp-plan li { font-size: 11px; } .bnp-plans-grid { gap: 12px; } }
 @media (max-width: 760px) { .bnp-plans-grid { grid-template-columns: 1fr; } .bnp-plan { padding: 30px; } .bnp-plan-profesional { padding: 29px; } .bnp-plan-description { min-height: 0; } .bnp-plan-price strong { font-size: 38px; } .bnp-setup { padding: 20px; align-items: flex-start; } }
 .bnp-plan:focus-within { border-color: var(--bnp-blue); box-shadow: 0 18px 48px -22px #315cf542; }
+.bnp-plan > button { border: 0; cursor: pointer; font: inherit; }
+.bnp-subscription-backdrop { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; padding: 20px; background: rgba(20,36,62,.58); }
+.bnp-subscription-modal { position: relative; width: min(100%, 520px); max-height: min(720px, calc(100vh - 40px)); overflow: auto; padding: 34px; border-radius: 20px; background: #fff; box-shadow: 0 30px 80px rgba(0,0,0,.25); }
+.bnp-subscription-modal h3 { margin: 10px 0; font: 600 30px/1.1 'Sora', sans-serif; letter-spacing: -.05em; }
+.bnp-subscription-modal > p { color: var(--bnp-muted); font-size: 13px; line-height: 1.55; }
+.bnp-subscription-modal form { display: grid; gap: 13px; margin-top: 22px; }
+.bnp-subscription-modal label { display: grid; gap: 6px; color: var(--bnp-ink); font-size: 12px; font-weight: 800; }
+.bnp-subscription-modal input { width: 100%; box-sizing: border-box; padding: 12px 13px; border: 1px solid var(--bnp-line); border-radius: 9px; font: inherit; }
+.bnp-subscription-modal input:focus { outline: 3px solid var(--bnp-ice); border-color: var(--bnp-blue); }
+.bnp-subscription-modal small { color: var(--bnp-muted); font-size: 10px; font-weight: 400; }
+.bnp-subscription-modal .bnp-button { justify-content: space-between; margin-top: 8px; border: 0; cursor: pointer; font: inherit; }
+.bnp-subscription-modal .bnp-button:disabled { cursor: wait; opacity: .65; }
+.bnp-subscription-close { position: absolute; top: 14px; right: 16px; width: 32px; height: 32px; border: 0; border-radius: 50%; background: var(--bnp-ice); color: var(--bnp-ink); font-size: 24px; line-height: 1; cursor: pointer; }
+.bnp-subscription-error { color: #b42318 !important; margin: 2px 0; font-size: 12px !important; }
 @media (hover: hover) and (pointer: fine) {
   .bnp-plan:hover { transform: translateY(-7px); border-color: var(--bnp-blue); box-shadow: 0 24px 54px -26px #315cf54d; }
 }

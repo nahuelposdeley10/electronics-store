@@ -509,6 +509,32 @@ function ProductForm({ product, onClose, onSaved, canInventory }) {
   const set = (key) => (e) =>
     setForm((f) => ({ ...f, [key]: e.target.value }))
 
+  const createBrand = async (name) => {
+    try {
+      const created = await apiPost('/api/admin/brands', { name })
+      const option = { value: created.name, label: created.name }
+      setBrandOptions((current) => [...current, created.name].sort((a, b) => a.localeCompare(b, 'es')))
+      setError('')
+      return option
+    } catch (err) {
+      setError(err.message)
+      return null
+    }
+  }
+
+  const createCategory = async (name) => {
+    try {
+      const created = await apiPost('/api/admin/categories', { name })
+      const option = { value: created.key, label: created.name }
+      setCategoryOptions((current) => [...current, { key: created.key, name: created.name }].sort((a, b) => a.name.localeCompare(b.name, 'es')))
+      setError('')
+      return option
+    } catch (err) {
+      setError(err.message)
+      return null
+    }
+  }
+
   const submit = async (e) => {
     e.preventDefault()
     if (!canSave) return
@@ -600,6 +626,8 @@ function ProductForm({ product, onClose, onSaved, canInventory }) {
                 value={form.brand}
                 onChange={(v) => setForm((f) => ({ ...f, brand: v }))}
                 options={brandList.map((b) => ({ value: b, label: b }))}
+                createLabel="Crear marca nueva"
+                onCreate={createBrand}
               />
             </label>
 
@@ -611,6 +639,8 @@ function ProductForm({ product, onClose, onSaved, canInventory }) {
                 value={form.category}
                 onChange={(v) => setForm((f) => ({ ...f, category: v }))}
                 options={catList.map((c) => ({ value: c.key, label: c.name }))}
+                createLabel="Crear categoría nueva"
+                onCreate={createCategory}
               />
             </label>
 
