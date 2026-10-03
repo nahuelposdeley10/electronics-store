@@ -1,5 +1,6 @@
-import { homeUrl, productUrl, cartUrl, infoUrl } from './urls.js'
+import { homeUrl, productUrl, infoUrl } from './urls.js'
 import { productImage } from './productImage.js'
+import { INDEX, NO_INDEX, shouldNoIndex } from './indexing.js'
 
 const INFO_TITLES = {
   'como-comprar': 'Cómo comprar',
@@ -24,6 +25,16 @@ function absolute(href) {
 }
 
 export function seoMeta({ view, product, settings }) {
+  if (view.name === 'dashboard' || view.name === 'account-activation') {
+    const isActivation = view.name === 'account-activation'
+    return {
+      title: `${isActivation ? 'Activar cuenta' : 'Panel de administración'} — Tienda BNP`,
+      description: isActivation ? 'Configurá el acceso a tu cuenta de Tienda BNP.' : 'Acceso al panel de administración de Tienda BNP.',
+      siteName: 'Tienda BNP',
+      noIndex: true,
+    }
+  }
+
   const name = settings?.store?.name || 'Tienda BNP'
   const tagline = settings?.store?.tagline || 'electrónica y tecnología'
   const baseDescription =
@@ -46,7 +57,6 @@ export function seoMeta({ view, product, settings }) {
     return {
       title: `Carrito — ${name}`,
       description: baseDescription,
-      canonical: absolute(cartUrl()),
       siteName: name,
       noIndex: true,
     }
@@ -91,14 +101,36 @@ function upsertMeta(attr, key, content) {
   el.setAttribute('content', content || '')
 }
 
+function upsertStructuredData(data) {
+  const selector = 'script[data-seo-jsonld="company"]'
+  let script = document.head.querySelector(selector)
+  if (!data) {
+    script?.remove()
+    return
+  }
+  if (!script) {
+    script = document.createElement('script')
+    script.type = 'application/ld+json'
+    script.dataset.seoJsonld = 'company'
+    document.head.appendChild(script)
+  }
+  script.textContent = JSON.stringify(data)
+}
+
+export function applyRobotsPolicy(noIndex = false) {
+  const excluded = noIndex || shouldNoIndex(window.location.href)
+  upsertMeta('name', 'robots', excluded ? NO_INDEX : INDEX)
+  return excluded
+}
+
 export function applySEO(meta) {
   if (!meta) return
 
   document.title = meta.title || document.title
   upsertMeta('name', 'description', meta.description || '')
-  upsertMeta('name', 'robots', meta.noIndex ? 'noindex, follow' : 'index, follow')
+  const noIndex = applyRobotsPolicy(meta.noIndex)
 
-  if (meta.canonical) {
+  if (meta.canonical && !noIndex) {
     let link = document.head.querySelector('link[rel="canonical"]')
     if (!link) {
       link = document.createElement('link')
@@ -107,6 +139,10 @@ export function applySEO(meta) {
     }
     link.href = meta.canonical
     upsertMeta('property', 'og:url', meta.canonical)
+  } else {
+    // Do not retain the previous public page's canonical on private SPA views.
+    document.head.querySelector('link[rel="canonical"]')?.remove()
+    document.head.querySelector('meta[property="og:url"]')?.remove()
   }
 
   upsertMeta('property', 'og:type', meta.type || 'website')
@@ -119,4 +155,5 @@ export function applySEO(meta) {
   upsertMeta('name', 'twitter:title', meta.title || document.title)
   upsertMeta('name', 'twitter:description', meta.description || '')
   upsertMeta('name', 'twitter:image', meta.image || '')
+  upsertStructuredData(noIndex ? null : meta.structuredData)
 }

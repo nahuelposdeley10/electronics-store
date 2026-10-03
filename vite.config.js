@@ -2,6 +2,8 @@ import react, { reactCompilerPreset } from '@vitejs/plugin-react'
 import babel from '@rolldown/plugin-babel'
 import { fileURLToPath, URL } from 'node:url'
 import { defineConfig } from 'vite'
+import companyPrerender from './scripts/company-prerender.js'
+import indexingHeaders from './scripts/indexing-headers.js'
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -12,8 +14,11 @@ export default defineConfig({
   },
   plugins: [
     react(),
-    babel({ presets: [reactCompilerPreset()] })
+    babel({ presets: [reactCompilerPreset()] }),
+    indexingHeaders(),
+    companyPrerender(),
   ],
+  build: { manifest: true },
   server: {
     proxy: {
       '/api': 'http://localhost:4000',

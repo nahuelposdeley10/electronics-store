@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+
+# Private HTML pages remain crawlable so Google can read their noindex header.
+# Their exclusion is defined in X-Robots-Tag and the robots meta tag, not here.
+
+Sitemap: https://www.tiendabnp.com/sitemap.xml

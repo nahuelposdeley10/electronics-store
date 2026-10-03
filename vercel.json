@@ -1,8 +1,32 @@
 {
   "buildCommand": "yarn build",
   "outputDirectory": "dist",
+  "headers": [
+    { "source": "/", "headers": [{ "key": "X-Robots-Tag", "value": "noindex, follow" }] },
+    { "source": "/index.html", "headers": [{ "key": "X-Robots-Tag", "value": "noindex, follow" }] },
+    { "source": "/admin/:path*", "headers": [{ "key": "X-Robots-Tag", "value": "noindex, follow" }] },
+    { "source": "/activar-cuenta/:path*", "headers": [{ "key": "X-Robots-Tag", "value": "noindex, follow" }] },
+    { "source": "/cart/:path*", "headers": [{ "key": "X-Robots-Tag", "value": "noindex, follow" }] },
+    { "source": "/order-status/:path*", "headers": [{ "key": "X-Robots-Tag", "value": "noindex, follow" }] },
+    { "source": "/api/:path*", "headers": [{ "key": "X-Robots-Tag", "value": "noindex, follow" }] },
+    { "source": "/u/:slug/cart/:path*", "headers": [{ "key": "X-Robots-Tag", "value": "noindex, follow" }] },
+    { "source": "/u/:slug/order-status/:path*", "headers": [{ "key": "X-Robots-Tag", "value": "noindex, follow" }] },
+    { "source": "/:path*", "has": [{ "type": "query", "key": "status" }], "headers": [{ "key": "X-Robots-Tag", "value": "noindex, follow" }] },
+    { "source": "/:path*", "has": [{ "type": "query", "key": "collection_status" }], "headers": [{ "key": "X-Robots-Tag", "value": "noindex, follow" }] },
+    { "source": "/:path*", "has": [{ "type": "query", "key": "external_reference" }], "headers": [{ "key": "X-Robots-Tag", "value": "noindex, follow" }] },
+    { "source": "/:path*", "has": [{ "type": "query", "key": "payment_id" }], "headers": [{ "key": "X-Robots-Tag", "value": "noindex, follow" }] },
+    { "source": "/:path*", "has": [{ "type": "query", "key": "collection_id" }], "headers": [{ "key": "X-Robots-Tag", "value": "noindex, follow" }] },
+    { "source": "/:path*", "has": [{ "type": "query", "key": "merchant_order_id" }], "headers": [{ "key": "X-Robots-Tag", "value": "noindex, follow" }] },
+    { "source": "/:path*", "has": [{ "type": "query", "key": "preference_id" }], "headers": [{ "key": "X-Robots-Tag", "value": "noindex, follow" }] },
+    { "source": "/:path*", "has": [{ "type": "query", "key": "preapproval_id" }], "headers": [{ "key": "X-Robots-Tag", "value": "noindex, follow" }] },
+    { "source": "/:path*", "has": [{ "type": "query", "key": "subscription", "value": "return" }], "headers": [{ "key": "X-Robots-Tag", "value": "noindex, follow" }] }
+  ],
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/index" },
+    { "source": "/home", "destination": "/home.html" },
+    { "source": "/home/", "destination": "/home.html" },
+    { "source": "/planes", "destination": "/home.html" },
+    { "source": "/planes/", "destination": "/home.html" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }

@@ -128,6 +128,47 @@ No se anuncian como disponibles facturación ARCA, logística integrada,
 cuentas corrientes, variantes en checkout, dominio automático ni newsletter
 funcional. No hay testimonios ni cifras comerciales inventadas.
 
+### HTML inicial de la landing (SEO, revisión local)
+
+`/home` y `/planes` entregan el contenido comercial completo antes de cargar
+JavaScript: portada, funciones, planes, preguntas frecuentes y contacto. El
+HTML y los datos JSON-LD se generan desde los mismos componentes y precios
+que utiliza React; no hay una copia manual de la página ni consultas a MongoDB.
+
+- `npm run build` genera `dist/home.html` mediante el plugin
+  `scripts/company-prerender.js`. Incluye los estilos necesarios, metadatos,
+  canonical y datos de empresa/software desde la primera respuesta.
+- `src/main.jsx` conecta React al contenido existente mediante hidratación.
+  Los menús, pestañas, animaciones y selección de planes siguen siendo
+  interactivos al cargar JavaScript. Sin JavaScript se pueden leer textos,
+  precios y preguntas frecuentes; la suscripción requiere JavaScript.
+- El prerender funciona también con `npm run dev` y `npm run preview`.
+  Express sirve el archivo únicamente en las rutas comerciales. Vercel tiene
+  las reescrituras equivalentes. `/admin`, `/activar-cuenta` y `/u/<slug>`
+  conservan la aplicación habitual y no reciben el canonical ni el JSON-LD
+  comercial. No se precarga el panel al abrir la landing.
+- En cada publicación se debe volver a ejecutar `npm run build` y desplegar
+  el `dist/` completo, incluido `home.html`; un pull y reinicio sin recompilar
+  no actualiza el HTML publicado. No se agregaron dependencias.
+- Validación sin base de datos: `npm run build` seguido de
+  `node --test tests/company-prerender.test.mjs tests/company-home.test.mjs tests/company-motion.test.mjs`.
+
+### Exclusiones de indexación
+
+La landing (`/home` y `/planes`), las tiendas públicas, sus productos y sus
+páginas informativas quedan indexables. El panel (`/admin`), la activación de
+cuentas, los carritos y los estados o retornos de pago reciben `noindex, follow`
+desde el servidor mediante `X-Robots-Tag` y también desde el meta tag de la SPA.
+Los parámetros de retorno de Mercado Pago (`status`, `external_reference`,
+`payment_id` y equivalentes) se cubren aunque vuelvan a la URL de la tienda.
+
+Las rutas privadas no se bloquean en `robots.txt`: deben poder ser rastreadas
+para que Google lea su exclusión. Solo la API queda fuera del rastreo. El
+sitemap conserva únicamente URLs comerciales indexables. La regla compartida
+vive en `src/lib/indexing.js`, se aplica en Express/Vite y se replica en los
+headers de Vercel. Validación: `node --test tests/indexing.test.mjs
+tests/company-prerender.test.mjs`.
+
 ### Efectos de la web comercial
 
 - Entrada escalonada del título y de la ilustración; fondo con luz y retícula.

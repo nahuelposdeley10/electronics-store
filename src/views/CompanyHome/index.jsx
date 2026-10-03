@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useSyncExternalStore } from 'react'
 import { applySEO } from '@/lib/seo'
 import Navigation from './components/Navigation'
 import InteractiveHero from './components/InteractiveHero'
@@ -10,17 +10,22 @@ import Pricing from './components/Pricing'
 import Faq from './components/Faq'
 import Closing from './components/Closing'
 import BrandLogo from '@/components/BrandLogo'
-import { companyMeta } from './content.js'
+import { companyMeta, companyStructuredData, companyUrl, companyImage } from './content.js'
 import { setupCompanyMotion } from './motion.js'
 import './styles.css'
 
-export default function CompanyHome({ legacyPlans = false }) {
+const subscribeYear = () => () => {}
+const currentYear = () => new Date().getFullYear()
+
+export default function CompanyHome({ legacyPlans = false, initialYear = currentYear() }) {
+  const year = useSyncExternalStore(subscribeYear, currentYear, () => initialYear)
   const root = useRef(null)
   useEffect(() => setupCompanyMotion(root.current), [])
   useEffect(() => {
     applySEO({ ...companyMeta,
-      canonical: new URL('/home', window.location.origin).href,
-      image: new URL('/images/company/storefront-social.jpg', window.location.origin).href,
+      canonical: companyUrl,
+      image: companyImage,
+      structuredData: companyStructuredData(),
     })
     if (legacyPlans) window.history.replaceState({}, '', '/home#planes')
     const target = document.getElementById(window.location.hash.slice(1))
@@ -44,7 +49,7 @@ export default function CompanyHome({ legacyPlans = false }) {
         <a className="bnp-brand" href="/home" aria-label="Tienda BNP, inicio"><BrandLogo /></a>
         <p>Software para comercios.<br />Hecho para tu día a día.</p>
         <nav aria-label="Enlaces del pie"><a href="#planes">Planes</a><a href="/admin">Acceso al panel</a></nav>
-        <small>© {new Date().getFullYear()} Tienda BNP · Argentina</small>
+        <small>© {year} Tienda BNP · Argentina</small>
       </footer>
     </div>
   )

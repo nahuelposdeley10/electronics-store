@@ -21,8 +21,10 @@ import cashRouter from './routes/cash.js'
 import subscriptionsRouter from './routes/subscriptions.js'
 import onboardingRouter from './routes/onboarding.js'
 import commercialSubscriptionsRouter from './routes/commercial-subscriptions.js'
+import { indexingHeaders } from './middleware/indexing.js'
 
 const DIST_DIR = path.resolve('dist')
+const CANONICAL_HOST = 'www.tiendabnp.com'
 
 export async function connectDb() {
   if (mongoose.connection.readyState === 1) return
@@ -69,6 +71,21 @@ export function createApp() {
   app.disable('x-powered-by')
   app.set('trust proxy', env.isProd ? 1 : false)
 
+  app.use(indexingHeaders)
+
+  app.use((req, res, next) => {
+    if (
+      env.isProd &&
+      req.hostname === 'tiendabnp.com' &&
+      req.path !== '/api' &&
+      !req.path.startsWith('/api/') &&
+      (req.method === 'GET' || req.method === 'HEAD')
+    ) {
+      return res.redirect(308, `https://${CANONICAL_HOST}${req.originalUrl}`)
+    }
+    return next()
+  })
+
   app.use(helmet({ contentSecurityPolicy: HELMET_CSP }))
   app.use(compression())
   app.use(
@@ -102,6 +119,9 @@ export function createApp() {
   app.use('/api/admin/reports', reportsRouter)
 
   if (fs.existsSync(DIST_DIR)) {
+    app.get(['/home', '/planes'], (req, res) => {
+      res.sendFile(path.join(DIST_DIR, 'home.html'))
+    })
     app.use(express.static(DIST_DIR))
     app.get(/^(?!\/api\/).*/, (req, res) => {
       res.sendFile(path.join(DIST_DIR, 'index.html'))

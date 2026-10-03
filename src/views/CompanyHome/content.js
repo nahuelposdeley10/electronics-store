@@ -1,5 +1,8 @@
 import { BUSINESS_PLANS } from '../../data/plans.js'
 
+export const companyUrl = 'https://www.tiendabnp.com/home'
+export const companyImage = 'https://www.tiendabnp.com/images/company/storefront-social.jpg'
+
 export const companyMeta = {
   title: 'Tienda BNP — Tu tienda online. Tu negocio bajo control.',
   description: 'Tienda online y gestión para comercios argentinos: catálogo, WhatsApp, Mercado Pago, ventas presenciales, stock, caja y reportes. Conocé los planes de Tienda BNP.',
@@ -27,6 +30,50 @@ export const plans = [
     features: ['Accesos para tu equipo', 'Roles y permisos por función', 'Registro de compras', 'Historial de movimientos y ajustes', 'Recuentos de inventario físico', 'Control de stock mínimo'],
     scope: 'Para una operación con más personas y procesos.' },
 ]
+
+export function companyStructuredData() {
+  const siteUrl = companyUrl
+  const organizationId = `${companyUrl}#organization`
+  return {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'Organization',
+        '@id': organizationId,
+        name: 'Tienda BNP',
+        url: siteUrl,
+        logo: 'https://www.tiendabnp.com/images/brand/tienda-bnp-logo.png',
+        description: companyMeta.description,
+        areaServed: { '@type': 'Country', name: 'Argentina' },
+        contactPoint: {
+          '@type': 'ContactPoint',
+          telephone: '+5491176731388',
+          contactType: 'sales',
+          areaServed: 'AR',
+          availableLanguage: 'es-AR',
+        },
+      },
+      {
+        '@type': 'SoftwareApplication',
+        name: 'Tienda BNP',
+        applicationCategory: 'BusinessApplication',
+        operatingSystem: 'Web',
+        url: siteUrl,
+        description: companyMeta.description,
+        provider: { '@id': organizationId },
+        offers: plans.map((plan) => ({
+          '@type': 'Offer',
+          name: `Plan ${plan.name}`,
+          price: plan.price,
+          priceCurrency: 'ARS',
+          url: `${siteUrl}#planes`,
+          seller: { '@id': organizationId },
+        })),
+      },
+    ],
+  }
+}
+
 export const faqs = [
   ['¿Necesito saber programar?', 'No. Administrás el catálogo y la configuración desde el panel. Coordinamos la puesta en marcha para que tu negocio tenga su marca, productos y canales de contacto.'],
   ['¿Cómo recibo el dinero de mis ventas?', 'Desde el plan Profesional podés conectar las credenciales de tu propia cuenta de Mercado Pago. Los cobros se procesan en esa cuenta. Las comisiones, plazos y condiciones del procesador son independientes de la mensualidad de Tienda BNP.'],

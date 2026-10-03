@@ -1,9 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { apiPost } from '@/lib/api'
+import { applySEO, seoMeta } from '@/lib/seo'
 import BrandLogo from '@/components/BrandLogo'
 import './styles.css'
 
 export default function AccountActivation({ token }) {
+  useEffect(() => applySEO(seoMeta({ view: { name: 'account-activation' } })), [])
   const [password, setPassword] = useState('')
   const [confirmation, setConfirmation] = useState('')
   const [state, setState] = useState({ loading: false, error: '', done: false })
