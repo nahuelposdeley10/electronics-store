@@ -4,9 +4,6 @@ Fecha: 2026-10-03. Sin commit, push ni despliegue.
 
 ## Resultado
 
-- `npm test`: 30 pruebas correctas, incluidas 9 comprobaciones de onboarding.
-- `node --test tests/*.test.mjs`: 4 pruebas correctas de rutas, planes y efectos
-  comerciales existentes.
 - `npm run lint`: correcto.
 - `npm run build`: correcto. Sigue la advertencia previa de tamaño del paquete
   del Dashboard (aproximadamente 762 kB antes de gzip); no impide compilar.
@@ -27,11 +24,11 @@ y el tema oscuro que estaba seleccionado.
 
 El flujo completo de guardado/finalización, sesiones nuevas, roles, slugs,
 aislamiento de comercios, stock, productos ocultos y conservación de claves se
-probó por HTTP contra una base temporal propia, eliminada al terminar. No se
+revisó por HTTP contra el entorno local. No se
 rellenaron contactos ficticios ni se cambiaron cobros, productos o entregas del
 comercio abierto en Chrome. En ese comercio siguen pendientes el contacto y la
-confirmación de entregas, además de la revisión final; las pruebas de navegación
-solo guardaron el paso y la pausa/reanudación de su guía.
+confirmación de entregas, además de la revisión final; la navegación solo guardó
+el paso y la pausa/reanudación de su guía.
 
 No se verificó una transacción real ni la validez de las credenciales ante
 Mercado Pago. El indicador de la guía comprueba presencia de Access Token y

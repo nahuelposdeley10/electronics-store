@@ -13,7 +13,7 @@ un **panel de administración completo** (ventas, stock, caja, reportes, pagos).
 
 Construida como sistema monolítico full-stack que sirve frontend + API en un
 solo deploy: React 19 + Express 5 + MongoDB, con pagos reales de Mercado Pago,
-estado en vivo por Socket.IO y una suite de tests que corre en CI.
+estado en vivo por Socket.IO y validaciones de lint y compilación en CI.
 
 No es una tienda aislada: es la plataforma sobre la que pueden correr muchas — cada
 negocio con su propia URL, marca, productos, precios y cuenta de Mercado Pago
@@ -73,13 +73,7 @@ Componentes y lógica en `src/views/Dashboard/components/onboarding/`; modelo,
 servicio y rutas en `server/models/Onboarding.js`, `server/lib/onboarding.js`
 y `server/routes/onboarding.js`. Sin dependencias nuevas ni migración manual.
 
-Pruebas específicas: `node --test server/tests/onboarding.test.js` (base temporal
-aislada `bnp-test-onboarding-…`, eliminada al terminar). Cubren el flujo completo,
-persistencia, permisos, aislamiento, slugs, productos ocultos, conservación de
-credenciales y regresión de requisitos. Suite general: `npm test`; frontend:
-`npm run lint` y `npm run build`.
-La política de apertura por rol y reinicio de sesión se verifica con
-`node --test tests/onboarding-entry.test.mjs`.
+La validación del proyecto se realiza con `npm run lint` y `npm run build`.
 
 ### Rutas públicas y comerciales
 
@@ -150,8 +144,8 @@ que utiliza React; no hay una copia manual de la página ni consultas a MongoDB.
 - En cada publicación se debe volver a ejecutar `npm run build` y desplegar
   el `dist/` completo, incluido `home.html`; un pull y reinicio sin recompilar
   no actualiza el HTML publicado. No se agregaron dependencias.
-- Validación sin base de datos: `npm run build` seguido de
-  `node --test tests/company-prerender.test.mjs tests/company-home.test.mjs tests/company-motion.test.mjs`.
+- Validación de la landing: `npm run build` y revisión manual de las rutas
+  comerciales.
 
 ### Exclusiones de indexación
 
@@ -166,8 +160,8 @@ Las rutas privadas no se bloquean en `robots.txt`: deben poder ser rastreadas
 para que Google lea su exclusión. Solo la API queda fuera del rastreo. El
 sitemap conserva únicamente URLs comerciales indexables. La regla compartida
 vive en `src/lib/indexing.js`, se aplica en Express/Vite y se replica en los
-headers de Vercel. Validación: `node --test tests/indexing.test.mjs
-tests/company-prerender.test.mjs`.
+headers de Vercel. Validación: `npm run build` y revisión manual de las rutas
+indexables.
 
 ### Efectos de la web comercial
 
@@ -182,7 +176,7 @@ tests/company-prerender.test.mjs`.
   nunca ocultan el contenido por defecto y se cancelan si un control recibe foco.
   No se agregaron dependencias. La lógica vive en los módulos `motion.js` de la view.
 
-Pruebas locales sin MongoDB: `node --test tests/company-home.test.mjs tests/company-motion.test.mjs`.
+Revisión local sin MongoDB: `npm run build`.
 
 ## Capturas
 
@@ -193,15 +187,14 @@ Rediseño comercial local:
 - [Celular](docs/screenshots/company-home-mobile.png)
 - [Planes](docs/screenshots/company-plans-desktop.png)
 
-Detalle de las pruebas realizadas: [Validación de la landing](docs/company-home-validation.md).
+Detalle de la validación visual: [Validación de la landing](docs/company-home-validation.md).
 Las capturas del panel, tienda y pagos se pueden agregar por separado.
 
 ## Lo que más vale la pena mirar
 
 - **Multi-tenancy de verdad**: cada tienda vive en su URL (`/u/<slug>`) y toda
   su data queda escopeada por `adminId`. Una tienda jamás ve ni muta datos de
-  otra; el aislamiento está garantizado por una suite de tests dedicada
-  (`server/tests/tenancy.test.js`), no por confianza.
+  otra; el aislamiento se aplica en cada consulta y mutación del servidor.
 - **Seguridad en pagos reales**: webhooks de Mercado Pago validados por firma
   **HMAC-SHA256**, refresh tokens **anti-IDOR** por orden (imposible consultar
   una orden ajena), credenciales de pago por tienda guardadas en la base,
@@ -213,9 +206,8 @@ Las capturas del panel, tienda y pagos se pueden agregar por separado.
   inventario físico, compras a proveedores, reportes de ganancia, presupuestos,
   cupones, roles y permisos granulares. También incluye importación de productos
   desde JSON o CSV y onboarding de primeros pasos.
-- **Testeado y con CI**: suites de webhooks, tenancy, checkout, stock, caja,
-  cupones, settings y secuencias atómicas; GitHub Actions levanta MongoDB y
-  corre lint + tests sin credenciales.
+- **CI de calidad**: GitHub Actions ejecuta lint sin requerir credenciales ni
+  servicios externos.
 
 ## Features
 
@@ -360,7 +352,6 @@ Las capturas del panel, tienda y pagos se pueden agregar por separado.
 | `npm run server`       | API sola (sin servir el frontend build)                |
 | `npm run server:dev`   | API con `node --watch`                                 |
 | `npm run lint`         | ESLint                                                  |
-| `npm test`             | Test runner (`node --test server/tests/`)              |
 | `npm run seed`         | Órdenes demo                                           |
 | `npm run seed:users`   | Usuarios del panel (passwords desde `.env` o `--ask`)  |
 | `npm run set-passwords`| Alias de `seed:users --ask`                            |
@@ -406,23 +397,10 @@ El slug se define en `ADMIN_BUSINESS_SLUG` al correr `seed:users`.
 > El tracking de pagos pendientes (estado en vivo por socket) lo maneja
 > `server/lib/order-tracker.js`.
 
-## Tests
+## Calidad del código
 
-Los tests viven en `server/tests/*.test.js`. Cada archivo se conecta a una base
-**aislada** (nombres tipo `electronics-store-test-tenancy`, `-test-promos`,
-`-test-refresh`, etc.) derivada de `MONGODB_URI`, así que se pueden correr contra
-tu MongoDB local o contra Atlas sin pisar la base real.
-
-```bash
-npm test            # toda la suite
-npm run test:refresh    # refresh de órdenes / IDOR
-npm run test:webhooks   # firma de webhooks y transiciones
-```
-
-**CI**: hay un workflow de GitHub Actions (`.github/workflows/ci.yml`) que levanta
-un Mongo (service container), corre `npm ci`, lint y `npm test` con
-`MONGODB_URI=mongodb://127.0.0.1:27017`. No hace falta ninguna credencial en el
-repo.
+El workflow de GitHub Actions ejecuta `npm run lint`. La compilación de
+producción se verifica localmente con `npm run build`.
 ## Suscripciones de locales
 
 Desde `/home`, los nuevos clientes pueden elegir un plan y crear una

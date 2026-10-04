@@ -59,7 +59,14 @@ export function getBillingService() {
 }
 
 export function isMercadoPagoAuthError(error) {
-  return Number(error?.status) === 401 && (
+  const status = Number(error?.status)
+
+  // The Mercado Pago SDK can return an empty `error` and no `causes` for an
+  // invalid access token. The HTTP status is the reliable signal in that
+  // response, so every 401 must stop the order tracker immediately.
+  if (status === 401) return true
+
+  return status === 403 && (
     error?.error === 'unauthorized' ||
     error?.causes?.some((cause) => /credential|live credentials|unauthorized/i.test(String(cause?.description || '')))
   )

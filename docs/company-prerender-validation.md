@@ -14,15 +14,12 @@ Validación local realizada el 3 de octubre de 2026. Sin commit, push ni desplie
 - El canonical comercial dejó de estar en el HTML compartido con las tiendas:
   ahora se genera únicamente en el documento de la landing y su acceso `/planes`.
 
-## Pruebas automatizadas
+## Validación de compilación y revisión manual
 
 `npm run lint` y `npm run build` finalizaron correctamente. Se conserva la
 advertencia previa de tamaño del paquete del Dashboard.
 
-`node --test tests/company-prerender.test.mjs tests/company-home.test.mjs tests/company-motion.test.mjs`:
-seis pruebas aprobadas, sin conectar con MongoDB.
-
-Las nuevas pruebas levantan Express en un puerto temporal y comprueban:
+Durante la revisión manual se comprobó:
 
 - HTML comercial completo en `/home`, `/home/`, `/planes` y URLs con parámetros.
 - Precios visibles coherentes con el JSON-LD y la fuente comercial.

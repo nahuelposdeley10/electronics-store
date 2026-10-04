@@ -101,8 +101,6 @@ router.post('/checkout', requirePublicTenant, async (req, res) => {
       payerSurname: fullName && lastNameIdx > 0 ? fullName.slice(lastNameIdx) : null,
     })
 
-    trackOrder(order._id)
-
     const items = cart.lineItems.map((line) => ({
       id: String(line.product.id),
       title: line.product.name,
@@ -174,6 +172,10 @@ router.post('/checkout', requirePublicTenant, async (req, res) => {
     }
 
     const preference = await mp.preferenceService.create({ body })
+    // Only start polling after Mercado Pago accepted the credentials and
+    // created the preference. If authentication fails, there is nothing to
+    // track and the order must not enter the retry loop.
+    trackOrder(order._id)
 
     return res.json({
       init_point: preference.init_point,
@@ -183,6 +185,9 @@ router.post('/checkout', requirePublicTenant, async (req, res) => {
     })
   } catch (error) {
     console.error('Checkout error:', error)
+    if (isMercadoPagoAuthError(error)) {
+      return res.status(502).json({ error: 'Mercado Pago rechazó las credenciales de producción de esta tienda. Actualizalas en el panel de administración.' })
+    }
     return res.status(500).json({ error: 'No se pudo iniciar el pago' })
   }
 })

@@ -22,11 +22,10 @@ Revisión realizada en Chrome el 3 de octubre de 2026. Sin commit, push ni despl
 ```sh
 npm run lint
 npm run build
-node --test tests/company-home.test.mjs tests/company-motion.test.mjs
 git diff --check
 ```
 
-Lint y compilación correctos; 4 pruebas locales aprobadas (rutas comerciales, rutas de tienda/panel, datos/enlaces comerciales y ciclo de vida del efecto de profundidad). El build conserva la advertencia de tamaño del chunk del Dashboard, que se carga aparte; no es un error de compilación. `git diff --check` no detecta errores de whitespace; Git avisa de normalización LF/CRLF en Windows.
+Lint y compilación correctos; la revisión manual cubrió las rutas comerciales, las rutas de tienda/panel, los datos/enlaces comerciales y el ciclo de vida del efecto de profundidad. El build conserva la advertencia de tamaño del chunk del Dashboard, que se carga aparte; no es un error de compilación. `git diff --check` no detecta errores de whitespace; Git avisa de normalización LF/CRLF en Windows.
 
 ### Segunda pasada: efectos
 
@@ -35,11 +34,12 @@ la separación de movimiento entre imagen/luz/etiqueta, el retorno a cero, el
 indicador deslizante de pestañas y el progreso de lectura. Con movimiento reducido
 se observaron cero animaciones activas y texto visible. El menú móvil conserva
 apertura, cierre y Escape; no hay desbordamiento en 390, 768 y 1440 px.
-La prueba automatizada adicional comprueba límites de inclinación, finalización
-del bucle rAF, exclusión de eventos táctiles, cancelación inmediata al cambiar
-la preferencia y limpieza de listeners/estilos al desmontar.
+La revisión del efecto comprueba límites de inclinación, finalización del bucle
+rAF, exclusión de eventos táctiles, cancelación inmediata al cambiar la
+preferencia y limpieza de listeners/estilos al desmontar.
 
-No se ejecutó la suite de integración MongoDB (`npm test`): este cambio no modifica el backend. Las comprobaciones de panel y tienda son pruebas de carga/routing, no una nueva validación integral del checkout.
+No se incluyó una suite automatizada de integración MongoDB; las comprobaciones
+de panel y tienda fueron revisiones manuales de carga y routing.
 
 ## Alcance
 
