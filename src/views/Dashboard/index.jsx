@@ -205,8 +205,19 @@ export default function Dashboard({ onExit }) {
         if (!alive) return
         setUser(data.user || getSession().user)
         setPerms(data.perms || [])
+        setGate('ready')
       })
-      .catch((err) => console.warn('No se pudo refrescar la sesión', err?.code))
+      .catch((err) => {
+        if (!alive) return
+        if (err.code === 'AUTH') {
+          clearSession()
+          setGate('login')
+          setGateError('Tu sesión expiró. Entrá de nuevo.')
+          return
+        }
+        setGate('error')
+        setGateError(err.message || 'No se pudo validar la sesión')
+      })
     return () => {
       alive = false
     }
@@ -215,12 +226,11 @@ export default function Dashboard({ onExit }) {
   useEffect(() => {
     let alive = true
     if (!getSession().token) return undefined
-    if (needsBusiness) return undefined
+    if (activeScreen !== 'overview') return undefined
     apiGet('/api/admin/overview')
       .then((data) => {
         if (!alive) return
         setOverview(data)
-        setGate('ready')
       })
       .catch((err) => {
         if (!alive) return
@@ -236,7 +246,7 @@ export default function Dashboard({ onExit }) {
     return () => {
       alive = false
     }
-  }, [attempt, needsBusiness])
+  }, [attempt, activeScreen])
 
   const changeScreen = (id) => {
     if (!canView(id)) return

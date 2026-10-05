@@ -256,28 +256,15 @@ function StoreScreen({ mode = 'business' }) {
   const { showToast } = useToast()
   const [saving, setSaving] = useState(false)
 
-  const save = async (store, hero, gaming) => {
+  const save = async (store, hero, gaming, general) => {
     setSaving(true)
     try {
       await apiPut('/api/admin/settings', { section: 'store', value: store })
       if (hero) await apiPut('/api/admin/settings', { section: 'hero', value: hero })
       if (gaming) await apiPut('/api/admin/settings', { section: 'gaming', value: gaming })
+      if (general) await apiPut('/api/admin/settings', { section: 'general', value: general })
       notifySiteSettingsChanged()
       showToast(mode === 'content' ? 'Portada y textos guardados.' : 'Datos y contacto guardados.', 'success')
-      return true
-    } catch (err) {
-      showToast(err.message, 'error')
-      return false
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const saveMessages = async (_shipping, general) => {
-    setSaving(true)
-    try {
-      await apiPut('/api/admin/settings', { section: 'general', value: general })
-      showToast('Mensajes de la cinta guardados.', 'success')
       return true
     } catch (err) {
       showToast(err.message, 'error')
@@ -290,20 +277,20 @@ function StoreScreen({ mode = 'business' }) {
   return (
     <SettingsFetcher
       render={(settings) => (
-        <StoreScreenBody key={mode} mode={mode} settings={settings} saving={saving} onSave={save}>
-          {mode === 'content' && <GeneralScreenBody mode="messages" settings={settings} saving={saving} onSave={saveMessages} />}
-        </StoreScreenBody>
+        <StoreScreenBody key={mode} mode={mode} settings={settings} saving={saving} onSave={save} />
       )}
     />
   )
 }
 
 
-function StoreScreenBody({ settings, saving, onSave, mode = 'business', children }) {
+function StoreScreenBody({ settings, saving, onSave, mode = 'business' }) {
   const content = mode === 'content'
   const { showToast } = useToast()
   const store = settings.store || {}
   const hero = settings.hero || {}
+  const general = settings.general || {}
+  const { confirm } = useConfirm()
   const [form, setForm] = useState({
     name: store.name || '',
     tagline: store.tagline || '',
@@ -311,6 +298,7 @@ function StoreScreenBody({ settings, saving, onSave, mode = 'business', children
     coverUrl: store.coverUrl || '',
     phone: store.phone || '',
     whatsapp: store.whatsapp || '',
+    instagram: store.instagram || '',
     email: store.email || '',
     addressFull: store.addressFull || '',
     addressShort: store.addressShort || '',
@@ -321,7 +309,27 @@ function StoreScreenBody({ settings, saving, onSave, mode = 'business', children
     heroLead: hero.lead || '',
     gaming: { ...GAMING_DEFAULTS, ...settings.gaming },
   })
+  const [marquee, setMarquee] = useState(
+    (Array.isArray(general.marquee) ? general.marquee : []).filter(Boolean),
+  )
+  const [counters, setCounters] = useState(
+    (Array.isArray(general.headerCounters) && general.headerCounters.length === 4
+      ? general.headerCounters
+      : [
+        { title: 'Cuotas', text: 'hasta 12 sin interés' },
+        { title: 'Envío', text: 'a domicilio' },
+        { title: 'Garantía', text: 'oficial' },
+        { title: 'Retiro', text: 'en el local' },
+      ]).map((counter) => ({ title: counter.title || '', text: counter.text || '' })),
+  )
   const [loadedForm, setLoadedForm] = useState(form)
+  const [loadedMarquee, setLoadedMarquee] = useState(marquee)
+  const [loadedCounters, setLoadedCounters] = useState(counters)
+  const [marqueeInput, setMarqueeInput] = useState('')
+  const [editingIndex, setEditingIndex] = useState(null)
+  const [draft, setDraft] = useState('')
+  const [previewFocus, setPreviewFocus] = useState(content ? 'marquee' : 'contact')
+  const [previewTarget, setPreviewTarget] = useState(content ? 'marquee' : 'contact')
   const [uploading, setUploading] = useState(null)
 
   const toPayload = (f) => ({
@@ -342,8 +350,48 @@ function StoreScreenBody({ settings, saving, onSave, mode = 'business', children
     gaming: f.gaming,
   })
   const dirty = JSON.stringify(toPayload(form)) !== JSON.stringify(toPayload(loadedForm))
+    || (content && JSON.stringify(marquee) !== JSON.stringify(loadedMarquee))
+    || (content && JSON.stringify(counters) !== JSON.stringify(loadedCounters))
 
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }))
+
+  const addMarquee = () => {
+    const text = marqueeInput.trim()
+    if (!text) return
+    setMarquee((prev) => [...prev, text])
+    setMarqueeInput('')
+  }
+
+  const removeMarquee = async (index) => {
+    const ok = await confirm({
+      title: 'Quitar mensaje',
+      message: '¿Eliminar este mensaje de la cinta superior?',
+      confirmLabel: 'Quitar',
+    })
+    if (ok) setMarquee((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  const startEdit = (index) => {
+    setEditingIndex(index)
+    setDraft(marquee[index])
+  }
+
+  const saveEdit = (index) => {
+    const text = draft.trim()
+    if (text) setMarquee((prev) => prev.map((item, i) => (i === index ? text : item)))
+    setEditingIndex(null)
+    setDraft('')
+  }
+
+  const clearMarquee = async () => {
+    if (!marquee.length) return
+    const ok = await confirm({
+      title: 'Vaciar cinta',
+      message: '¿Quitar todos los mensajes de la cinta superior?',
+      confirmLabel: 'Vaciar cinta',
+    })
+    if (ok) setMarquee([])
+  }
 
   const uploadImage = async (which, e) => {
     const file = e.target.files?.[0]
@@ -376,7 +424,7 @@ function StoreScreenBody({ settings, saving, onSave, mode = 'business', children
     if (!dirty || saving || uploading) return
     const fields = content
       ? ['coverUrl', 'band']
-      : ['name', 'tagline', 'logoUrl', 'phone', 'whatsapp', 'email', 'addressFull', 'addressShort', 'hours']
+      : ['name', 'tagline', 'logoUrl', 'phone', 'whatsapp', 'instagram', 'email', 'addressFull', 'addressShort', 'hours']
     const saved = await onSave(
       { ...store, ...Object.fromEntries(fields.map((key) => [key, form[key].trim()])) },
       content ? {
@@ -386,8 +434,13 @@ function StoreScreenBody({ settings, saving, onSave, mode = 'business', children
         lead: form.heroLead.trim(),
       } : null,
       content ? form.gaming : null,
+      content ? { ...general, marquee: marquee.filter(Boolean), headerCounters: counters } : null,
     )
-    if (saved) setLoadedForm(form)
+    if (saved) {
+      setLoadedForm(form)
+      setLoadedMarquee(marquee)
+      setLoadedCounters(counters)
+    }
   }
 
   return (
@@ -401,14 +454,65 @@ function StoreScreenBody({ settings, saving, onSave, mode = 'business', children
 
       <div className="dash-toolbar">
         <p className="list-note">
-          {content ? 'Elegí la imagen de bienvenida y escribí los mensajes que ven tus clientes. Para cambiar colores u ocultar secciones, entrá en Tienda online → Colores y diseño.' : 'Presentá tu negocio y ayudá a tus clientes a contactarte. Estos datos aparecen en la cabecera, el pie de página, el mapa y WhatsApp.'}
+          {content ? 'Elegí la imagen de bienvenida y escribí los mensajes que ven tus clientes. Para cambiar colores u ocultar secciones, entrá en Tienda online → Colores y diseño.' : 'Presentá tu negocio y ayudá a tus clientes a contactarte. Estos datos aparecen en la cabecera, el pie de página, el mapa, WhatsApp e Instagram.'}
         </p>
       </div>
 
       <div className="settings-live-layout">
       <form className="set-card set-form" onSubmit={submit}>
+        {content && <section onFocusCapture={() => { setPreviewFocus('marquee'); setPreviewTarget('marquee') }}>
+        <h3>Mensajes de la cinta superior</h3>
+        <p className="set-hint">Aparecen arriba de todo en la tienda. Podés agregar varios y se muestran en el mismo orden.</p>
+        <div className="set-list">
+          {marquee.map((item, index) => editingIndex === index ? (
+            <div key={`edit-${index}`} className="set-inline-add">
+              <input value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => {
+                if (e.key === 'Enter') { e.preventDefault(); saveEdit(index) }
+                if (e.key === 'Escape') setEditingIndex(null)
+              }} autoFocus placeholder="Mensaje…" />
+              <button type="button" className="ghost-btn" onClick={() => saveEdit(index)}>Aplicar edición</button>
+              <button type="button" className="ghost-btn" onClick={() => setEditingIndex(null)}>Cancelar</button>
+            </div>
+          ) : (
+            <div key={`${item}-${index}`} className="set-chip">
+              <span>{item}</span>
+              <button type="button" className="x-btn" title="Editar este mensaje" aria-label={`Editar ${item}`} onClick={() => startEdit(index)}><IconEdit /></button>
+              <button type="button" className="x-btn" title="Quitar este mensaje" aria-label={`Quitar ${item}`} onClick={() => removeMarquee(index)}><IconCross /></button>
+            </div>
+          ))}
+          {!marquee.length && <p className="set-empty">Sin mensajes. La cinta queda oculta.</p>}
+        </div>
+        <div className="set-inline-add">
+          <input aria-label="Nuevo mensaje de la cinta" value={marqueeInput} onChange={(e) => setMarqueeInput(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addMarquee() } }} placeholder="Ej.: Retirá gratis en nuestro local" />
+          <button type="button" className="ghost-btn" onClick={addMarquee} disabled={!marqueeInput.trim()}><IconPlus />Agregar</button>
+          {marquee.length > 0 && <button type="button" className="ghost-btn" onClick={clearMarquee}>Vaciar cinta</button>}
+        </div>
+        {editingIndex !== null && <p className="set-hint">Aplicá o cancelá la edición antes de guardar.</p>}
+        </section>}
+
+        {content && <section onFocusCapture={() => setPreviewFocus('brand')}>
+        <h3>Indicadores de la cabecera</h3>
+        <p className="set-hint">Estos cuatro mensajes aparecen debajo de la cabecera: cuotas, envío, garantía y retiro.</p>
+        <div className="set-row">
+          {counters.map((counter, index) => (
+            <div className="set-counter-editor" key={`counter-${index}`}>
+              <label className="inv-field">
+                <span>Título {index + 1}</span>
+                <input value={counter.title} onFocus={() => { setPreviewFocus('brand'); setPreviewTarget(`counter-${index}`) }} onChange={(e) => setCounters((prev) => prev.map((item, i) => (i === index ? { ...item, title: e.target.value } : item)))} maxLength={40} />
+              </label>
+              <label className="inv-field">
+                <span>Texto {index + 1}</span>
+                <input value={counter.text} onFocus={() => { setPreviewFocus('brand'); setPreviewTarget(`counter-${index}`) }} onChange={(e) => setCounters((prev) => prev.map((item, i) => (i === index ? { ...item, text: e.target.value } : item)))} maxLength={80} />
+              </label>
+            </div>
+          ))}
+        </div>
+        </section>}
+
+        <section onFocusCapture={() => { setPreviewFocus(content ? 'hero' : 'contact'); setPreviewTarget(content ? 'hero-image' : 'contact') }}>
         <h3>{content ? 'Imagen de portada' : 'Logo del negocio'}</h3>
         <p className="set-hint">La vista previa muestra la imagen completa. Las imágenes se publican al subirlas; para quitarlas o cambiar los textos, guardá los cambios al final.</p>
+        <div className={`set-contact-top-grid${content ? ' is-content' : ''}`}>
         <div className="set-row set-images">
           {!content && <SetImageField
             label="Logo"
@@ -417,6 +521,7 @@ function StoreScreenBody({ settings, saving, onSave, mode = 'business', children
             uploading={uploading === 'logo'}
             onFile={(e) => uploadImage('logo', e)}
             onRemove={() => removeImage('logo')}
+            onFocus={() => { setPreviewFocus('contact'); setPreviewTarget('contact-logo') }}
           />}
           {content && <SetImageField
             label="Portada"
@@ -428,68 +533,81 @@ function StoreScreenBody({ settings, saving, onSave, mode = 'business', children
             wide
           />}
         </div>
-
-        {!content && <>
+        {!content && <div className="set-contact-identity-block">
         <h3>Identidad</h3>
-        <div className="set-row">
+        <div className="set-row set-contact-identity">
           <label className="inv-field">
             <span>Nombre de la tienda</span>
-            <input value={form.name} onChange={set('name')} required minLength={2} />
+            <input value={form.name} onFocus={() => { setPreviewFocus('contact'); setPreviewTarget('contact-name') }} onChange={set('name')} required minLength={2} />
           </label>
           <label className="inv-field">
             <span>Frase corta (bajo el logo)</span>
-            <input value={form.tagline} onChange={set('tagline')} />
+            <input value={form.tagline} onFocus={() => { setPreviewFocus('contact'); setPreviewTarget('contact-tagline') }} onChange={set('tagline')} />
           </label>
         </div>
 
+        </div>}
+        </div>
+        </section>
+
+        {!content && <>
+        <section onFocusCapture={() => setPreviewFocus('contact')}>
         <h3>Contacto</h3>
         <div className="set-row">
           <label className="inv-field">
             <span>Teléfono fijo</span>
-            <input value={form.phone} onChange={set('phone')} placeholder="11 5555 4294" />
+            <input value={form.phone} onFocus={() => { setPreviewFocus('contact'); setPreviewTarget('contact-phone') }} onChange={set('phone')} placeholder="11 5555 4294" />
           </label>
           <label className="inv-field">
             <span>WhatsApp (sin + ni espacios)</span>
-            <input value={form.whatsapp} onChange={set('whatsapp')} placeholder="5491155554294" />
+            <input value={form.whatsapp} onFocus={() => { setPreviewFocus('contact'); setPreviewTarget('contact-whatsapp') }} onChange={set('whatsapp')} placeholder="5491155554294" />
+          </label>
+          <label className="inv-field">
+            <span>Instagram</span>
+            <input value={form.instagram} onFocus={() => { setPreviewFocus('contact'); setPreviewTarget('contact-instagram') }} onChange={set('instagram')} placeholder="https://instagram.com/tu-negocio" inputMode="url" />
+            <small className="set-hint">Se muestra como enlace en el pie de tu tienda.</small>
           </label>
           <label className="inv-field">
             <span>Email</span>
-            <input type="email" value={form.email} onChange={set('email')} />
+            <input type="email" value={form.email} onFocus={() => { setPreviewFocus('contact'); setPreviewTarget('contact-email') }} onChange={set('email')} />
           </label>
         </div>
+        </section>
 
+        <section onFocusCapture={() => setPreviewFocus('contact')}>
         <h3>Ubicación y horarios</h3>
         <div className="set-row">
           <label className="inv-field set-grow">
             <span>Dirección completa (para el mapa)</span>
-            <input value={form.addressFull} onChange={set('addressFull')} />
+            <input value={form.addressFull} onFocus={() => { setPreviewFocus('contact'); setPreviewTarget('contact-address-full') }} onChange={set('addressFull')} />
           </label>
           <label className="inv-field">
             <span>Dirección corta (marcas de la tienda)</span>
-            <input value={form.addressShort} onChange={set('addressShort')} />
+            <input value={form.addressShort} onFocus={() => { setPreviewFocus('contact'); setPreviewTarget('contact-address-short') }} onChange={set('addressShort')} />
           </label>
         </div>
         <label className="inv-field">
           <span>Horarios de atención</span>
-          <input value={form.hours} onChange={set('hours')} />
+          <input value={form.hours} onFocus={() => { setPreviewFocus('contact'); setPreviewTarget('contact-hours') }} onChange={set('hours')} />
         </label>
-
+        </section>
         </>}
-        {content && <>
+
+        {content && <section onFocusCapture={() => { setPreviewFocus('hero'); setPreviewTarget('hero') }}>
         <h3>Bienvenida de la página de inicio</h3>
         <div className="set-row">
           <label className="inv-field">
             <span>Título principal</span>
-            <input value={form.heroTitle} onChange={set('heroTitle')} maxLength={160} />
+            <input value={form.heroTitle} onFocus={() => setPreviewTarget('hero-title')} onChange={set('heroTitle')} maxLength={160} />
           </label>
           <label className="inv-field">
             <span>Parte destacada del título</span>
-            <input value={form.heroAccent} onChange={set('heroAccent')} maxLength={160} />
+            <input value={form.heroAccent} onFocus={() => setPreviewTarget('hero-accent')} onChange={set('heroAccent')} maxLength={160} />
           </label>
         </div>
         <label className="inv-field">
           <span>Texto de presentación</span>
-          <textarea value={form.heroLead} onChange={set('heroLead')} rows={3} maxLength={300} />
+          <textarea value={form.heroLead} onFocus={() => setPreviewTarget('hero-lead')} onChange={set('heroLead')} rows={3} maxLength={300} />
         </label>
         <p className="set-hint">
           Este texto aparece en la portada. Podés usar{' '}
@@ -497,6 +615,8 @@ function StoreScreenBody({ settings, saving, onSave, mode = 'business', children
           (dirección corta) dentro del texto.
         </p>
 
+        </section>}
+        {content && <section onFocusCapture={() => { setPreviewFocus('gaming'); setPreviewTarget('gaming') }}>
         <h3>Sección GAMING · Sala 04</h3>
         <p className="set-hint">Editá el bloque destacado de gaming del inicio. Podés mostrarlo u ocultarlo desde Colores y diseño. El botón lleva a las ofertas.</p>
         {[
@@ -506,7 +626,7 @@ function StoreScreenBody({ settings, saving, onSave, mode = 'business', children
         ].map(([key, label]) => (
           <label className="inv-field" key={key}>
             <span>{label}</span>
-            <input value={form.gaming[key]} maxLength={300} onChange={(e) => setForm((f) => ({ ...f, gaming: { ...f.gaming, [key]: e.target.value } }))} />
+            <input value={form.gaming[key]} maxLength={300} onFocus={() => setPreviewTarget(`gaming-${key === 'buttonText' ? 'button' : key === 'imageAlt' ? 'image' : key}`)} onChange={(e) => setForm((f) => ({ ...f, gaming: { ...f.gaming, [key]: e.target.value } }))} />
           </label>
         ))}
         <SetImageField
@@ -519,12 +639,14 @@ function StoreScreenBody({ settings, saving, onSave, mode = 'business', children
           wide
         />
 
+        </section>}
+        {content && <section onFocusCapture={() => { setPreviewFocus('band'); setPreviewTarget('band') }}>
         <h3>Franja del pie de página</h3>
         <label className="inv-field">
           <span>Texto promocional</span>
-          <textarea value={form.band} onChange={set('band')} rows={2} />
+          <textarea value={form.band} onFocus={() => setPreviewTarget('band')} onChange={set('band')} rows={2} />
         </label>
-        </>}
+        </section>}
 
         <div className="set-actions">
           <button type="submit" className="primary-btn" disabled={saving || uploading !== null || !dirty}>
@@ -532,9 +654,8 @@ function StoreScreenBody({ settings, saving, onSave, mode = 'business', children
           </button>
         </div>
       </form>
-      <LiveStorePreview variant={content ? 'content' : 'contact'} data={form} appearance={settings.appearance} />
+      <LiveStorePreview variant={content ? 'content' : 'contact'} data={{ ...form, marquee, counters }} settings={{ ...settings, general: { ...settings.general, headerCounters: counters } }} appearance={settings.appearance} highlight={previewFocus} highlightTarget={previewTarget} />
       </div>
-      {children}
     </div>
   )
 }
@@ -587,6 +708,7 @@ function GeneralScreenBody({ settings, saving, onSave, mode = 'shipping' }) {
   const [marqueeInput, setMarqueeInput] = useState('')
   const [editingIndex, setEditingIndex] = useState(null)
   const [draft, setDraft] = useState('')
+  const [previewFocus, setPreviewFocus] = useState(messages ? 'marquee' : 'shipping')
 
   const toPayload = (f, m) => ({
     enabled: f.enabled !== false,
@@ -677,7 +799,7 @@ function GeneralScreenBody({ settings, saving, onSave, mode = 'shipping' }) {
       </div>
 
       <div className="settings-live-layout">
-      <form className="set-card set-form" onSubmit={submit}>
+      <form className="set-card set-form" onSubmit={submit} onFocusCapture={messages ? () => setPreviewFocus('marquee') : undefined}>
         {!messages && <>
         <h3>Envíos</h3>
         <div className="set-toggles">
@@ -782,7 +904,7 @@ function GeneralScreenBody({ settings, saving, onSave, mode = 'shipping' }) {
         </div>
         {messages && (editingIndex !== null || Boolean(marqueeInput.trim())) && <p className="set-hint">Aplicá la edición o agregá el mensaje a la lista antes de guardar.</p>}
       </form>
-      <LiveStorePreview variant={messages ? 'messages' : 'shipping'} data={form} items={marquee} appearance={settings.appearance} />
+      <LiveStorePreview variant={messages ? 'messages' : 'shipping'} data={form} items={marquee} settings={settings} appearance={settings.appearance} highlight={previewFocus} />
       </div>
     </div>
   )

@@ -50,7 +50,7 @@ body:has(.dash.theme-dark),
   box-shadow: 10px 0 32px rgba(30, 76, 125, .07);
   display: flex;
   flex-direction: column;
-  padding: 22px 14px 18px;
+  padding: 14px 10px 10px;
   position: sticky;
   top: 0;
   height: 100vh;
@@ -64,11 +64,11 @@ body:has(.dash.theme-dark),
   justify-content: flex-start;
   gap: 11px;
   min-height: 42px;
-  padding: 2px 8px 18px;
+  padding: 0 6px 10px;
   border-bottom: 1px solid #d5e3f0;
-  margin-bottom: 16px;
+  margin-bottom: 8px;
 }
-.dash-brand .brand-logo { width: 176px; height: auto; }
+.dash-brand .brand-logo { width: 166px; height: auto; }
 .unlock-brand { width: 188px; height: auto; margin: 0 auto 24px; }
 .dash-brand .brand-chip {
   width: 36px;
@@ -112,21 +112,23 @@ body:has(.dash.theme-dark),
 .dash-nav {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
   flex: 1;
   min-height: 0;
-  overflow-y: auto;
-  scrollbar-width: thin;
+  overflow: auto;
+  scrollbar-width: none;
+  overscroll-behavior: contain;
 }
+.dash-nav::-webkit-scrollbar { width: 0; height: 0; }
 .dash-nav-item {
   display: flex;
   align-items: center;
-  gap: 11px;
+  gap: 8px;
   border: 1px solid transparent;
   border-radius: 4px;
-  padding: 10px 12px;
+  padding: 7px 8px;
   color: #405b78;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   text-align: left;
   transition: background 0.15s var(--ease-out), color 0.15s var(--ease-out), transform .15s var(--ease-out), box-shadow .15s var(--ease-out);
@@ -136,6 +138,8 @@ body:has(.dash.theme-dark),
   height: 17px;
 }
 .dash-nav-item > span { flex: 1; }
+.dash-nav-item,
+.dash-nav-sub-item { min-width: 0; }
 .dash-nav-chevron {
   width: 14px !important;
   height: 14px !important;
@@ -164,8 +168,8 @@ body:has(.dash.theme-dark),
   display: flex;
   flex-direction: column;
   gap: 2px;
-  margin: 2px 0 4px;
-  padding-left: 10px;
+  margin: 1px 0 2px;
+  padding-left: 7px;
   border-left: 1px solid #cbddeb;
   margin-left: 19px;
   animation: dash-submenu-in .16s var(--ease-out) both;
@@ -180,9 +184,9 @@ body:has(.dash.theme-dark),
   gap: 9px;
   border: 1px solid transparent;
   border-radius: 4px;
-  padding: 7px 12px;
+  padding: 5px 8px;
   color: #627994;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   text-align: left;
   transition: background 0.15s var(--ease-out), color 0.15s var(--ease-out);
@@ -212,7 +216,7 @@ body:has(.dash.theme-dark),
   align-items: center;
   gap: 9px;
   width: 100%;
-  padding: 12px 8px 4px;
+  padding: 6px 6px 2px;
   color: #9aa290;
   font-size: 13px;
   font-weight: 600;
@@ -233,10 +237,10 @@ body:has(.dash.theme-dark),
   margin-top: 18px;
 }
 .dash-side-user-top {
-  padding: 8px 8px 18px;
+  padding: 6px 6px 10px;
   border-top: 0;
   border-bottom: 1px solid #d5e3f0;
-  margin: 0 0 16px;
+  margin: 0 0 8px;
 }
 .user-meta {
   display: flex;
@@ -269,9 +273,9 @@ body:has(.dash.theme-dark),
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin: 0 8px;
-  padding: 14px 12px 12px;
+  gap: 5px;
+  margin: 0 4px;
+  padding: 9px 9px 8px;
   border: 1px solid rgba(140, 226, 223, .42);
   border-radius: 7px;
   background: linear-gradient(145deg, rgba(23, 92, 211, .2), rgba(140, 226, 223, .07));
@@ -313,7 +317,7 @@ body:has(.dash.theme-dark),
 }
 .dash-side-store-url {
   display: block;
-  padding: 9px 10px;
+  padding: 6px 8px;
   border: 1px solid rgba(255, 255, 255, .1);
   border-radius: 4px;
   background: rgba(5, 8, 4, .5);
@@ -332,14 +336,14 @@ body:has(.dash.theme-dark),
 .dash-side-store-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 6px;
+  gap: 4px;
 }
 .dash-side-store-copy,
 .dash-side-store-open {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 31px;
+  min-height: 27px;
   font-family: var(--font-mono);
   font-size: 9.5px;
   font-weight: 700;
@@ -388,14 +392,14 @@ body:has(.dash.theme-dark),
   display: flex;
   flex-direction: column;
   border-top: 1px solid #2a2f20;
-  padding-top: 6px;
+  padding-top: 3px;
 }
 .dash-logout {
   display: flex;
   align-items: center;
   gap: 9px;
   width: 100%;
-  padding: 8px 8px 4px;
+  padding: 5px 6px 2px;
   color: #9aa290;
   font-size: 13px;
   font-weight: 600;
@@ -693,7 +697,7 @@ body:has(.dash.theme-dark),
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 3px;
-  margin: 7px 4px 8px;
+  margin: 4px 2px 5px;
   padding: 3px;
   border: 1px solid #cbddeb;
   border-radius: 9px;
@@ -704,8 +708,8 @@ body:has(.dash.theme-dark),
   align-items: center;
   justify-content: center;
   gap: 5px;
-  min-height: 32px;
-  padding: 6px 8px;
+  min-height: 27px;
+  padding: 4px 6px;
   border-radius: 6px;
   color: #637b95;
   font-size: 11px;

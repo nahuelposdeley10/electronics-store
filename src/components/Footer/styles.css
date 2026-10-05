@@ -10,8 +10,8 @@
   margin-top: 40px;
 }
 .footer-band {
-  background: var(--gal-facade);
-  color: #fff;
+  background: var(--gal-tag);
+  color: var(--gal-tag-ink);
   text-align: center;
   font-family: var(--font-mono);
   font-size: 13px;
@@ -86,6 +86,16 @@
 }
 .footer-col button:hover {
   color: #fff;
+}
+.footer-social-link {
+  color: #c9cdc2;
+  text-decoration: none;
+}
+.footer-social-link:hover,
+.footer-social-link:focus-visible {
+  color: #fff;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 .footer-map {
   margin-top: 18px;

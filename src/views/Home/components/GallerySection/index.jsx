@@ -1,11 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import ProductCard from '@/components/ProductCard'
 import SearchSelect from '@/components/SearchSelect'
 import { getTenantHeaders } from '@/lib/tenant'
 
 import './styles.css'
 
-export default function GallerySection({ onView, brands }) {
+export default function GallerySection({ onView, brands, demoProducts = [] }) {
+  const isDemo = demoProducts.length > 0
   const [page, setPage] = useState(1)
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -14,8 +15,17 @@ export default function GallerySection({ onView, brands }) {
   const [category, setCategory] = useState('all')
   const [brand, setBrand] = useState('all')
   const [sort, setSort] = useState('relevance')
+  const demoData = useMemo(() => {
+    let items = demoProducts
+    if (category !== 'all') items = items.filter((product) => product.category === category)
+    if (brand !== 'all') items = items.filter((product) => product.brand === brand)
+    if (sort === 'price_asc') items = [...items].sort((a, b) => a.price - b.price)
+    if (sort === 'price_desc') items = [...items].sort((a, b) => b.price - a.price)
+    return { items, page: 1, total: items.length, totalPages: 1 }
+  }, [demoProducts, category, brand, sort])
 
   useEffect(() => {
+    if (isDemo) return undefined
     let alive = true
     fetch('/api/categories', { headers: getTenantHeaders() })
       .then((res) => res.json())
@@ -26,7 +36,7 @@ export default function GallerySection({ onView, brands }) {
     return () => {
       alive = false
     }
-  }, [])
+  }, [isDemo])
 
   const hasFilters = category !== 'all' || brand !== 'all' || sort !== 'relevance'
 
@@ -43,6 +53,9 @@ export default function GallerySection({ onView, brands }) {
   }
 
   useEffect(() => {
+    if (isDemo) {
+      return undefined
+    }
     let alive = true
     const qs = new URLSearchParams({ page: String(page), limit: '12' })
     if (category !== 'all') qs.set('category', category)
@@ -62,7 +75,16 @@ export default function GallerySection({ onView, brands }) {
     return () => {
       alive = false
     }
-  }, [page, category, brand, sort])
+  }, [page, category, brand, sort, isDemo, demoProducts])
+
+  const visibleData = isDemo ? demoData : data
+
+  const visibleCategories = isDemo
+    ? [...new Set(demoProducts.map((product) => product.category))].map((key) => ({
+      key,
+      name: key.charAt(0).toUpperCase() + key.slice(1),
+    }))
+    : categories
 
   return (
     <section id="catalogo" className="home-section gallery-section">
@@ -70,7 +92,7 @@ export default function GallerySection({ onView, brands }) {
         <h2 id="section-galeria" data-reveal="sweep">
           Toda la galería
         </h2>
-        <span className="count-tag">{data ? `${data.total} productos` : '…'}</span>
+        <span className="count-tag">{visibleData ? `${visibleData.total} productos` : '…'}</span>
       </div>
 
       <div className="gallery-tools" data-reveal="up">
@@ -82,7 +104,7 @@ export default function GallerySection({ onView, brands }) {
           >
             Todas
           </button>
-          {categories.map((c) => (
+          {visibleCategories.map((c) => (
             <button
               key={c.key}
               type="button"
@@ -139,23 +161,24 @@ export default function GallerySection({ onView, brands }) {
 
       {error ? (
         <p className="gallery-note">{error}</p>
-      ) : loading && !data ? (
+      ) : loading && !visibleData ? (
         <p className="gallery-note">Cargando la galería…</p>
-      ) : data.items.length === 0 ? (
+      ) : visibleData.items.length === 0 ? (
         <p className="gallery-note">No hay productos con esos filtros.</p>
       ) : (
         <>
           <div className="product-grid">
-            {data.items.map((product, i) => (
+            {visibleData.items.map((product, i) => (
               <ProductCard
                 key={product.id}
                 product={product}
                 onView={onView}
+                demo={isDemo}
                 revealDelay={i * 45}
               />
             ))}
           </div>
-          {data.totalPages > 1 && (
+          {visibleData.totalPages > 1 && (
             <div className="gallery-pager">
               <button
                 type="button"
@@ -165,12 +188,12 @@ export default function GallerySection({ onView, brands }) {
                 ← Anterior
               </button>
               <span className="mono">
-                Página {data.page} de {data.totalPages} · {data.total} productos
+                Página {visibleData.page} de {visibleData.totalPages} · {visibleData.total} productos
               </span>
               <button
                 type="button"
                 onClick={() => setPage((p) => p + 1)}
-                disabled={page >= data.totalPages || loading}
+                disabled={page >= visibleData.totalPages || loading}
               >
                 Siguiente →
               </button>

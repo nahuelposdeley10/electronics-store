@@ -36,11 +36,16 @@
 .onboard-footnote { margin-top: 26px; font-size: 12px; line-height: 1.7; color: var(--gal-ink-soft); }
 .onboard :is(button, a, input):focus-visible, .onboard-banner button:focus-visible { outline: 3px solid var(--gal-facade); outline-offset: 4px; }
 .onboard button:disabled, .onboard-banner button:disabled { opacity: .55; cursor: not-allowed; }
-.onboard-banner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 20px; border: 1px solid var(--gal-line-strong); border-left: 4px solid var(--gal-facade); border-radius: 14px; padding: 22px; margin-bottom: 24px; background: var(--gal-white); }
+.onboard-banner { position: sticky; top: 14px; z-index: 8; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 20px; border: 1px solid var(--gal-line-strong); border-left: 4px solid var(--gal-facade); border-radius: 14px; padding: 18px 22px; margin-bottom: 24px; background: color-mix(in srgb, var(--gal-white) 94%, transparent); box-shadow: 0 12px 30px rgba(18, 35, 63, .09); backdrop-filter: blur(12px); }
 .onboard-banner > div:first-child { display: grid; gap: 8px; }
 .onboard-banner strong { font-size: 18px; }
 .onboard-banner > div > span:last-child { font-size: 13px; color: var(--gal-ink-soft); line-height: 1.6; }
 .onboard-banner-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.onboard-missing { display: grid; gap: 7px; min-width: min(100%, 310px); }
+.onboard-missing > span { color: var(--gal-ink-faint); font: 700 10px/1.2 var(--font-mono, monospace); letter-spacing: .09em; text-transform: uppercase; }
+.onboard-missing > div { display: flex; flex-wrap: wrap; gap: 6px; }
+.onboard-missing button { border: 1px solid #b8ccec; border-radius: 999px; padding: 6px 10px; background: #eef5ff; color: var(--gal-facade-deep); font-size: 12px; font-weight: 700; cursor: pointer; }
+.onboard-missing button:hover { border-color: var(--gal-facade); background: #e2edff; }
 @media (max-width: 1150px) { .onboard-layout { grid-template-columns: 220px minmax(0, 1fr); gap: 16px; } }
 @media (max-width: 900px) {
   .onboard-heading { flex-direction: column; gap: 16px; }
@@ -53,4 +58,6 @@
   .onboard-steps > p { display: none; }
   .onboard-detail { padding: 22px 18px; border-radius: 14px; }
   .onboard-controls { justify-content: flex-start; }
+  .onboard-banner { top: 8px; padding: 16px; }
+  .onboard-missing { width: 100%; }
 }

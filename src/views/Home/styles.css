@@ -8,6 +8,27 @@
   flex-direction: column;
   gap: 64px;
 }
+.catalog-demo-notice {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-top: -38px;
+  padding: 14px 18px;
+  border: 1px solid #c8d7ed;
+  border-left: 4px solid var(--gal-facade);
+  border-radius: 6px;
+  background: #eef5ff;
+  color: var(--gal-ink);
+  line-height: 1.5;
+}
+.catalog-demo-notice strong {
+  color: var(--gal-facade-deep);
+  font-size: 12px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.catalog-demo-notice span { color: var(--gal-ink-soft); font-size: 13px; }
 .hero-bay {
   position: relative;
   overflow: hidden;

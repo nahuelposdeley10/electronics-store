@@ -1,7 +1,7 @@
 .appearance-layout { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(280px, 1fr); gap: 24px; align-items: start; }
 .appearance-form { display: grid; gap: 18px; min-width: 0; }
-.appearance-form fieldset { display: grid; gap: 14px; min-width: 0; margin: 0; padding: 20px; border: 1px solid var(--gal-line); border-radius: 8px; background: var(--gal-white); }
-.appearance-form legend { font-weight: 700; padding: 0 6px; }
+.appearance-form fieldset { display: grid; gap: 14px; min-width: 0; margin: 0; padding: 22px 20px 20px; border: 1px solid var(--gal-line); border-top: 3px solid var(--gal-facade); border-radius: 8px; background: var(--gal-white); box-shadow: 0 5px 16px rgba(16, 18, 9, .035); }
+.appearance-form legend { color: var(--gal-ink); font-size: 17px; font-weight: 800; letter-spacing: -.015em; line-height: 1.25; padding: 0 6px; }
 .appearance-field-note { color: var(--gal-ink-soft); font-size: 13px; line-height: 1.5; }
 .appearance-background-options { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .appearance-presets { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -45,3 +45,8 @@
 .appearance-preview { position: relative; }
 @media (max-width: 850px) { .appearance-layout { grid-template-columns: 1fr; } .appearance-preview-wrap { position: static; } }
 @media (max-width: 560px) { .appearance-background-options { grid-template-columns: 1fr; } }
+
+/* El contenido visual vive en la preview compartida con Portada y mensajes. */
+.appearance-preview .preview-storefront h3 { font-family: var(--font-sign); }
+.appearance-preview .preview-storefront .preview-hero h3 { font-size: 27px; }
+.appearance-preview .preview-storefront .preview-section-head h3 { font-size: 17px; }

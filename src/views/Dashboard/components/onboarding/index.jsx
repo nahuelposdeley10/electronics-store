@@ -38,11 +38,18 @@ export default function Onboarding({ screen, role, userId, assistance = false, o
   const done = data.steps.find((item) => item.id === current)?.complete
   const percent = Math.round(data.completed / data.total * 100)
   const goStep = (id) => save('visit', id)
+  const missingSteps = data.steps
+    .filter((item) => !item.complete && item.id !== 'review')
+    .map((item) => ({ ...item, content: STEPS.find((stepItem) => stepItem.id === item.id) }))
 
   if (!isOpen) {
-    if (assistance || data.paused || data.finished) return null
+    if (assistance || data.finished) return null
     return <section className="onboard-banner" aria-label="Puesta en marcha">
       <div><span className="dash-eyebrow">Tu negocio, paso a paso</span><strong>{data.completedAt ? 'Tu configuración necesita una revisión' : 'Prepará tu tienda para comenzar'}</strong><span>{data.completed} de {data.total} pasos completos. Guardá los cambios en cada pantalla y volvé a la guía.</span></div>
+      {missingSteps.length > 0 && <div className="onboard-missing" aria-label="Secciones pendientes">
+        <span>Te falta completar</span>
+        <div>{missingSteps.map((item) => <button key={item.id} type="button" onClick={async () => { onView('onboarding'); await goStep(item.id) }}>{item.content?.title || item.id}</button>)}</div>
+      </div>}
       <div className="onboard-banner-actions"><button className="primary-btn" type="button" onClick={() => onView('onboarding')}>Continuar puesta en marcha<IconArrow /></button><button type="button" className="ghost-btn" disabled={busy} onClick={() => save('pause')}>Más tarde</button></div>
       {error && <p role="alert">{error}</p>}
     </section>

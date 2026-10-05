@@ -8,7 +8,7 @@ import { IconPlus, IconCross } from '@/components/Icons'
 
 import './styles.css'
 
-export default function ProductCard({ product, onView, offer = false, revealDelay }) {
+export default function ProductCard({ product, onView, offer = false, revealDelay, demo = false }) {
   const { addItem } = useCart()
   const settings = mergeSettings(useSiteSettings())
 
@@ -31,12 +31,12 @@ export default function ProductCard({ product, onView, offer = false, revealDela
   return (
     <article className="product-box" {...delayProps}>
       <div
-        className="box-media"
-        role="link"
-        tabIndex={0}
-        aria-label={`Ver ${product.name}`}
-        onClick={() => onView(product)}
-        onKeyDown={(e) => {
+        className={`box-media${demo ? ' is-demo' : ''}`}
+        role={demo ? undefined : 'link'}
+        tabIndex={demo ? undefined : 0}
+        aria-label={demo ? `${product.name}, producto de ejemplo` : `Ver ${product.name}`}
+        onClick={demo ? undefined : () => onView(product)}
+        onKeyDown={demo ? undefined : (e) => {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault()
             onView(product)
@@ -61,15 +61,17 @@ export default function ProductCard({ product, onView, offer = false, revealDela
       <div className="box-body">
         <span className="box-brand">{brand}</span>
         <h3 className="box-name">
-          <a
-            href={productUrl(product.id)}
-            onClick={(e) => {
-              e.preventDefault()
-              onView(product)
-            }}
-          >
-            {product.name}
-          </a>
+          {demo ? <span>{product.name}</span> : (
+            <a
+              href={productUrl(product.id)}
+              onClick={(e) => {
+                e.preventDefault()
+                onView(product)
+              }}
+            >
+              {product.name}
+            </a>
+          )}
         </h3>
 
         <div className="box-rating">
@@ -94,10 +96,14 @@ export default function ProductCard({ product, onView, offer = false, revealDela
               o {inst.count} cuotas de {formatARS(inst.value)}
             </span>
           </div>
-          <button type="button" className="add-btn" onClick={() => addItem(product)}>
-            <IconPlus />
-            Agregar
-          </button>
+          {demo ? (
+            <span className="demo-product-label">Vista de ejemplo</span>
+          ) : (
+            <button type="button" className="add-btn" onClick={() => addItem(product)}>
+              <IconPlus />
+              Agregar
+            </button>
+          )}
         </div>
       </div>
     </article>

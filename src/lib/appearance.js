@@ -5,7 +5,7 @@ export const APPEARANCE_DEFAULTS = Object.freeze({
   headingFont: 'anton', corners: 'classic', imageFit: 'cover',
   productCardStyle: 'classic', productsPerRow: 4, productSpacing: 'comfortable',
   showHero: true, showOffers: true, showNewArrivals: true,
-  showGaming: true, showBrands: true, showMarquee: true, showWhatsapp: true,
+  showGaming: true, showBrands: true, showMarquee: true, showWhatsapp: true, showInstagram: true,
   heroButton: 'Comprar ahora',
 })
 

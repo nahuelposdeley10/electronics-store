@@ -37,6 +37,7 @@ export function seoMeta({ view, product, settings }) {
 
   const name = settings?.store?.name || 'Tienda BNP'
   const tagline = settings?.store?.tagline || 'electrónica y tecnología'
+  const icon = absolute(settings?.store?.logoUrl)
   const baseDescription =
     settings?.store?.band ||
     `Tienda online de ${name}: ${tagline}. Comprá con envío a todo el país o retirá en el local.`
@@ -49,6 +50,7 @@ export function seoMeta({ view, product, settings }) {
       image: absolute(productImage(product.image)),
       type: 'product',
       siteName: name,
+      icon,
       noIndex: false,
     }
   }
@@ -58,6 +60,7 @@ export function seoMeta({ view, product, settings }) {
       title: `Carrito — ${name}`,
       description: baseDescription,
       siteName: name,
+      icon,
       noIndex: true,
     }
   }
@@ -68,6 +71,7 @@ export function seoMeta({ view, product, settings }) {
       description: baseDescription,
       canonical: absolute(infoUrl(view.payload)),
       siteName: name,
+      icon,
       noIndex: false,
     }
   }
@@ -77,15 +81,17 @@ export function seoMeta({ view, product, settings }) {
       title: `Estado del pedido — ${name}`,
       description: baseDescription,
       siteName: name,
+      icon,
       noIndex: true,
     }
   }
 
   return {
-    title: `${name} — Electrónica y tecnología`,
+    title: `${name} — ${tagline}`,
     description: baseDescription,
     canonical: absolute(homeUrl()),
     siteName: name,
+    icon,
     noIndex: false,
   }
 }
@@ -127,6 +133,14 @@ export function applySEO(meta) {
   if (!meta) return
 
   document.title = meta.title || document.title
+  let favicon = document.head.querySelector('link[rel="icon"]')
+  if (!favicon) {
+    favicon = document.createElement('link')
+    favicon.rel = 'icon'
+    favicon.type = 'image/png'
+    document.head.appendChild(favicon)
+  }
+  favicon.href = meta.icon || '/images/brand/tienda-bnp-icon.png'
   upsertMeta('name', 'description', meta.description || '')
   const noIndex = applyRobotsPolicy(meta.noIndex)
 

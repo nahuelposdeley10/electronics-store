@@ -4,15 +4,16 @@ import ProductCard from '@/components/ProductCard'
 import { formatARS } from '@/data/format'
 import { useSiteSettings, mergeSettings } from '@/lib/siteSettings'
 import { IconArrow, IconCheck, IconBolt } from '@/components/Icons'
+import { DEMO_BRANDS, DEMO_PRODUCTS } from '@/data/demoCatalog.js'
 import GallerySection from './components/GallerySection'
 
 import './styles.css'
 
-function Section({ title, items, onView, offer = false }) {
+function Section({ title, items, onView, offer = false, demo = false }) {
   return (
     <section className="home-section" aria-labelledby={`section-${title}`}>
       <div className="section-head">
-        <h2 id={`section-${title}`} data-reveal="sweep">
+        <h2 id={`section-${title}`}>
           {title}
         </h2>
         <span className="count-tag">{items.length} productos</span>
@@ -24,6 +25,7 @@ function Section({ title, items, onView, offer = false }) {
             product={product}
             onView={onView}
             offer={offer}
+            demo={demo}
             revealDelay={i * 55}
           />
         ))}
@@ -34,6 +36,9 @@ function Section({ title, items, onView, offer = false }) {
 
 export default function Home({ onView }) {
   const { products, brands } = useCatalog()
+  const showingDemoCatalog = products.length === 0
+  const visibleProducts = showingDemoCatalog ? DEMO_PRODUCTS : products
+  const visibleBrands = showingDemoCatalog ? DEMO_BRANDS : brands
   const settings = mergeSettings(useSiteSettings())
   const appearance = settings.appearance
   const maxMonths = Math.max(
@@ -87,18 +92,22 @@ export default function Home({ onView }) {
   }, [appearance.showHero])
 
   const topDeals = useMemo(() => {
-    const onSale = products.filter(
+    const onSale = visibleProducts.filter(
       (p) => p.onSale && p.oldPrice && p.oldPrice > p.price,
     )
     return onSale.length > 0
-      ? onSale.slice(0, 4)
-      : [...products].sort((a, b) => (b.oldPrice ?? 0) - (a.oldPrice ?? 0)).slice(0, 4)
-  }, [products])
+      ? { title: 'Ofertas de la semana', items: onSale.slice(0, 4), demo: false }
+      : { title: 'Ofertas de la semana', items: DEMO_PRODUCTS.slice(0, 4), demo: true }
+  }, [visibleProducts])
 
   const newest = useMemo(() => {
-    const newArrivals = products.filter((p) => p.badge === 'Nuevo')
-    return newArrivals.length ? newArrivals : products.slice(2, 6)
-  }, [products])
+    const newArrivals = visibleProducts.filter((p) => p.badge === 'Nuevo')
+    return newArrivals.length
+      ? { title: 'Recién llegados', items: newArrivals.slice(0, 4), demo: false }
+      : { title: 'Recién llegados', items: DEMO_PRODUCTS.slice(2, 6), demo: true }
+  }, [visibleProducts])
+  const showOffersSection = appearance.showOffers || topDeals.demo
+  const showNewArrivalsSection = appearance.showNewArrivals || newest.demo
 
   return (
     <main className="home">
@@ -170,9 +179,14 @@ export default function Home({ onView }) {
         </div>
       </section>}
 
+      {showingDemoCatalog && <aside className="catalog-demo-notice" role="status">
+        <strong>Vista de ejemplo</strong>
+        <span>Esta tienda todavía no tiene productos cargados. Estos artículos muestran cómo se verá tu catálogo y no se pueden comprar.</span>
+      </aside>}
+
       <div id="ofertas" className="anchor" />
 
-      {appearance.showOffers && <Section title="Ofertas de la semana" items={topDeals} onView={onView} offer />}
+      {showOffersSection && <Section title={topDeals.title} items={topDeals.items} onView={onView} offer demo={topDeals.demo} />}
 
       {shippingEnabled ? (
         <div className="band-shipping" data-reveal="up">
@@ -188,7 +202,7 @@ export default function Home({ onView }) {
         </div>
       )}
 
-      {appearance.showNewArrivals && <Section title="Recién llegados" items={newest} onView={onView} />}
+      {showNewArrivalsSection && <Section title={newest.title} items={newest.items} onView={onView} demo={newest.demo} />}
 
       {appearance.showGaming && <section className="gaming-bay" data-reveal="up">
         <div className="gaming-copy">
@@ -214,12 +228,12 @@ export default function Home({ onView }) {
         </div>}
       </section>}
 
-      <GallerySection onView={onView} brands={brands} />
+      <GallerySection onView={onView} brands={visibleBrands} demoProducts={showingDemoCatalog ? DEMO_PRODUCTS : []} />
 
       {appearance.showBrands && <section className="brands-strip" aria-label="Marcas oficiales">
         <h2 data-reveal="sweep">Marcas oficiales</h2>
         <div className="brands">
-          {brands.map((brand, i) => (
+          {visibleBrands.map((brand, i) => (
             <span
               key={brand}
               className="brand-tag"

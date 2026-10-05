@@ -3,7 +3,7 @@ import { useEffect, useMemo } from 'react'
 import { CartContext } from './cartContext'
 import { useToast } from './useToast'
 import { fetchSiteSettings } from '../lib/siteSettings'
-import { getTenantHeaders } from '../lib/tenant'
+import { getTenantHeaders, getTenantSlug } from '../lib/tenant.js'
 
 const STORAGE_KEY = 'electronics-store-cart'
 const COUPON_STORAGE_KEY = 'electronics-store-coupon'
@@ -12,9 +12,12 @@ const round2 = (n) => Math.round((Number(n) + Number.EPSILON) * 100) / 100
 
 export default function CartProvider({ children }) {
   const { showToast } = useToast()
+  const tenantNamespace = getTenantSlug() || 'global'
+  const cartStorageKey = `${STORAGE_KEY}:${tenantNamespace}`
+  const couponStorageKey = `${COUPON_STORAGE_KEY}:${tenantNamespace}`
   const [items, setItems] = useState(() => {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY)
+      const stored = localStorage.getItem(cartStorageKey)
       return stored ? JSON.parse(stored) : []
     } catch {
       return []
@@ -22,7 +25,7 @@ export default function CartProvider({ children }) {
   })
   const [appliedCoupon, setAppliedCoupon] = useState(() => {
     try {
-      return localStorage.getItem(COUPON_STORAGE_KEY) || null
+      return localStorage.getItem(couponStorageKey) || null
     } catch {
       return null
     }
@@ -136,16 +139,16 @@ export default function CartProvider({ children }) {
   }, [items])
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(items))
-  }, [items])
+    localStorage.setItem(cartStorageKey, JSON.stringify(items))
+  }, [cartStorageKey, items])
 
   useEffect(() => {
     if (appliedCoupon) {
-      localStorage.setItem(COUPON_STORAGE_KEY, appliedCoupon)
+      localStorage.setItem(couponStorageKey, appliedCoupon)
     } else {
-      localStorage.removeItem(COUPON_STORAGE_KEY)
+      localStorage.removeItem(couponStorageKey)
     }
-  }, [appliedCoupon])
+  }, [appliedCoupon, couponStorageKey])
 
   const addItem = (product) => {
     const stock = Math.max(0, Number(product.stock) || 0)

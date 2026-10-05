@@ -5,6 +5,7 @@ import { roundMoney } from './money.js'
 import { APPEARANCE_DEFAULTS, normalizeAppearance } from '../../src/lib/appearance.js'
 import { Subscription } from '../models/Subscription.js'
 import { permissionsForPlan, inferPlanCode } from './plans.js'
+import { normalizeInstagramUrl } from '../../src/lib/social.js'
 
 export const ALL_PERMISSIONS = [
   'settings.manage',
@@ -61,6 +62,7 @@ export function defaults() {
       coverUrl: null,
       phone: '11 5555 4294',
       whatsapp: '5491155554294',
+      instagram: null,
       email: 'hola@tienda.com.ar',
       addressFull: 'Av. de los Incas 4050, Villa Urquiza, CABA',
       addressShort: 'Villa Urquiza, CABA',
@@ -92,6 +94,12 @@ export function defaults() {
         { minPrice: 0, months: 3 },
         { minPrice: 50000, months: 6 },
         { minPrice: 100000, months: 12 },
+      ],
+      headerCounters: [
+        { title: 'Cuotas', text: 'hasta 12 sin interés' },
+        { title: 'Envío', text: 'a domicilio' },
+        { title: 'Garantía', text: 'oficial' },
+        { title: 'Retiro', text: 'en el local' },
       ],
     },
     payments: {
@@ -259,6 +267,16 @@ export async function saveSettings({ section, value, tenant } = {}) {
   }
   const current = await getSettings({ fresh: true, tenant })
   let nextValue = value
+
+  if (section === 'store' && value && typeof value === 'object' && String(value.instagram || '').trim()) {
+    const instagram = normalizeInstagramUrl(value.instagram)
+    if (!instagram) {
+      const error = new Error('Ingresá un perfil válido de Instagram, por ejemplo https://instagram.com/tu-negocio')
+      error.status = 400
+      throw error
+    }
+    nextValue = { ...value, instagram }
+  }
 
   // Credential fields are intentionally not clearable from ordinary settings
   // saves. A stale admin form (or a second save made by the same screen) can

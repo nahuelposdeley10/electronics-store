@@ -4,6 +4,7 @@ import {
   IconMap,
   IconPhone,
   IconMail,
+  IconInstagram,
   IconClock,
 } from '@/components/Icons'
 
@@ -72,6 +73,14 @@ export default function Footer({ onNavigate }) {
             <li><IconMap /> {settings.store.addressFull}</li>
             <li><IconPhone /> {settings.store.phone}</li>
             <li><IconMail /> {settings.store.email}</li>
+            {settings.store.instagram && (
+              <li>
+                <IconInstagram />
+                <a className="footer-social-link" href={settings.store.instagram} target="_blank" rel="noopener noreferrer">
+                  Instagram
+                </a>
+              </li>
+            )}
             <li><IconClock /> {settings.store.hours}</li>
           </ul>
           <div className="footer-map">

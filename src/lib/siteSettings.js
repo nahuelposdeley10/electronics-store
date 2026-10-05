@@ -11,6 +11,7 @@ const FALLBACK = {
     tagline: 'galería de tecnología',
     phone: '11 5555 4294',
     whatsapp: '5491155554294',
+    instagram: null,
     email: 'hola@tienda.com.ar',
     addressFull: 'Av. de los Incas 4050, Villa Urquiza, CABA',
     addressShort: 'Villa Urquiza, CABA',
@@ -39,6 +40,12 @@ const FALLBACK = {
       { minPrice: 0, months: 3 },
       { minPrice: 50000, months: 6 },
       { minPrice: 100000, months: 12 },
+    ],
+    headerCounters: [
+      { title: 'Cuotas', text: 'hasta 12 sin interés' },
+      { title: 'Envío', text: 'a domicilio' },
+      { title: 'Garantía', text: 'oficial' },
+      { title: 'Retiro', text: 'en el local' },
     ],
   },
   payments: {
@@ -115,9 +122,14 @@ export function useSiteSettings() {
 }
 
 export function mergeSettings(override) {
+  const gaming = { ...GAMING_DEFAULTS, ...(override?.gaming || {}) }
+  if (!String(gaming.imageUrl || '').trim() || gaming.imageUrl === 'null') {
+    gaming.imageUrl = GAMING_DEFAULTS.imageUrl
+    gaming.imageAlt = GAMING_DEFAULTS.imageAlt
+  }
   return {
     appearance: normalizeAppearance(override?.appearance),
-    gaming: { ...GAMING_DEFAULTS, ...(override?.gaming || {}) },
+    gaming,
     store: { ...FALLBACK.store, ...(override?.store || {}) },
     shipping: { ...FALLBACK.shipping, ...(override?.shipping || {}) },
     hero: { ...FALLBACK.hero, ...(override?.hero || {}) },

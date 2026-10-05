@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import CatalogProvider from './context/CatalogProvider'
 import CartProvider from './context/CartProvider'
 import { ToastProvider } from './context/ToastContext'
@@ -11,7 +11,6 @@ import ConfirmDialog from '@/components/ConfirmDialog'
 import CookieConsent from '@/components/CookieConsent'
 import WhatsAppButton from '@/components/WhatsAppButton'
 import ProductCard from '@/components/ProductCard'
-import DashboardLoading from '@/components/DashboardLoading'
 import { IconSearchOff } from '@/components/Icons'
 import Home from '@/views/Home'
 import StoreUnavailable from '@/views/StoreUnavailable'
@@ -20,7 +19,6 @@ import ProductDetail from '@/views/ProductDetail'
 import OrderStatus from '@/views/OrderStatus'
 import InfoPage from '@/views/InfoPage'
 import { getTenantHeaders, storePathPrefix } from '@/lib/tenant'
-import { getSession } from '@/lib/api'
 import { parseLocation, urlForView } from '@/lib/router'
 import { applySEO, seoMeta } from '@/lib/seo'
 import { useSiteSettings, mergeSettings } from '@/lib/siteSettings'
@@ -29,8 +27,6 @@ import { appearanceVariables } from '@/lib/appearance'
 import './styles/ui.css'
 
 initMotion()
-
-const Dashboard = lazy(() => import('./views/Dashboard'))
 
 function CatalogLoading() {
   return (
@@ -96,15 +92,14 @@ function AppContent() {
     applySEO(seoMeta({ view, product: view.name === 'product' ? product : null, settings }))
   }, [view, product, settings])
 
-  useEffect(() => {
-    if (view.name === 'dashboard' && window.location.pathname !== '/admin') {
-      window.history.replaceState({}, '', '/admin')
-    }
-  }, [view.name])
-
   const navigate = (name, payload) => {
     if (name === 'home' && !storePathPrefix()) name = 'dashboard'
     const url = urlForView(name, payload)
+    if (name === 'dashboard') {
+      window.history.pushState({}, '', url)
+      window.dispatchEvent(new PopStateEvent('popstate'))
+      return
+    }
     setView({ name, payload })
     if (name === 'product') {
       setProduct(productFromView({ name, payload }, products))
@@ -306,29 +301,14 @@ function AppContent() {
     <CartProvider>
       <Toast />
       <ConfirmDialog />
-      {view.name === 'dashboard' ? (
-        <Suspense fallback={<DashboardLoading />}>
-          <Dashboard
-            onExit={() => {
-              const { user } = getSession()
-              if (user?.role === 'admin' && user?.businessSlug) {
-                window.location.assign(`/u/${user.businessSlug}`)
-                return
-              }
-              navigate('dashboard')
-            }}
-          />
-        </Suspense>
-      ) : (
-        <div className="storefront" data-product-columns={settings.appearance.productsPerRow} style={appearanceVariables(settings.appearance)}>
-          <div className="scroll-tape" ref={tapeRef} aria-hidden="true" />
-          <Header onNavigate={navigate} view={view.name} onSearch={handleSearch} />
-          {content}
-          <Footer onNavigate={navigate} />
-          {settings.appearance.showWhatsapp && <WhatsAppButton />}
-          <CookieConsent onNavigate={navigate} />
-        </div>
-      )}
+      <div className="storefront" data-product-columns={settings.appearance.productsPerRow} style={appearanceVariables(settings.appearance)}>
+        <div className="scroll-tape" ref={tapeRef} aria-hidden="true" />
+        <Header onNavigate={navigate} view={view.name} onSearch={handleSearch} />
+        {content}
+        <Footer onNavigate={navigate} />
+        {(settings.appearance.showWhatsapp || settings.appearance.showInstagram) && <WhatsAppButton />}
+        <CookieConsent onNavigate={navigate} />
+      </div>
     </CartProvider>
   )
 }

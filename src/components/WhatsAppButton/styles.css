@@ -1,26 +1,41 @@
 /*============================================================
-   WHATSAPP
+   FLOATING SOCIAL LINKS
    ============================================================*/
-.whatsapp-btn {
+.social-float {
   position: fixed;
   bottom: 26px;
   right: 26px;
-  background: #1fbf58;
-  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  z-index: 50;
+}
+.social-float-btn {
+  position: relative;
   width: 56px;
   height: 56px;
   display: flex;
   align-items: center;
   justify-content: center;
+  border-radius: 50%;
+  color: #fff;
+  transition: transform 0.15s;
+}
+.whatsapp-btn {
+  background: #1fbf58;
   box-shadow:
     inset 0 0 0 2px rgba(255, 255, 255, 0.32),
     0 10px 26px rgba(31, 191, 88, 0.42);
-  z-index: 50;
-  transition: transform 0.15s;
-  color: #fff;
 }
-.whatsapp-btn::before,
-.whatsapp-btn::after {
+.instagram-btn {
+  background: radial-gradient(circle at 30% 110%, #fdf497 0 8%, #fdf49700 35%), linear-gradient(135deg, #405de6, #833ab4 42%, #e1306c 68%, #fd1d1d 85%, #f77737);
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 255, 255, 0.32),
+    0 10px 26px rgba(193, 53, 132, 0.38);
+}
+.social-float-btn::before,
+.social-float-btn::after {
   content: "";
   position: absolute;
   inset: -2px;
@@ -30,9 +45,18 @@
   will-change: transform, opacity;
 }
 .whatsapp-btn::before {
+  border-color: rgba(34, 197, 94, 0.6);
+}
+.instagram-btn::before {
+  border-color: rgba(225, 48, 108, 0.6);
+}
+.instagram-btn::after {
+  border-color: rgba(225, 48, 108, 0.6);
+}
+.social-float-btn::before {
   animation: gal-wa-ping 2.33s var(--ease-out) infinite;
 }
-.whatsapp-btn::after {
+.social-float-btn::after {
   animation: gal-wa-ping 2.33s var(--ease-out) infinite;
   animation-delay: 1.165s;
 }
@@ -49,10 +73,20 @@
     opacity: 0;
   }
 }
-.whatsapp-btn:hover {
+.social-float-btn:hover {
   transform: scale(1.07);
 }
-.whatsapp-btn svg {
+.social-float-btn:focus-visible {
+  outline: 3px solid var(--gal-focus, #2563eb);
+  outline-offset: 4px;
+}
+.social-float-btn svg {
   width: 30px;
   height: 30px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .social-float-btn::before,
+  .social-float-btn::after {
+    animation: none;
+  }
 }

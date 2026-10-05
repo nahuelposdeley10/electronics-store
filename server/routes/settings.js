@@ -94,8 +94,8 @@ router.put('/admin/settings', requireAuth, requirePermission('settings.manage'),
     return res.json(saved[section] || {})
   } catch (error) {
     console.error('Settings save error:', error)
-    if (error.message && error.message.includes('conocida')) {
-      return res.status(400).json({ error: error.message })
+    if (error.status || error.message?.includes('conocida')) {
+      return res.status(error.status || 400).json({ error: error.message })
     }
     return res.status(500).json({ error: 'No se pudieron guardar los ajustes' })
   }

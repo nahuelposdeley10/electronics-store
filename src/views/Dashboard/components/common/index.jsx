@@ -361,9 +361,9 @@ function ScreenBlocked({ message }) {
 }
 
 
-function ToggleRow({ label, hint, checked, onChange, disabled = false }) {
+function ToggleRow({ label, hint, checked, onChange, disabled = false, onFocus }) {
   return (
-    <label className="set-wrap">
+    <label className="set-wrap" onFocusCapture={onFocus}>
       <span className="set-wrap-txt">
         <strong>{label}</strong>
         {hint && <em>{hint}</em>}
@@ -412,10 +412,10 @@ function SettingsNote({ text }) {
 }
 
 
-function SetImageField({ label, hint, value, uploading, onFile, onRemove, wide }) {
+function SetImageField({ label, hint, value, uploading, onFile, onRemove, onFocus, wide }) {
   const kind = wide ? 'cover' : 'logo'
   return (
-    <div className={`set-image-box is-${kind}`}>
+    <div className={`set-image-box is-${kind}`} onFocusCapture={onFocus}>
       <div className="set-image-head">
         <span className="set-image-label">{label}</span>
         <span className={`set-image-status${value ? ' has-image' : ''}`}>

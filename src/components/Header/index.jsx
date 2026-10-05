@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useCart } from '@/context/useCart'
 import { useSiteSettings, mergeSettings } from '@/lib/siteSettings'
-import { formatARS } from '@/data/format'
 import {
   IconBolt,
   IconSearch,
@@ -9,7 +8,6 @@ import {
   IconCard,
   IconTruck,
   IconShield,
-  IconWrench,
   IconPickup,
 } from '@/components/Icons'
 
@@ -38,17 +36,17 @@ export default function Header({ onNavigate, view, onSearch }) {
       : [12]
   const maxMonths = Math.max(...steps)
 
-  const counters = [
-    { icon: IconCard, title: 'Cuotas', text: `hasta ${maxMonths} sin interés` },
-    {
-      icon: IconTruck,
-      title: 'Envío',
-      text: `gratis + ${formatARS(settings.shipping.freeThreshold)}`,
-    },
-    { icon: IconShield, title: 'Garantía', text: 'oficial de fábrica' },
-    { icon: IconWrench, title: 'Técnico', text: 'servicio propio' },
-    { icon: IconPickup, title: 'Retiro', text: settings.store.addressShort },
+  const counterIcons = [IconCard, IconTruck, IconShield, IconPickup]
+  const counterFallback = [
+    { title: 'Cuotas', text: `hasta ${maxMonths} sin interés` },
+    { title: 'Envío', text: 'a domicilio' },
+    { title: 'Garantía', text: 'oficial' },
+    { title: 'Retiro', text: 'en el local' },
   ]
+  const counters = (Array.isArray(settings.general.headerCounters) && settings.general.headerCounters.length === 4
+    ? settings.general.headerCounters
+    : counterFallback
+  ).map((counter, index) => ({ ...counter, icon: counterIcons[index] }))
 
   const handleSearch = (e) => {
     e.preventDefault()
