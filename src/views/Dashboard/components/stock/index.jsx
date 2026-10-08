@@ -185,7 +185,7 @@ function StockScreen() {
                   <span className="t-cell-product">
                     <img className="prod-thumb" src={productImage(p.image)} alt="" loading="lazy" />
                     <span>
-                      <strong>{p.name}</strong>
+                      <strong title={p.name}>{p.name}</strong>
                       <em>{p.brand}</em>
                     </span>
                   </span>
@@ -723,7 +723,7 @@ function MinStockScreen({ canManage }) {
               <tr key={p.id} className={`stock-row-${stockStatusOf(p.stock, p.minStock)}`}>
                 <td>
                   <span className="t-cell-name">
-                    <strong>{p.name}</strong>
+                    <strong title={p.name}>{p.name}</strong>
                     <em>{p.brand}</em>
                   </span>
                 </td>
@@ -1338,7 +1338,7 @@ function PhysicalInventoryScreen({ canManage }) {
                   <tr key={p.id} className={diff !== 0 ? 'inv-alert-row' : ''}>
                     <td>
                       <span className="t-cell-name">
-                        <strong>{p.name}</strong>
+                        <strong title={p.name}>{p.name}</strong>
                         <em>{p.brand || ''}</em>
                       </span>
                     </td>

@@ -717,7 +717,13 @@
   display: flex;
   align-items: center;
   gap: 11px;
-  min-width: 200px;
+  width: min(100%, 190px);
+  max-width: 190px;
+  min-width: 0;
+}
+.t-cell-product > span {
+  min-width: 0;
+  flex: 1 1 auto;
 }
 .prod-thumb {
   width: 36px;
@@ -732,6 +738,7 @@
   display: block;
   font-size: 13.5px;
   line-height: 1.2;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1336,16 +1343,25 @@
 .t-cell-name {
   display: flex;
   flex-direction: column;
-  min-width: 180px;
+  width: min(100%, 190px);
+  max-width: 190px;
+  min-width: 0;
+  overflow: hidden;
 }
 .t-cell-name strong {
   font-weight: 600;
   color: var(--gal-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .t-cell-name em {
   font-style: normal;
   font-size: 11px;
   color: var(--gal-ink-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .prod-thumb.empty {
   width: 36px;

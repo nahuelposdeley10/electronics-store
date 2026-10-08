@@ -3,7 +3,7 @@ import { formatARS } from '@/data/format'
 import SearchSelect from '@/components/SearchSelect'
 import { apiDelete, apiGet, apiPost, apiPut, apiUpdate, apiUpload } from '@/lib/api'
 import { productImage } from '@/lib/productImage'
-import { IconCheck, IconClock, IconCross, IconEdit, IconInventory, IconLock, IconPlus, IconSearch, IconTrash } from '@/components/Icons'
+import { IconCheck, IconClock, IconCross, IconEdit, IconEye, IconInventory, IconLock, IconPlus, IconSearch, IconTrash } from '@/components/Icons'
 import { CATEGORY_LABELS, IMPORT_EXAMPLE, PAYMENT_LABELS, stockStatusOf } from '../../consts.js'
 import { EmptyNote, FilterReset, ProductPicker, ScreenBlocked, ScreenLoading, SortSelect, StockValue } from '../common'
 import { loadCatalogOptions } from '../common/catalogOptions.js'
@@ -24,6 +24,7 @@ function ProductsScreen({ canManage, canInventory, canCash }) {
   const [params, setParams] = useState({ q: '', category: '', brand: '', sort: '', page: 1 })
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState(null)
+  const [detailsProduct, setDetailsProduct] = useState(null)
   const [stockProduct, setStockProduct] = useState(null)
   const [cats, setCats] = useState([])
   const [brands, setBrands] = useState([])
@@ -42,7 +43,7 @@ function ProductsScreen({ canManage, canInventory, canCash }) {
   })
 
   useEffect(() => {
-    if (!formOpen && !stockProduct) return undefined
+    if (!formOpen && !detailsProduct && !stockProduct) return undefined
 
     const previousBodyOverflow = document.body.style.overflow
     const previousHtmlOverflow = document.documentElement.style.overflow
@@ -53,7 +54,7 @@ function ProductsScreen({ canManage, canInventory, canCash }) {
       document.body.style.overflow = previousBodyOverflow
       document.documentElement.style.overflow = previousHtmlOverflow
     }
-  }, [formOpen, stockProduct])
+  }, [formOpen, detailsProduct, stockProduct])
 
   useEffect(() => {
     let alive = true
@@ -340,6 +341,17 @@ function ProductsScreen({ canManage, canInventory, canCash }) {
         />
       )}
 
+      {detailsProduct && (
+        <ProductDetails
+          product={detailsProduct}
+          onClose={() => setDetailsProduct(null)}
+          onEdit={canManage ? () => {
+            setDetailsProduct(null)
+            openForm(detailsProduct)
+          } : undefined}
+        />
+      )}
+
       <div className="table-wrap">
         <table className="dash-table">
           <thead>
@@ -352,17 +364,30 @@ function ProductsScreen({ canManage, canInventory, canCash }) {
               <th>Stock</th>
               <th>Vendidos</th>
               <th>Ingresos</th>
-              {canManage && <th>Acciones</th>}
+              <th>Acciones</th>
             </tr>
           </thead>
           <tbody>
             {data.items.map((p) => (
-              <tr key={p.id} className={`stock-row-${stockStatusOf(p.stock, p.minStock)}`}>
+              <tr
+                key={p.id}
+                className={`stock-row-${stockStatusOf(p.stock, p.minStock)} product-row-clickable`}
+                role="button"
+                tabIndex={0}
+                aria-label={`Ver detalles de ${p.name}`}
+                onClick={() => setDetailsProduct(p)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    setDetailsProduct(p)
+                  }
+                }}
+              >
                 <td>
                   <span className="t-cell-product">
                     <img className="prod-thumb" src={productImage(p.image)} alt="" loading="lazy" />
                     <span>
-                      <strong>{p.name}</strong>
+                      <strong title={p.name}>{p.name}</strong>
                       <em>{p.brand}</em>
                     </span>
                   </span>
@@ -384,39 +409,50 @@ function ProductsScreen({ canManage, canInventory, canCash }) {
                 <td className="mono t-num"><StockValue stock={p.stock} min={p.minStock} /></td>
                 <td className="mono t-num">{p.soldUnits}</td>
                 <td className="mono t-num t-money">{formatARS(p.revenue)}</td>
-                {canManage && (
-                  <td>
-                    <span className="row-actions">
-                      {canInventory && (
-                        <button
-                          type="button"
-                          className="row-btn"
-                          title="Cargar stock (compra)"
-                          aria-label={`Cargar stock de ${p.name}`}
-                          onClick={() => setStockProduct(p)}
-                        >
-                          <IconInventory />
-                        </button>
-                      )}
+                <td onClick={(e) => e.stopPropagation()}>
+                  <span className="row-actions">
+                    <button
+                      type="button"
+                      className="row-btn"
+                      title="Ver detalles"
+                      aria-label={`Ver detalles de ${p.name}`}
+                      onClick={() => setDetailsProduct(p)}
+                    >
+                      <IconEye />
+                    </button>
+                    {canManage && canInventory && (
                       <button
                         type="button"
                         className="row-btn"
-                        aria-label={`Editar ${p.name}`}
-                        onClick={() => openForm(p)}
+                        title="Cargar stock (compra)"
+                        aria-label={`Cargar stock de ${p.name}`}
+                        onClick={() => setStockProduct(p)}
                       >
-                        <IconEdit />
+                        <IconInventory />
                       </button>
-                      <button
-                        type="button"
-                        className="row-btn row-btn-danger"
-                        aria-label={`Eliminar ${p.name}`}
-                        onClick={() => handleDelete(p)}
-                      >
-                        <IconTrash />
-                      </button>
-                    </span>
-                  </td>
-                )}
+                    )}
+                    {canManage && (
+                      <>
+                        <button
+                          type="button"
+                          className="row-btn"
+                          aria-label={`Editar ${p.name}`}
+                          onClick={() => openForm(p)}
+                        >
+                          <IconEdit />
+                        </button>
+                        <button
+                          type="button"
+                          className="row-btn row-btn-danger"
+                          aria-label={`Eliminar ${p.name}`}
+                          onClick={() => handleDelete(p)}
+                        >
+                          <IconTrash />
+                        </button>
+                      </>
+                    )}
+                  </span>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -455,6 +491,113 @@ function ProductsScreen({ canManage, canInventory, canCash }) {
           </button>
         </div>
       )}
+    </div>
+  )
+}
+
+
+function ProductDetails({ product, onClose, onEdit }) {
+  const images = product.images?.length
+    ? product.images
+    : product.image
+      ? [product.image]
+      : []
+  const margin = product.costPrice ? Number(product.price) - Number(product.costPrice) : null
+  const discount = product.oldPrice && Number(product.oldPrice) > Number(product.price)
+    ? Math.round((1 - Number(product.price) / Number(product.oldPrice)) * 100)
+    : 0
+
+  return (
+    <div className="product-overlay" onMouseDown={onClose}>
+      <div
+        className="product-panel product-details-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Detalles de ${product.name}`}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        <header className="product-head">
+          <div>
+            <span className="dash-eyebrow">Ficha de venta</span>
+            <h2>Detalles del producto</h2>
+            <p className="product-details-name" title={product.name}>{product.name}</p>
+          </div>
+          <button type="button" className="product-close" onClick={onClose} aria-label="Cerrar">
+            <IconCross />
+          </button>
+        </header>
+
+        <div className="product-details-layout">
+          <div className="product-details-gallery">
+            {images.length > 0 ? (
+              images.map((image, index) => (
+                <img
+                  key={`${image}-${index}`}
+                  src={productImage(image)}
+                  alt={index === 0 ? product.name : `${product.name}, imagen ${index + 1}`}
+                  className={index === 0 ? 'product-details-image is-primary' : 'product-details-image'}
+                />
+              ))
+            ) : (
+              <img className="product-details-image is-primary" src={productImage()} alt="" />
+            )}
+          </div>
+
+          <div className="product-details-copy">
+            <div className="product-details-tags">
+              <span>{product.brand || 'Sin marca'}</span>
+              <span>{CATEGORY_LABELS[product.category] || product.category || 'Sin categoría'}</span>
+              {product.badge && <span className="is-accent">{product.badge}</span>}
+            </div>
+            <p className="product-details-description">
+              {product.description || 'Este producto todavía no tiene una descripción cargada.'}
+            </p>
+            {product.specs?.length > 0 && (
+              <div className="product-details-specs">
+                <span className="product-details-label">Especificaciones</span>
+                <ul>
+                  {product.specs.map((spec) => <li key={spec}>{spec}</li>)}
+                </ul>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="product-details-stats">
+          <div>
+            <span>Precio</span>
+            <strong className="mono">{formatARS(product.price)}</strong>
+            {discount > 0 && <em>{discount}% OFF · antes {formatARS(product.oldPrice)}</em>}
+          </div>
+          <div>
+            <span>Stock</span>
+            <strong className="mono">{product.stock ?? 0}</strong>
+            <em>mínimo {product.minStock ?? 0}</em>
+          </div>
+          <div>
+            <span>Ventas</span>
+            <strong className="mono">{product.soldUnits ?? 0}</strong>
+            <em>{formatARS(product.revenue ?? 0)} facturados</em>
+          </div>
+          <div>
+            <span>Margen</span>
+            <strong className={`mono ${margin !== null && margin < 0 ? 'is-negative' : ''}`}>
+              {margin === null ? '—' : formatARS(margin)}
+            </strong>
+            <em>{product.freeShipping ? 'Envío gratis' : 'Envío no configurado'}</em>
+          </div>
+        </div>
+
+        <div className="product-details-meta">
+          <span>Rating <strong>{Number(product.rating || 0).toFixed(1)} / 5</strong></span>
+          <span>ID <strong className="mono">#{product.id}</strong></span>
+        </div>
+
+        <div className="pf-actions">
+          <button type="button" className="ghost-btn" onClick={onClose}>Cerrar</button>
+          {onEdit && <button type="button" className="primary-btn" onClick={onEdit}>Editar producto</button>}
+        </div>
+      </div>
     </div>
   )
 }
@@ -1648,7 +1791,7 @@ function OffersScreen({ canManage }) {
                     <span className="t-cell-product">
                       <img className="prod-thumb" src={productImage(p.image)} alt="" loading="lazy" />
                       <span>
-                        <strong>{p.name}</strong>
+                        <strong title={p.name}>{p.name}</strong>
                         <em>{p.brand}</em>
                       </span>
                     </span>

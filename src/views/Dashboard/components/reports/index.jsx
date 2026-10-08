@@ -306,7 +306,7 @@ function ProductsReportScreen() {
               <tr key={p.productId} className={`stock-row-${stockStatusOf(p.stock, p.minStock)}`}>
                 <td>
                   <span className="t-cell-name">
-                    <strong>{p.name}</strong>
+                    <strong title={p.name}>{p.name}</strong>
                     <em>{p.brand || `#${p.productId}`}</em>
                   </span>
                 </td>
@@ -423,7 +423,7 @@ function ProfitReportScreen() {
               <tr key={p.productId}>
                 <td>
                   <span className="t-cell-name">
-                    <strong>{p.name}</strong>
+                    <strong title={p.name}>{p.name}</strong>
                     <em>{p.brand || `#${p.productId}`}</em>
                   </span>
                 </td>
@@ -644,7 +644,7 @@ function StockReportScreen() {
                   <tr key={p.id} className={`stock-row-${stockStatusOf(p.stock, p.minStock)}`}>
                     <td>
                       <span className="t-cell-name">
-                        <strong>{p.name}</strong>
+                      <strong title={p.name}>{p.name}</strong>
                         <em>{p.brand}</em>
                       </span>
                     </td>
