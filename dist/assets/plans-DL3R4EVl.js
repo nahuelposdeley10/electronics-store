@@ -1,0 +1,1 @@
+var e=[{code:`inicial`,name:`Inicial`,price:49900},{code:`profesional`,name:`Profesional`,price:89900},{code:`negocio`,name:`Negocio`,price:149900}];e.map(e=>e.code);export{e as t};
