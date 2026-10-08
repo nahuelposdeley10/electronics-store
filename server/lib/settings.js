@@ -51,6 +51,14 @@ export const OPERATOR_DEFAULT_PERMISSIONS = [
   'inventory.write',
 ]
 
+const DEFAULT_HEADER_COUNTERS = [
+  { title: 'Cuotas', text: 'hasta 12 sin interés', icon: 'card' },
+  { title: 'Envío', text: 'a domicilio', icon: 'truck' },
+  { title: 'Garantía', text: 'oficial', icon: 'shield' },
+  { title: 'Retiro', text: 'en el local', icon: 'pickup' },
+  { title: 'Servicio técnico', text: 'propio', icon: 'wrench' },
+]
+
 export function defaults() {
   return {
     appearance: { ...APPEARANCE_DEFAULTS },
@@ -95,12 +103,7 @@ export function defaults() {
         { minPrice: 50000, months: 6 },
         { minPrice: 100000, months: 12 },
       ],
-      headerCounters: [
-        { title: 'Cuotas', text: 'hasta 12 sin interés' },
-        { title: 'Envío', text: 'a domicilio' },
-        { title: 'Garantía', text: 'oficial' },
-        { title: 'Retiro', text: 'en el local' },
-      ],
+      headerCounters: DEFAULT_HEADER_COUNTERS,
     },
     payments: {
       online: true,

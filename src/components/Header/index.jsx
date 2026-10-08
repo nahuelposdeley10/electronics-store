@@ -5,11 +5,21 @@ import {
   IconBolt,
   IconSearch,
   IconCart,
+  IconBox,
   IconCard,
-  IconTruck,
-  IconShield,
+  IconCash,
+  IconLock,
+  IconMap,
+  IconPhone,
   IconPickup,
+  IconShield,
+  IconTruck,
+  IconWrench,
 } from '@/components/Icons'
+import {
+  DEFAULT_HEADER_COUNTERS,
+  normalizeHeaderCounters,
+} from '@/lib/siteSettings.js'
 
 import './styles.css'
 
@@ -36,17 +46,25 @@ export default function Header({ onNavigate, view, onSearch }) {
       : [12]
   const maxMonths = Math.max(...steps)
 
-  const counterIcons = [IconCard, IconTruck, IconShield, IconPickup]
-  const counterFallback = [
-    { title: 'Cuotas', text: `hasta ${maxMonths} sin interés` },
-    { title: 'Envío', text: 'a domicilio' },
-    { title: 'Garantía', text: 'oficial' },
-    { title: 'Retiro', text: 'en el local' },
-  ]
-  const counters = (Array.isArray(settings.general.headerCounters) && settings.general.headerCounters.length === 4
-    ? settings.general.headerCounters
-    : counterFallback
-  ).map((counter, index) => ({ ...counter, icon: counterIcons[index] }))
+  const counterFallback = DEFAULT_HEADER_COUNTERS.map((counter) => (
+    counter.title === 'Cuotas' ? { ...counter, text: `hasta ${maxMonths} sin interés` } : counter
+  ))
+  const counterIcons = {
+    card: IconCard,
+    truck: IconTruck,
+    shield: IconShield,
+    pickup: IconPickup,
+    wrench: IconWrench,
+    box: IconBox,
+    map: IconMap,
+    phone: IconPhone,
+    lock: IconLock,
+    cash: IconCash,
+  }
+  const counters = normalizeHeaderCounters(settings.general.headerCounters).map((counter, index) => ({
+    ...counter,
+    icon: counterIcons[counter.icon] || counterIcons[counterFallback[index]?.icon] || IconBox,
+  }))
 
   const handleSearch = (e) => {
     e.preventDefault()

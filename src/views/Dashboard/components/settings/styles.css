@@ -160,6 +160,23 @@
   border-radius: 5px;
   background: var(--gal-panel);
 }
+.set-counter-editors { align-items: start; }
+.set-counter-editor-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--gal-ink);
+  font-size: 12px;
+}
+.set-counter-editor-head .x-btn:disabled { opacity: .35; cursor: not-allowed; }
+.set-icon-picker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.set-icon-picker svg { width: 18px; height: 18px; flex: 0 0 auto; color: var(--gal-facade); }
+.set-icon-picker select { flex: 1; min-width: 0; }
 .mp-paused-note {
   border: 1.5px dashed var(--gal-facade);
   background: var(--gal-panel);

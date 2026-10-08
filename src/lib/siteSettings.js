@@ -4,6 +4,39 @@ import { normalizeAppearance } from './appearance.js'
 
 import { GAMING_DEFAULTS } from './gaming.js'
 
+export const MAX_HEADER_COUNTERS = 5
+export const DEFAULT_HEADER_COUNTERS = [
+  { title: 'Cuotas', text: 'hasta 12 sin interés', icon: 'card' },
+  { title: 'Envío', text: 'a domicilio', icon: 'truck' },
+  { title: 'Garantía', text: 'oficial', icon: 'shield' },
+  { title: 'Retiro', text: 'en el local', icon: 'pickup' },
+  { title: 'Servicio técnico', text: 'propio', icon: 'wrench' },
+]
+export const HEADER_COUNTER_ICON_OPTIONS = [
+  { value: 'card', label: 'Tarjeta' },
+  { value: 'truck', label: 'Envío' },
+  { value: 'shield', label: 'Escudo' },
+  { value: 'pickup', label: 'Local' },
+  { value: 'wrench', label: 'Herramienta' },
+  { value: 'box', label: 'Caja' },
+  { value: 'map', label: 'Mapa' },
+  { value: 'phone', label: 'Teléfono' },
+  { value: 'lock', label: 'Seguridad' },
+  { value: 'cash', label: 'Dinero' },
+]
+
+export function normalizeHeaderCounters(value) {
+  const source = Array.isArray(value) && value.length ? value : DEFAULT_HEADER_COUNTERS
+  return source.slice(0, MAX_HEADER_COUNTERS).map((counter, index) => {
+    const fallback = DEFAULT_HEADER_COUNTERS[index] || { title: '', text: '', icon: 'box' }
+    return {
+      title: String(counter?.title || fallback.title),
+      text: String(counter?.text || fallback.text),
+      icon: String(counter?.icon || fallback.icon),
+    }
+  })
+}
+
 const FALLBACK = {
   gaming: GAMING_DEFAULTS,
   store: {
@@ -41,12 +74,7 @@ const FALLBACK = {
       { minPrice: 50000, months: 6 },
       { minPrice: 100000, months: 12 },
     ],
-    headerCounters: [
-      { title: 'Cuotas', text: 'hasta 12 sin interés' },
-      { title: 'Envío', text: 'a domicilio' },
-      { title: 'Garantía', text: 'oficial' },
-      { title: 'Retiro', text: 'en el local' },
-    ],
+    headerCounters: DEFAULT_HEADER_COUNTERS,
   },
   payments: {
     methods: {
@@ -133,7 +161,11 @@ export function mergeSettings(override) {
     store: { ...FALLBACK.store, ...(override?.store || {}) },
     shipping: { ...FALLBACK.shipping, ...(override?.shipping || {}) },
     hero: { ...FALLBACK.hero, ...(override?.hero || {}) },
-    general: { ...FALLBACK.general, ...(override?.general || {}) },
+    general: {
+      ...FALLBACK.general,
+      ...(override?.general || {}),
+      headerCounters: normalizeHeaderCounters(override?.general?.headerCounters),
+    },
     payments: { ...FALLBACK.payments, ...(override?.payments || {}) },
   }
 }

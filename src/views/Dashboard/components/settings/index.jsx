@@ -1,7 +1,22 @@
 ﻿import { useState } from 'react'
 import { apiPut, apiUpload, getSession } from '@/lib/api'
 import { getSuperTenant } from '@/lib/tenant'
-import { IconArrow, IconCross, IconEdit, IconPlus } from '@/components/Icons'
+import {
+  IconArrow,
+  IconBox,
+  IconCard,
+  IconCash,
+  IconCross,
+  IconEdit,
+  IconLock,
+  IconMap,
+  IconPhone,
+  IconPickup,
+  IconPlus,
+  IconShield,
+  IconTruck,
+  IconWrench,
+} from '@/components/Icons'
 import mercadoPagoLogo from '@/assets/mercado-pago-logo.png'
 import { useToast } from '@/context/useToast'
 import { useConfirm } from '@/context/useConfirm'
@@ -9,7 +24,12 @@ import { SetImageField, SettingsFetcher, ToggleRow } from '../common'
 import LiveStorePreview from './components/LiveStorePreview'
 
 import { GAMING_DEFAULTS } from '@/lib/gaming'
-import { notifySiteSettingsChanged } from '@/lib/siteSettings'
+import {
+  HEADER_COUNTER_ICON_OPTIONS,
+  MAX_HEADER_COUNTERS,
+  normalizeHeaderCounters,
+  notifySiteSettingsChanged,
+} from '@/lib/siteSettings'
 
 import './styles.css'
 
@@ -26,6 +46,19 @@ function PasswordInput({ label, value, onChange, ...rest }) {
       </div>
     </label>
   )
+}
+
+const HEADER_COUNTER_ICONS = {
+  card: IconCard,
+  truck: IconTruck,
+  shield: IconShield,
+  pickup: IconPickup,
+  wrench: IconWrench,
+  box: IconBox,
+  map: IconMap,
+  phone: IconPhone,
+  lock: IconLock,
+  cash: IconCash,
 }
 
 function PaymentsScreen() {
@@ -312,16 +345,7 @@ function StoreScreenBody({ settings, saving, onSave, mode = 'business' }) {
   const [marquee, setMarquee] = useState(
     (Array.isArray(general.marquee) ? general.marquee : []).filter(Boolean),
   )
-  const [counters, setCounters] = useState(
-    (Array.isArray(general.headerCounters) && general.headerCounters.length === 4
-      ? general.headerCounters
-      : [
-        { title: 'Cuotas', text: 'hasta 12 sin interés' },
-        { title: 'Envío', text: 'a domicilio' },
-        { title: 'Garantía', text: 'oficial' },
-        { title: 'Retiro', text: 'en el local' },
-      ]).map((counter) => ({ title: counter.title || '', text: counter.text || '' })),
-  )
+  const [counters, setCounters] = useState(() => normalizeHeaderCounters(general.headerCounters))
   const [loadedForm, setLoadedForm] = useState(form)
   const [loadedMarquee, setLoadedMarquee] = useState(marquee)
   const [loadedCounters, setLoadedCounters] = useState(counters)
@@ -391,6 +415,21 @@ function StoreScreenBody({ settings, saving, onSave, mode = 'business' }) {
       confirmLabel: 'Vaciar cinta',
     })
     if (ok) setMarquee([])
+  }
+
+  const addCounter = () => {
+    if (counters.length >= MAX_HEADER_COUNTERS) return
+    setCounters((prev) => [...prev, { title: '', text: '', icon: 'box' }])
+  }
+
+  const removeCounter = async (index) => {
+    if (counters.length <= 1) return
+    const ok = await confirm({
+      title: 'Quitar indicador',
+      message: '¿Eliminar este indicador de la cabecera de tu tienda?',
+      confirmLabel: 'Quitar',
+    })
+    if (ok) setCounters((prev) => prev.filter((_, i) => i !== index))
   }
 
   const uploadImage = async (which, e) => {
@@ -492,10 +531,18 @@ function StoreScreenBody({ settings, saving, onSave, mode = 'business' }) {
 
         {content && <section onFocusCapture={() => setPreviewFocus('brand')}>
         <h3>Indicadores de la cabecera</h3>
-        <p className="set-hint">Estos cuatro mensajes aparecen debajo de la cabecera: cuotas, envío, garantía y retiro.</p>
-        <div className="set-row">
-          {counters.map((counter, index) => (
+        <p className="set-hint">Aparecen debajo de la cabecera. Podés editar el texto, elegir un ícono y agregar hasta {MAX_HEADER_COUNTERS} indicadores.</p>
+        <div className="set-row set-counter-editors">
+          {counters.map((counter, index) => {
+            const CounterIcon = HEADER_COUNTER_ICONS[counter.icon] || IconBox
+            return (
             <div className="set-counter-editor" key={`counter-${index}`}>
+              <div className="set-counter-editor-head">
+                <strong>Indicador {index + 1}</strong>
+                <button type="button" className="x-btn" title="Quitar indicador" aria-label={`Quitar indicador ${index + 1}`} onClick={() => removeCounter(index)} disabled={counters.length <= 1}>
+                  <IconCross />
+                </button>
+              </div>
               <label className="inv-field">
                 <span>Título {index + 1}</span>
                 <input value={counter.title} onFocus={() => { setPreviewFocus('brand'); setPreviewTarget(`counter-${index}`) }} onChange={(e) => setCounters((prev) => prev.map((item, i) => (i === index ? { ...item, title: e.target.value } : item)))} maxLength={40} />
@@ -504,8 +551,23 @@ function StoreScreenBody({ settings, saving, onSave, mode = 'business' }) {
                 <span>Texto {index + 1}</span>
                 <input value={counter.text} onFocus={() => { setPreviewFocus('brand'); setPreviewTarget(`counter-${index}`) }} onChange={(e) => setCounters((prev) => prev.map((item, i) => (i === index ? { ...item, text: e.target.value } : item)))} maxLength={80} />
               </label>
+              <label className="inv-field">
+                <span>Ícono {index + 1}</span>
+                <span className="set-icon-picker">
+                  <CounterIcon aria-hidden="true" />
+                  <select value={counter.icon} onFocus={() => { setPreviewFocus('brand'); setPreviewTarget(`counter-${index}`) }} onChange={(e) => setCounters((prev) => prev.map((item, i) => (i === index ? { ...item, icon: e.target.value } : item)))}>
+                    {HEADER_COUNTER_ICON_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                  </select>
+                </span>
+              </label>
             </div>
-          ))}
+            )
+          })}
+        </div>
+        <div className="set-inline-add">
+          <button type="button" className="ghost-btn" onClick={addCounter} disabled={counters.length >= MAX_HEADER_COUNTERS}>
+            <IconPlus />{counters.length >= MAX_HEADER_COUNTERS ? 'Máximo alcanzado' : 'Agregar indicador'}
+          </button>
         </div>
         </section>}
 

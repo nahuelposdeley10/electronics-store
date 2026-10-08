@@ -71,8 +71,9 @@
 .preview-brand small { overflow: hidden; color: var(--gal-ink-soft); font-size: 7px; text-overflow: ellipsis; white-space: nowrap; }
 .preview-search { overflow: hidden; padding: 6px 8px; border: 1px solid var(--gal-line-strong); border-radius: var(--store-radius); color: var(--gal-ink-faint); font-size: 7px; text-overflow: ellipsis; white-space: nowrap; }
 .preview-nav { display: flex; gap: 8px; color: var(--gal-ink-soft); font-size: 7px; font-weight: 700; white-space: nowrap; }
-.preview-counters { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: var(--gal-line); }
-.preview-counters span { min-width: 0; padding: 7px 5px; background: #fff; color: var(--gal-ink-soft); font-size: 6.5px; line-height: 1.3; text-align: center; }
+.preview-counters { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 1px; background: var(--gal-line); }
+.preview-counters span { display: grid; justify-items: center; min-width: 0; padding: 7px 5px; background: #fff; color: var(--gal-ink-soft); font-size: 6.5px; line-height: 1.3; text-align: center; }
+.preview-counters svg { width: 13px; height: 13px; margin-bottom: 3px; color: var(--gal-ink-soft); }
 .preview-counters b { display: block; color: var(--gal-ink); font-size: 7px; }
 .preview-hero { min-height: 205px; display: flex; align-items: center; padding: 22px; background-color: #101209; background-position: center; background-size: cover; color: #fff; }
 .preview-hero > div { max-width: 66%; }

@@ -2,7 +2,20 @@ import { useEffect, useRef } from 'react'
 import { formatARS } from '@/data/format'
 import { DEMO_PRODUCTS } from '@/data/demoCatalog.js'
 import { appearanceVariables, normalizeAppearance } from '@/lib/appearance'
-import { IconInstagram } from '@/components/Icons'
+import {
+  IconBox,
+  IconCard,
+  IconCash,
+  IconInstagram,
+  IconLock,
+  IconMap,
+  IconPhone,
+  IconPickup,
+  IconShield,
+  IconTruck,
+  IconWrench,
+} from '@/components/Icons'
+import { HEADER_COUNTER_ICON_OPTIONS, normalizeHeaderCounters } from '@/lib/siteSettings.js'
 import './styles.css'
 
 function PreviewShell({ title, appearance, children, highlightTarget, social }) {
@@ -51,22 +64,25 @@ function PreviewStorefront({ data = {}, appearance, settings, items = [], highli
   const hero = { ...(settings?.hero || {}), ...data }
   const cover = String(source.coverUrl || '').trim()
   const gaming = data.gaming || settings?.gaming || {}
-  const headerCounters = Array.isArray(data.counters) && data.counters.length === 4
-    ? data.counters
-    : (Array.isArray(settings?.general?.headerCounters) && settings.general.headerCounters.length === 4
-      ? settings.general.headerCounters
-      : [
-        { title: 'Cuotas', text: 'hasta 12 sin interés' },
-        { title: 'Envío', text: 'a domicilio' },
-        { title: 'Garantía', text: 'oficial' },
-        { title: 'Retiro', text: 'en el local' },
-      ])
+  const headerCounters = normalizeHeaderCounters(data.counters || settings?.general?.headerCounters)
   const marquee = items.length ? items : (settings?.general?.marquee?.length ? settings.general.marquee : ['Novedades de tu tienda', 'Compra segura', 'Envíos a todo el país'])
   const heroStyle = cover
     ? { backgroundImage: `linear-gradient(90deg, rgba(10,12,8,.9), rgba(10,12,8,.3)), url("${cover.replaceAll('"', '%22')}")` }
     : undefined
   const zoneFocus = (zone, ownTarget = zone) => highlight === zone && (!highlightTarget || highlightTarget === ownTarget) ? ' is-preview-focus' : ''
   const appearanceFocus = (target, className = 'is-preview-focus') => highlightTarget === target ? ` ${className}` : ''
+  const headerCounterIcons = {
+    card: IconCard,
+    truck: IconTruck,
+    shield: IconShield,
+    pickup: IconPickup,
+    wrench: IconWrench,
+    box: IconBox,
+    map: IconMap,
+    phone: IconPhone,
+    lock: IconLock,
+    cash: IconCash,
+  }
 
   return <div className={`preview-storefront preview-focus-zone${appearanceFocus('appearance-background')}`} data-appearance-target="appearance-background">
     {appearance.showMarquee && <div data-preview-target="marquee" data-appearance-target="appearance-showMarquee" className={`preview-marquee preview-focus-zone${zoneFocus('marquee')}${appearanceFocus('appearance-showMarquee')}`}>{marquee.map((item) => <span key={item}>{item}</span>)}</div>}
@@ -79,7 +95,14 @@ function PreviewStorefront({ data = {}, appearance, settings, items = [], highli
         <div className="preview-search">Buscá producto, marca o categoría…</div>
         <div className="preview-nav">Inicio <span>Carrito</span></div>
       </div>
-      <div className={`preview-counters preview-focus-zone${zoneFocus('brand')}`}>{headerCounters.map((counter, index) => <span key={`${counter.title}-${index}`} className={highlightTarget === `counter-${index}` ? 'is-preview-text-focus' : ''} data-preview-target={`counter-${index}`}><b>{counter.title}</b> {counter.text}</span>)}</div>
+      <div className={`preview-counters preview-focus-zone${zoneFocus('brand')}`}>{headerCounters.map((counter, index) => {
+        const option = HEADER_COUNTER_ICON_OPTIONS.find((item) => item.value === counter.icon)
+        const CounterIcon = headerCounterIcons[option?.value]
+        return <span key={`${counter.title}-${index}`} className={highlightTarget === `counter-${index}` ? 'is-preview-text-focus' : ''} data-preview-target={`counter-${index}`}>
+          {CounterIcon && <CounterIcon aria-hidden="true" />}
+          <b>{counter.title}</b> {counter.text}
+        </span>
+      })}</div>
     </header>
 
     {appearance.showHero ? <section data-preview-target="hero-image" data-appearance-target="appearance-showHero" className={`preview-hero preview-focus-zone${zoneFocus('hero', 'hero-image')}${appearanceFocus('appearance-showHero')}`} style={heroStyle}>
