@@ -103,8 +103,8 @@ export default function Home({ onView }) {
   const newest = useMemo(() => {
     const newArrivals = visibleProducts.filter((p) => p.badge === 'Nuevo')
     return newArrivals.length
-      ? { title: 'Recién llegados', items: newArrivals.slice(0, 4), demo: false }
-      : { title: 'Recién llegados', items: DEMO_PRODUCTS.slice(2, 6), demo: true }
+      ? { title: 'Recién llegados', items: newArrivals.slice(0, 5), demo: false }
+      : { title: 'Recién llegados', items: DEMO_PRODUCTS.slice(2, 7), demo: true }
   }, [visibleProducts])
   const showOffersSection = appearance.showOffers || topDeals.demo
   const showNewArrivalsSection = appearance.showNewArrivals || newest.demo
