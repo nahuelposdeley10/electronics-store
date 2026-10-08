@@ -1,20 +1,30 @@
 import { useEffect, useMemo, useState } from 'react'
 import ProductCard from '@/components/ProductCard'
 import SearchSelect from '@/components/SearchSelect'
-import { getTenantHeaders } from '@/lib/tenant'
+import { getTenantHeaders, getTenantSlug } from '@/lib/tenant'
 
 import './styles.css'
 
+const readStoredFilters = (key) => {
+  try {
+    const stored = sessionStorage.getItem(key)
+    return stored ? JSON.parse(stored) : {}
+  } catch {
+    return {}
+  }
+}
+
 export default function GallerySection({ onView, brands, demoProducts = [] }) {
   const isDemo = demoProducts.length > 0
+  const filterStorageKey = `storefront-gallery-filters:${getTenantSlug() || 'global'}`
   const [page, setPage] = useState(1)
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [categories, setCategories] = useState([])
-  const [category, setCategory] = useState('all')
-  const [brand, setBrand] = useState('all')
-  const [sort, setSort] = useState('relevance')
+  const [category, setCategory] = useState(() => readStoredFilters(filterStorageKey).category || 'all')
+  const [brand, setBrand] = useState(() => readStoredFilters(filterStorageKey).brand || 'all')
+  const [sort, setSort] = useState(() => readStoredFilters(filterStorageKey).sort || 'relevance')
   const demoData = useMemo(() => {
     let items = demoProducts
     if (category !== 'all') items = items.filter((product) => product.category === category)
@@ -42,15 +52,27 @@ export default function GallerySection({ onView, brands, demoProducts = [] }) {
 
   const resetPage = (update) => {
     setPage(1)
+    setLoading(true)
+    setError('')
     if (update) update()
   }
 
   const clearFilters = () => {
     setPage(1)
+    setLoading(true)
+    setError('')
     setCategory('all')
     setBrand('all')
     setSort('relevance')
   }
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(filterStorageKey, JSON.stringify({ category, brand, sort }))
+    } catch {
+      // La navegación sigue funcionando aunque el navegador bloquee el storage.
+    }
+  }, [filterStorageKey, category, brand, sort])
 
   useEffect(() => {
     if (isDemo) {
@@ -62,7 +84,10 @@ export default function GallerySection({ onView, brands, demoProducts = [] }) {
     if (brand !== 'all') qs.set('brand', brand)
     if (sort !== 'relevance') qs.set('sort', sort)
     fetch(`/api/products?${qs.toString()}`, { headers: getTenantHeaders() })
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error('No se pudieron cargar los productos')
+        return res.json()
+      })
       .then((result) => {
         if (alive) setData(result)
       })
@@ -162,7 +187,16 @@ export default function GallerySection({ onView, brands, demoProducts = [] }) {
       {error ? (
         <p className="gallery-note">{error}</p>
       ) : loading && !visibleData ? (
-        <p className="gallery-note">Cargando la galería…</p>
+        <div className="catalog-skeleton-grid" role="status" aria-label="Cargando productos" aria-busy="true">
+          {Array.from({ length: 6 }, (_, i) => (
+            <div className="catalog-skeleton-card" key={i}>
+              <span className="catalog-skeleton-media" />
+              <span className="catalog-skeleton-line short" />
+              <span className="catalog-skeleton-line" />
+              <span className="catalog-skeleton-line price" />
+            </div>
+          ))}
+        </div>
       ) : visibleData.items.length === 0 ? (
         <p className="gallery-note">No hay productos con esos filtros.</p>
       ) : (
@@ -182,7 +216,10 @@ export default function GallerySection({ onView, brands, demoProducts = [] }) {
             <div className="gallery-pager">
               <button
                 type="button"
-                onClick={() => setPage((p) => p - 1)}
+                onClick={() => {
+                  setLoading(true)
+                  setPage((p) => p - 1)
+                }}
                 disabled={page <= 1 || loading}
               >
                 ← Anterior
@@ -192,7 +229,10 @@ export default function GallerySection({ onView, brands, demoProducts = [] }) {
               </span>
               <button
                 type="button"
-                onClick={() => setPage((p) => p + 1)}
+                onClick={() => {
+                  setLoading(true)
+                  setPage((p) => p + 1)
+                }}
                 disabled={page >= visibleData.totalPages || loading}
               >
                 Siguiente →

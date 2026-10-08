@@ -6,6 +6,7 @@ import {
   IconBox,
   IconCard,
   IconCash,
+  IconCart,
   IconInstagram,
   IconLock,
   IconMap,
@@ -132,7 +133,11 @@ function PreviewSocialFloat({ appearance, instagram, highlightWhatsapp, highligh
 
 function PreviewProductSection({ title, products, appearance, highlight, appearanceTarget, highlightTarget }) {
   const primarySection = appearanceTarget === 'appearance-showOffers'
-  return <section data-appearance-target={appearanceTarget} className={`preview-products preview-focus-zone${highlight === 'catalog' ? ' is-preview-focus' : ''}${highlightTarget === appearanceTarget ? ' is-preview-focus' : ''}`}><div className="preview-section-head"><h3>{title}</h3><span>{products.length} productos</span></div><div data-appearance-target={primarySection ? 'appearance-productGrid' : undefined} className={`preview-product-grid${primarySection && highlightTarget === 'appearance-productGrid' ? ' preview-focus-zone is-preview-focus' : ''}`}>{products.map((product, index) => <article key={product.id} data-appearance-target={primarySection && index === 0 ? 'appearance-cardStyle' : undefined} className={`preview-product-card${primarySection && index === 0 && highlightTarget === 'appearance-cardStyle' ? ' is-preview-focus' : ''}`}><div data-appearance-target={primarySection && index === 0 ? 'appearance-imageFit' : undefined} className={`preview-product-image${primarySection && index === 0 && highlightTarget === 'appearance-imageFit' ? ' is-preview-media-focus' : ''}`}><img src={product.image} alt="" /><span>Ejemplo</span></div><small>{product.brand}</small><strong>{product.name}</strong><b>{formatARS(product.price)}</b><button type="button" tabIndex={-1} data-appearance-target={primarySection && index === 0 ? 'appearance-primary' : undefined} className={primarySection && index === 0 && highlightTarget === 'appearance-primary' ? 'is-preview-text-focus' : ''} style={{ background: appearance.primary }}>Agregar</button></article>)}</div></section>
+  return <section data-appearance-target={appearanceTarget} className={`preview-products preview-focus-zone${highlight === 'catalog' ? ' is-preview-focus' : ''}${highlightTarget === appearanceTarget ? ' is-preview-focus' : ''}`}><div className="preview-section-head"><h3>{title}</h3><span>{products.length} productos</span></div><div data-appearance-target={primarySection ? 'appearance-productGrid' : undefined} className={`preview-product-grid${primarySection && highlightTarget === 'appearance-productGrid' ? ' preview-focus-zone is-preview-focus' : ''}`}>{products.map((product, index) => {
+    const stock = Math.max(0, Number(product.stock) || 0)
+    const stockLabel = stock <= 0 ? 'Sin stock' : stock === 1 ? 'Última unidad' : stock <= 5 ? `Quedan ${stock}` : ''
+    return <article key={product.id} data-appearance-target={primarySection && index === 0 ? 'appearance-cardStyle' : undefined} className={`preview-product-card${primarySection && index === 0 && highlightTarget === 'appearance-cardStyle' ? ' is-preview-focus' : ''}`}><div data-appearance-target={primarySection && index === 0 ? 'appearance-imageFit' : undefined} className={`preview-product-image${primarySection && index === 0 && highlightTarget === 'appearance-imageFit' ? ' is-preview-media-focus' : ''}`}><img src={product.image} alt="" /><span>{product.badge || 'Ejemplo'}</span>{stockLabel && <small className={stock <= 0 ? 'is-out' : ''}>{stockLabel}</small>}</div><small>{product.brand}</small><strong>{product.name}</strong><b>{formatARS(product.price)}</b><button type="button" tabIndex={-1} aria-label={`Agregar ${product.name} al carrito`} data-appearance-target={primarySection && index === 0 ? 'appearance-primary' : undefined} className={primarySection && index === 0 && highlightTarget === 'appearance-primary' ? 'is-preview-text-focus' : ''} style={{ background: appearance.primary }}><IconCart /></button></article>
+  })}</div></section>
 }
 
 function MessagesPreview({ items, appearance, settings }) {
