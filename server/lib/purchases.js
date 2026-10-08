@@ -5,7 +5,7 @@ import { roundMoney, roundLine } from './money.js'
 import { nextSequence, sequenceKey } from './counter.js'
 import { currentShift, addMovement } from './cash.js'
 
-export async function registerPurchase({ tenant, supplier, invoice, items, by = null, cashOut = null }) {
+export async function registerPurchase({ tenant, supplier, invoice, items, by = null, byUserId = null, cashOut = null }) {
   const cleanSupplier = String(supplier || '').trim()
   const cleanInvoice = String(invoice || '').trim()
   const cleanItems = (items || [])
@@ -96,7 +96,7 @@ export async function registerPurchase({ tenant, supplier, invoice, items, by = 
   const cashAmount = roundMoney(Number(cashOut?.amount))
   if (cashAmount > 0) {
     try {
-      const shift = await currentShift(tenant)
+      const shift = await currentShift(tenant, byUserId, { userEmail: by })
       if (!shift) {
         cashWarning =
           'El pago de la compra no se registró en caja porque no hay ninguna caja abierta'
@@ -111,6 +111,7 @@ export async function registerPurchase({ tenant, supplier, invoice, items, by = 
           description,
           ref: String(number),
           by: by || null,
+          byUserId,
         })
       }
     } catch (error) {

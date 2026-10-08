@@ -4,6 +4,7 @@ import { CartContext } from './cartContext'
 import { useToast } from './useToast'
 import { fetchSiteSettings } from '../lib/siteSettings'
 import { getTenantHeaders, getTenantSlug } from '../lib/tenant.js'
+import { useStockEvents } from '../lib/useStockEvents.js'
 
 const STORAGE_KEY = 'electronics-store-cart'
 const COUPON_STORAGE_KEY = 'electronics-store-coupon'
@@ -38,6 +39,24 @@ export default function CartProvider({ children }) {
   })
   const [onlinePayEnabled, setOnlinePayEnabled] = useState(true)
   const [storeWhatsapp, setStoreWhatsapp] = useState('')
+
+  useStockEvents(({ productId, stock }) => {
+    const nextStock = Math.max(0, Number(stock) || 0)
+    setItems((current) => {
+      let changed = false
+      const next = current.flatMap((item) => {
+        if (item.id !== productId) return [item]
+        if (nextStock <= 0) {
+          changed = true
+          return []
+        }
+        const quantity = Math.min(item.quantity, nextStock)
+        if (quantity !== item.quantity) changed = true
+        return [{ ...item, quantity }]
+      })
+      return changed ? next : current
+    })
+  })
 
   useEffect(() => {
     fetchSiteSettings({ fresh: true }).then((data) => {

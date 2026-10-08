@@ -14,6 +14,12 @@ const countSchema = new mongoose.Schema(
     difference: { type: Number, required: true },
     note: { type: String, trim: true, default: '' },
     by: { type: String, default: null },
+    byUserId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+      index: true,
+    },
   },
   { timestamps: true },
 )

@@ -10,6 +10,7 @@ import { EmptyNote, FilterReset, StockValue } from '../common'
 import { loadCatalogOptions } from '../common/catalogOptions.js'
 import { useToast } from '@/context/useToast'
 import { useConfirm } from '@/context/useConfirm'
+import { useStockEvents } from '@/lib/useStockEvents.js'
 
 import './styles.css'
 
@@ -33,6 +34,20 @@ function PosScreen({ canManage }) {
   const [cashReceived, setCashReceived] = useState('')
   const [saving, setSaving] = useState(false)
   const [lastSale, setLastSale] = useState(null)
+
+  useStockEvents(({ productId, stock }) => {
+    const nextStock = Math.max(0, Number(stock) || 0)
+    setProducts((current) =>
+      current.map((product) => product.id === productId ? { ...product, stock: nextStock } : product),
+    )
+    setLines((current) =>
+      current.map((line) =>
+        line.product.id === productId
+          ? { ...line, product: { ...line.product, stock: nextStock } }
+          : line,
+      ),
+    )
+  })
 
   useEffect(() => {
     let alive = true

@@ -9,6 +9,7 @@ import { EmptyNote, FilterReset, OperatorSelect, ProductPicker, ScreenBlocked, S
 import { loadCatalogOptions } from '../common/catalogOptions.js'
 import { useToast } from '@/context/useToast'
 import { useConfirm } from '@/context/useConfirm'
+import { useStockEvents } from '@/lib/useStockEvents.js'
 
 import './styles.css'
 
@@ -19,6 +20,17 @@ function StockScreen() {
   const [cats, setCats] = useState([])
   const [brands, setBrands] = useState([])
   const [params, setParams] = useState({ q: '', low: '', category: '', brand: '', sort: '', page: 1 })
+
+  useStockEvents(({ productId, stock, minStock }) => {
+    setData((current) => current
+      ? {
+          ...current,
+          items: current.items.map((product) => product.id === productId
+            ? { ...product, stock: Number(stock), minStock: Number(minStock ?? product.minStock) }
+            : product),
+        }
+      : current)
+  })
 
   useEffect(() => {
     let alive = true

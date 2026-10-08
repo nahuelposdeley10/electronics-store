@@ -9,6 +9,7 @@ import { EmptyNote, FilterReset, ProductPicker, ScreenBlocked, ScreenLoading, So
 import { loadCatalogOptions } from '../common/catalogOptions.js'
 import { useToast } from '@/context/useToast'
 import { useConfirm } from '@/context/useConfirm'
+import { useStockEvents } from '@/lib/useStockEvents.js'
 
 import ProductImagesEditor from './components/ProductImagesEditor'
 
@@ -28,6 +29,17 @@ function ProductsScreen({ canManage, canInventory, canCash }) {
   const [brands, setBrands] = useState([])
   const [bulk, setBulk] = useState({ mode: 'percent', value: '', category: 'todas' })
   const [bulkSaving, setBulkSaving] = useState(false)
+
+  useStockEvents(({ productId, stock, minStock }) => {
+    setData((current) => current
+      ? {
+          ...current,
+          items: current.items.map((product) => product.id === productId
+            ? { ...product, stock: Number(stock), minStock: Number(minStock ?? product.minStock) }
+            : product),
+        }
+      : current)
+  })
 
   useEffect(() => {
     if (!formOpen && !stockProduct) return undefined

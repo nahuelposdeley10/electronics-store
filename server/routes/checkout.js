@@ -78,6 +78,22 @@ router.post('/checkout', requirePublicTenant, async (req, res) => {
       }
     }
 
+    // Validate the tenant's payment configuration before creating an order.
+    // A rejected checkout must not leave a pending order without a preference.
+    const settings = await getSettings({ fresh: true, tenant })
+    if (settings.payments?.online === false) {
+      return res.status(400).json({
+        error: 'Esta tienda no recibe pagos online por el momento',
+      })
+    }
+
+    const mpConfig = await getMpConfig(tenant)
+    if (!mpConfig.configured) {
+      return res.status(400).json({
+        error: 'Esta tienda aún no configuró su Access Token de Mercado Pago para recibir pagos online',
+      })
+    }
+
     const buyer = req.body.payer || {}
     const fullName = String(buyer.name || '').trim()
     const lastNameIdx = fullName.lastIndexOf(' ') + 1
@@ -134,7 +150,6 @@ router.post('/checkout', requirePublicTenant, async (req, res) => {
     const slug = String(req.headers['x-tenant-slug'] || '').trim().toLowerCase()
     const storePath = slug ? `/u/${slug}` : ''
 
-    const settings = await getSettings({ tenant })
     const body = {
       items,
       external_reference: String(order._id),
@@ -145,19 +160,6 @@ router.post('/checkout', requirePublicTenant, async (req, res) => {
         pending: `${origin}${storePath}`,
       },
       statement_descriptor: settings.checkout?.statementDescriptor || 'TechStore',
-    }
-
-    if (settings.payments?.online === false) {
-      return res.status(400).json({
-        error: 'Esta tienda no recibe pagos online por el momento',
-      })
-    }
-
-    const mpConfig = await getMpConfig(tenant)
-    if (!mpConfig.configured) {
-      return res.status(400).json({
-        error: 'Esta tienda aún no configuró su Access Token de Mercado Pago para recibir pagos online',
-      })
     }
 
     const mp = await getMpServices(tenant)

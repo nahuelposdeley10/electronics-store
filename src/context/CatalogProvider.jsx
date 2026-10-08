@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { CatalogContext } from './catalogContext'
 import { getTenantHeaders } from '../lib/tenant.js'
+import { useStockEvents } from '../lib/useStockEvents.js'
 
 const HEADERS = getTenantHeaders()
 const CATALOG_URL = '/api/products?limit=100'
@@ -54,6 +55,16 @@ export default function CatalogProvider({ children }) {
     if (!res.ok) throw new Error(data.error || 'No se pudo realizar la búsqueda')
     return data.items || []
   }, [])
+
+  useStockEvents(({ productId, stock, minStock }) => {
+    setProducts((current) =>
+      current.map((product) =>
+        product.id === productId
+          ? { ...product, stock: Number(stock), minStock: Number(minStock ?? product.minStock) }
+          : product,
+      ),
+    )
+  })
 
   useEffect(() => {
     const after = (fn) => Promise.resolve().then(fn)

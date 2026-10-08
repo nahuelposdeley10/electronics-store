@@ -370,6 +370,7 @@ router.post('/purchases', requirePermission('inventory.write'), async (req, res)
       invoice: req.body?.invoice,
       items: req.body?.items,
       by: req.user?.email || null,
+      byUserId: req.user?.sub || null,
       cashOut,
     })
 

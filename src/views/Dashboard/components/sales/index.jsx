@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { formatARS } from '@/data/format'
 import { apiConfirmOrder, apiDelete, apiGet, apiPost, apiPut } from '@/lib/api'
 import { useOrderEvents } from '@/lib/useOrderEvents'
+import { useQuoteEvents } from '@/lib/useQuoteEvents.js'
 import { IconCross, IconEye, IconPlus, IconRefresh, IconReturn, IconSearch, IconTrash } from '@/components/Icons'
 import { PENDING_GROUP, PAYMENT_LABELS, PAYMENT_OPTIONS, QUOTE_STATUS_LABELS, fullDate, idDoc, itemsSummary, salePaymentLabel, shortDate, shortId } from '../../consts.js'
 import { EmptyNote, FilterReset, OperatorSelect, ProductPicker, ScreenBlocked, ScreenLoading, SortSelect, StatusTag } from '../common'
@@ -152,6 +153,7 @@ function SalesScreen() {
   const [query, setQuery] = useState('')
   const [rechecking, setRechecking] = useState({})
   const [detail, setDetail] = useState(null)
+  const [realtimeTick, setRealtimeTick] = useState(0)
 
   useEffect(() => {
     let alive = true
@@ -172,7 +174,7 @@ function SalesScreen() {
     return () => {
       alive = false
     }
-  }, [params])
+  }, [params, realtimeTick])
 
   const submitSearch = (e) => {
     e.preventDefault()
@@ -213,18 +215,8 @@ function SalesScreen() {
   }
 
   useOrderEvents((event) => {
-    setData((d) =>
-      d
-        ? {
-            ...d,
-            items: d.items.map((o) =>
-              o.id === event.id
-                ? { ...o, status: event.status, paymentId: event.paymentId, payer: event.payer || o.payer }
-                : o,
-            ),
-          }
-        : d,
-    )
+    setRealtimeTick((tick) => tick + 1)
+    if (event.event === 'created') showToast('Entró un nuevo pedido.', 'success')
   })
 
   if (!data && !error) return <ScreenLoading label="Contando las ventas…" />
@@ -630,6 +622,7 @@ function QuotesScreen({ canManage }) {
   const [formOpen, setFormOpen] = useState(false)
   const [params, setParams] = useState({ status: 'all', q: '', sort: '', page: 1 })
   const [query, setQuery] = useState('')
+  const [realtimeTick, setRealtimeTick] = useState(0)
 
   useEffect(() => {
     let alive = true
@@ -647,7 +640,12 @@ function QuotesScreen({ canManage }) {
     return () => {
       alive = false
     }
-  }, [params])
+  }, [params, realtimeTick])
+
+  useQuoteEvents((event) => {
+    setRealtimeTick((tick) => tick + 1)
+    if (event.event === 'created') showToast(`Nuevo presupuesto #${event.number}.`, 'success')
+  })
 
   const submitSearch = (e) => {
     e.preventDefault()

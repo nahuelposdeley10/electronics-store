@@ -24,6 +24,7 @@ import { applySEO, seoMeta } from '@/lib/seo'
 import { useSiteSettings, mergeSettings } from '@/lib/siteSettings'
 import { initMotion } from '@/lib/motion'
 import { appearanceVariables } from '@/lib/appearance'
+import { useStockEvents } from '@/lib/useStockEvents.js'
 import './styles/ui.css'
 
 initMotion()
@@ -51,6 +52,12 @@ function AppContent() {
   const [view, setView] = useState(() => parseLocation())
   const [product, setProduct] = useState(() => productFromView(parseLocation(), []))
   const [productError, setProductError] = useState('')
+
+  useStockEvents(({ productId, stock, minStock }) => {
+    setProduct((current) => current && current.id === productId
+      ? { ...current, stock: Number(stock), minStock: Number(minStock ?? current.minStock) }
+      : current)
+  })
 
   useEffect(() => {
     const onPop = () => {

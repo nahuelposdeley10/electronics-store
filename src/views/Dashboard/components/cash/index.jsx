@@ -6,12 +6,73 @@ import { CASH_KIND_CHIPS, CASH_KIND_LABELS, fullDate, shortDate } from '../../co
 import { EmptyNote, KpiTicket, OperatorSelect, ScreenBlocked, ScreenLoading } from '../common'
 import SearchSelect from '@/components/SearchSelect'
 import { useToast } from '@/context/useToast'
+import { useCashEvents } from '@/lib/useCashEvents.js'
 
 import './styles.css'
 
-function CashCurrentScreen({ canManage, onView }) {
+function operatorLabel(shift) {
+  return shift?.operator?.name || shift?.operator?.email || shift?.openedBy || 'Operador sin identificar'
+}
+
+function CashOpenShifts({ shifts, onSelect }) {
+  if (!shifts?.length) return null
+  return (
+    <section className="dash-card">
+      <div className="dash-card-head">
+        <div>
+          <span className="dash-eyebrow">Control del equipo</span>
+          <h2>Cajas abiertas</h2>
+        </div>
+        <span className="mono">{shifts.length}</span>
+      </div>
+      <div className="table-wrap">
+        <table className="dash-table">
+          <thead>
+            <tr>
+              <th>Operador</th>
+              <th>Turno</th>
+              <th>Ventas</th>
+              <th>Esperado</th>
+              {onSelect && <th />}
+            </tr>
+          </thead>
+          <tbody>
+            {shifts.map((shift) => (
+              <tr key={shift._id}>
+                <td>
+                  <span className="t-cell-name">
+                    <strong>{operatorLabel(shift)}</strong>
+                    {shift.operator?.email && shift.operator.email !== shift.operator.name && <em>{shift.operator.email}</em>}
+                  </span>
+                </td>
+                <td className="mono">#{shift.number}</td>
+                <td className="mono t-num">{formatARS(shift.sales || 0)}</td>
+                <td className="mono t-num">{formatARS(shift.expected || 0)}</td>
+                {onSelect && (
+                  <td>
+                    <button type="button" className="filter-reset-btn" onClick={() => onSelect(String(shift._id))}>
+                      Administrar
+                    </button>
+                  </td>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  )
+}
+
+function CashCurrentScreen({ canManage, isAdmin, onView }) {
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
+
+  useCashEvents(() => {
+    apiGet('/api/admin/cash/status')
+      .then(setData)
+      .catch((err) => setError(err.message))
+  })
 
   useEffect(() => {
     let alive = true
@@ -30,7 +91,7 @@ function CashCurrentScreen({ canManage, onView }) {
   if (!data && !error) return <ScreenLoading label="Abriendo la caja…" />
   if (error) return <ScreenBlocked message={error} />
 
-  const { open, shift, lastShift, today } = data
+  const { open, shift, openShifts = [], lastShift, today } = data
 
   return (
     <div className="dash-screen">
@@ -40,8 +101,8 @@ function CashCurrentScreen({ canManage, onView }) {
           <h1>Caja actual</h1>
         </div>
         <div className="dash-head-today">
-          <strong className="mono">{open ? formatARS(shift.expected) : 'cerrada'}</strong>
-          <em>{open ? 'efectivo esperado' : 'sin turno abierto'}</em>
+          <strong className="mono">{open ? formatARS(shift.expected) : isAdmin && openShifts.length ? `${openShifts.length} cajas` : 'cerrada'}</strong>
+          <em>{open ? 'efectivo esperado' : isAdmin && openShifts.length ? 'abiertas por el equipo' : 'sin turno propio abierto'}</em>
         </div>
       </header>
 
@@ -78,7 +139,7 @@ function CashCurrentScreen({ canManage, onView }) {
               </button>
               {canManage && (
                 <button type="button" className="btn" onClick={() => onView('cash-movements')}>
-                  Nuevo movimiento
+                  Registrar ingreso/egreso
                 </button>
               )}
             </div>
@@ -86,12 +147,12 @@ function CashCurrentScreen({ canManage, onView }) {
         ) : (
           <>
             <div className="cash-hero-txt">
-              <span className="dash-eyebrow">Caja cerrada</span>
+              <span className="dash-eyebrow">Caja propia cerrada</span>
               <strong className="cash-hero-amount">{lastShift ? `Turno #${lastShift.number} · ${formatARS(lastShift.closedBalance ?? 0)}` : 'Todavía no abriste caja'}</strong>
               <em>
                 {lastShift
                   ? `cerrado ${shortDate(lastShift.closedAt)} · esperado ${formatARS(lastShift.expectedClose ?? 0)}`
-                  : 'Abrí un turno para registrar el efectivo del cajón'}
+                  : 'Abrí un turno propio para registrar tus ventas en efectivo'}
               </em>
             </div>
             <div className="cash-hero-actions">
@@ -102,6 +163,7 @@ function CashCurrentScreen({ canManage, onView }) {
           </>
         )}
       </div>
+      {isAdmin && <CashOpenShifts shifts={openShifts} onSelect={() => onView('cash-openclose')} />}
     </div>
   )
 }
@@ -115,6 +177,9 @@ function CashMovementsScreen({ canManage }) {
   const [formOpen, setFormOpen] = useState(false)
   const [form, setForm] = useState({ flow: 'in', amount: '', description: '' })
   const [saving, setSaving] = useState(false)
+  const [realtimeTick, setRealtimeTick] = useState(0)
+
+  useCashEvents(() => setRealtimeTick((tick) => tick + 1))
 
   useEffect(() => {
     let alive = true
@@ -136,7 +201,7 @@ function CashMovementsScreen({ canManage }) {
     return () => {
       alive = false
     }
-  }, [params])
+  }, [params, realtimeTick])
 
   if (!data && !error) return <ScreenLoading label="Leyendo los movimientos…" />
   if (error) return <ScreenBlocked message={error} />
@@ -166,7 +231,8 @@ function CashMovementsScreen({ canManage }) {
       .finally(() => setSaving(false))
   }
 
-  const { shift } = data
+  const { shift, shifts = [] } = data
+  const movementShift = shift || shifts[0]
 
   return (
     <div className="dash-screen">
@@ -176,8 +242,8 @@ function CashMovementsScreen({ canManage }) {
           <h1>Movimientos</h1>
         </div>
         <div className="dash-head-today">
-          <strong className="mono">{shift ? `turno #${shift.number}` : '—'}</strong>
-          <em>{shift ? 'movimientos del cajón' : 'sin caja abierta'}</em>
+            <strong className="mono">{shifts.length > 1 ? `${shifts.length} cajas` : movementShift ? `turno #${movementShift.number}` : '—'}</strong>
+            <em>{shifts.length > 1 ? 'movimientos del equipo' : movementShift ? 'movimientos del cajón' : 'sin caja abierta'}</em>
         </div>
       </header>
 
@@ -199,7 +265,7 @@ function CashMovementsScreen({ canManage }) {
             className="btn"
             onClick={() => setFormOpen(true)}
           >
-            <IconPlus /> Nuevo movimiento
+            <IconPlus /> Registrar ingreso/egreso
           </button>
         )}
       </div>
@@ -210,13 +276,13 @@ function CashMovementsScreen({ canManage }) {
             className="product-panel"
             role="dialog"
             aria-modal="true"
-            aria-label="Nuevo movimiento"
+            aria-label="Registrar ingreso o egreso"
             onMouseDown={(e) => e.stopPropagation()}
           >
             <header className="product-head">
               <div>
                 <span className="dash-eyebrow">Libro de caja</span>
-                <h2>Nuevo movimiento</h2>
+                <h2>Registrar ingreso o egreso</h2>
               </div>
               <button type="button" className="product-close" onClick={closeForm} aria-label="Cerrar">
                 <IconCross />
@@ -258,7 +324,7 @@ function CashMovementsScreen({ canManage }) {
               </div>
               <div className="cash-form-foot">
                 <button type="submit" className="btn cta" disabled={saving || !movementValid}>
-                  {saving ? 'Guardando…' : 'Guardar movimiento'}
+                  {saving ? 'Guardando…' : 'Guardar ingreso/egreso'}
                 </button>
                 <button type="button" className="btn" onClick={closeForm} disabled={saving}>
                   Cancelar
@@ -348,7 +414,7 @@ function CashMovementsScreen({ canManage }) {
 }
 
 
-function CashShiftScreen({ canManage }) {
+function CashShiftScreen({ canManage, isAdmin }) {
   const { showToast } = useToast()
   const [status, setStatus] = useState(null)
   const [shifts, setShifts] = useState(null)
@@ -356,6 +422,7 @@ function CashShiftScreen({ canManage }) {
   const [openForm, setOpenForm] = useState({ openingBalance: '0', note: '' })
   const [closeForm, setCloseForm] = useState({ countedBalance: '', note: '' })
   const [busy, setBusy] = useState(false)
+  const [selectedShiftId, setSelectedShiftId] = useState('')
 
   const load = () => {
     apiGet('/api/admin/cash/status')
@@ -365,6 +432,8 @@ function CashShiftScreen({ canManage }) {
       .then(setShifts)
       .catch((err) => console.warn('No se pudieron cargar los turnos de caja', err))
   }
+
+  useCashEvents(() => load())
 
   useEffect(() => {
     load()
@@ -399,6 +468,7 @@ function CashShiftScreen({ canManage }) {
     apiPost('/api/admin/cash/shifts/close', {
       countedBalance: Number(closeForm.countedBalance) || 0,
       note: closeForm.note.trim(),
+      shiftId: target?._id || null,
     })
       .then((res) => {
         const diff = res.shift.difference ?? 0
@@ -408,13 +478,19 @@ function CashShiftScreen({ canManage }) {
             : `Caja cerrada. Diferencia de ${formatARS(diff)} ${diff > 0 ? 'a favor' : 'en contra'}.`,
           'success',
         )
+        setSelectedShiftId('')
+        setCloseForm({ countedBalance: '', note: '' })
         load()
       })
       .catch((err) => showToast(err.message, 'error'))
       .finally(() => setBusy(false))
   }
 
+  const openShifts = status.openShifts || []
   const current = status.shift
+  const selected = selectedShiftId ? openShifts.find((shift) => String(shift._id) === selectedShiftId) : null
+  const target = selected || current
+  const viewingOther = Boolean(selected && (!current || String(selected._id) !== String(current._id)))
 
   return (
     <div className="dash-screen">
@@ -424,13 +500,13 @@ function CashShiftScreen({ canManage }) {
           <h1>Apertura / cierre</h1>
         </div>
         <div className="dash-head-today">
-          <strong className="mono">{status.open ? 'abierta' : 'cerrada'}</strong>
-          <em>{status.open ? `turno #${current.number}` : 'esperando apertura'}</em>
+          <strong className="mono">{target ? 'abierta' : 'cerrada'}</strong>
+          <em>{target ? `turno #${target.number}` : 'esperando apertura propia'}</em>
         </div>
       </header>
 
       <div className="dash-cols">
-        {!status.open ? (
+        {!target ? (
           <section className="dash-card">
             <div className="dash-card-head">
               <h2>Abrir caja</h2>
@@ -468,24 +544,24 @@ function CashShiftScreen({ canManage }) {
         ) : (
           <section className="dash-card">
             <div className="dash-card-head">
-              <h2>Cerrar caja</h2>
+                <h2>{viewingOther ? `Cerrar caja de ${operatorLabel(target)}` : 'Cerrar mi caja'}</h2>
             </div>
             <div className="cash-strip">
               <span>
                 <em>Apertura</em>
-                <strong className="mono">{formatARS(current.openingBalance)}</strong>
+                <strong className="mono">{formatARS(target.openingBalance)}</strong>
               </span>
               <span>
                 <em>Ingresos</em>
-                <strong className="mono">{formatARS(current.income)}</strong>
+                <strong className="mono">{formatARS(target.income)}</strong>
               </span>
               <span>
                 <em>Egresos</em>
-                <strong className="mono">{formatARS(current.outcome)}</strong>
+                <strong className="mono">{formatARS(target.outcome)}</strong>
               </span>
               <span>
                 <em>Esperado</em>
-                <strong className="mono">{formatARS(current.expected)}</strong>
+                <strong className="mono">{formatARS(target.expected)}</strong>
               </span>
             </div>
             {canManage ? (
@@ -498,7 +574,7 @@ function CashShiftScreen({ canManage }) {
                     step="0.01"
                     value={closeForm.countedBalance}
                     onChange={(e) => setCloseForm((f) => ({ ...f, countedBalance: e.target.value }))}
-                    placeholder={String(current.expected)}
+                    placeholder={String(target.expected)}
                     required
                   />
                 </label>
@@ -552,11 +628,55 @@ function CashShiftScreen({ canManage }) {
         </section>
       </div>
 
+      {isAdmin && openShifts.length > 0 && (
+        <section className="dash-card">
+          <div className="dash-card-head">
+            <div>
+              <span className="dash-eyebrow">Control del equipo</span>
+              <h2>Cajas abiertas</h2>
+            </div>
+            <span className="mono">{openShifts.length}</span>
+          </div>
+          <div className="table-wrap">
+            <table className="dash-table">
+              <thead>
+                <tr>
+                  <th>Operador</th>
+                  <th>Turno</th>
+                  <th>Esperado</th>
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                {openShifts.map((shift) => (
+                  <tr key={shift._id}>
+                    <td>
+                      <span className="t-cell-name">
+                        <strong>{operatorLabel(shift)}</strong>
+                        {shift.operator?.email && shift.operator.email !== shift.operator.name && <em>{shift.operator.email}</em>}
+                      </span>
+                    </td>
+                    <td className="mono">#{shift.number}</td>
+                    <td className="mono t-num">{formatARS(shift.expected || 0)}</td>
+                    <td>
+                      <button type="button" className="filter-reset-btn" onClick={() => setSelectedShiftId(String(shift._id))}>
+                        {selectedShiftId === String(shift._id) ? 'Seleccionada' : 'Ver / cerrar'}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
       <div className="table-wrap">
         <table className="dash-table">
           <thead>
             <tr>
               <th>Turno</th>
+              <th>Operador</th>
               <th>Apertura</th>
               <th>Apertura $</th>
               <th>Ingresos</th>
@@ -573,6 +693,12 @@ function CashShiftScreen({ canManage }) {
               return (
                 <tr key={s._id}>
                   <td className="mono">#{s.number}</td>
+                  <td>
+                    <span className="t-cell-name">
+                      <strong>{operatorLabel(s)}</strong>
+                      {s.operator?.email && s.operator.email !== s.operator.name && <em>{s.operator.email}</em>}
+                    </span>
+                  </td>
                   <td className="t-date" title={fullDate(s.openedAt)}>
                     {shortDate(s.openedAt)}
                   </td>
@@ -601,7 +727,7 @@ function CashShiftScreen({ canManage }) {
 }
 
 
-function CashCountScreen({ canManage }) {
+function CashCountScreen({ canManage, isAdmin }) {
   const { showToast } = useToast()
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
@@ -619,6 +745,19 @@ function CashCountScreen({ canManage }) {
   }
 
   const applyCounts = (counts) => setData((d) => (d ? { ...d, counts } : d))
+
+  useCashEvents(() => {
+    Promise.all([
+      apiGet('/api/admin/cash/status'),
+      loadCounts(),
+      apiGet('/api/admin/cash/shifts?limit=100'),
+    ])
+      .then(([status, counts, shiftsRes]) => {
+        setData((current) => (current ? { status, counts } : current))
+        setShifts(shiftsRes.items || [])
+      })
+      .catch((err) => setError(err.message))
+  })
 
   useEffect(() => {
     let alive = true
@@ -693,11 +832,11 @@ function CashCountScreen({ canManage }) {
   const viewingClosed = Boolean(shiftId)
 
   const shiftOptions = shifts
-    .filter((s) => s.status === 'closed' || (status.open && String(s._id) !== String(status.shift._id)))
+    .filter((s) => s.status === 'closed' || isAdmin || (status.open && String(s._id) !== String(status.shift._id)))
     .sort((a, b) => new Date(b.openedAt) - new Date(a.openedAt))
     .map((s) => ({
       value: String(s._id),
-      label: `Turno #${s.number} · ${shortDate(s.openedAt)}`,
+      label: `${operatorLabel(s)} · turno #${s.number} · ${shortDate(s.openedAt)}`,
     }))
 
   return (

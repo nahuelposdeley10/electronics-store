@@ -7,6 +7,7 @@ import { CashShift } from '../models/CashShift.js'
 import { CashMovement } from '../models/CashMovement.js'
 import { CashCount } from '../models/CashCount.js'
 import { Order } from '../models/Order.js'
+import { User } from '../models/User.js'
 import { requireTenantIdOf } from '../lib/tenant.js'
 
 const router = express.Router()
@@ -24,23 +25,75 @@ function requireTenant(req, res, next) {
 
 router.use(requireTenant)
 
-async function tenantOwnedShift(tenant, shiftId) {
+function canManageAllShifts(req) {
+  return req.user?.role === 'admin' || req.user?.role === 'superadmin'
+}
+
+function actorId(req) {
+  return req.user?.sub || null
+}
+
+function legacyShiftAccess(req) {
+  return canManageAllShifts(req)
+}
+
+async function enrichShifts(shifts) {
+  const rows = (shifts || []).filter(Boolean)
+  const ids = [...new Set(rows.map((shift) => shift.openedByUserId).filter(Boolean).map(String))]
+  const users = ids.length
+    ? await User.find({ _id: { $in: ids } }).select('_id name email role').lean()
+    : []
+  const byId = new Map(users.map((user) => [String(user._id), user]))
+  return rows.map((shift) => {
+    const user = shift.openedByUserId ? byId.get(String(shift.openedByUserId)) : null
+    const fallback = shift.openedBy ? { name: shift.openedBy, email: shift.openedBy, role: null } : null
+    return {
+      ...shift,
+      operator: user
+        ? { id: String(user._id), name: user.name, email: user.email, role: user.role }
+        : fallback
+          ? { id: null, ...fallback }
+          : null,
+    }
+  })
+}
+
+async function tenantOwnedShift(tenant, shiftId, req) {
   if (!shiftId) return null
-  return CashShift.findOne({ _id: shiftId, adminId: tenant })
+  const filter = { _id: shiftId, adminId: tenant }
+  if (!canManageAllShifts(req)) {
+    filter.$or = [{ openedByUserId: actorId(req) }, { openedBy: req.user?.email || null }]
+  }
+  return CashShift.findOne(filter)
     .select('_id number openedAt status')
     .lean()
 }
 
-router.get('/status', async (req, res) => {
+router.get('/status', requirePermission('cash.manage'), async (req, res) => {
   try {
     const tenant = requireTenantIdOf(req)
-    const active = await currentShift(tenant)
-    const lastShift = await CashShift.findOne({ status: 'closed', adminId: tenant }).sort({ closedAt: -1 }).lean()
+    const manager = canManageAllShifts(req)
+    const active = await currentShift(tenant, actorId(req), { includeLegacy: legacyShiftAccess(req), userEmail: req.user?.email || null })
+    const openShifts = manager
+      ? await CashShift.find({ status: 'open', adminId: tenant }).sort({ openedAt: -1 }).lean()
+      : active
+        ? [active]
+        : []
+    const lastFilter = { status: 'closed', adminId: tenant }
+    if (!manager) {
+      lastFilter.$or = [{ openedByUserId: actorId(req) }, { openedBy: req.user?.email || null }]
+    }
+    const lastShift = await CashShift.findOne(lastFilter).sort({ closedAt: -1 }).lean()
 
     const todayStart = new Date()
     todayStart.setHours(0, 0, 0, 0)
+    const todayFilter = { status: 'approved', adminId: tenant, createdAt: { $gte: todayStart } }
+    if (!manager) {
+      todayFilter.source = 'pos'
+      todayFilter.soldBy = req.user?.email || null
+    }
     const today = await Order.aggregate([
-      { $match: { status: 'approved', adminId: tenant, createdAt: { $gte: todayStart } } },
+      { $match: todayFilter },
       {
         $group: {
           _id: null,
@@ -53,29 +106,32 @@ router.get('/status', async (req, res) => {
       },
     ])
 
-    if (!active) {
-      return res.json({
-        open: false,
-        shift: null,
-        lastShift,
-        today: today[0] || { revenue: 0, orders: 0, cash: 0 },
-      })
-    }
-
-    const balance = await cashNet(active._id)
+    const [activeWithOwner, openWithOwner, lastWithOwner] = await Promise.all([
+      enrichShifts([active]),
+      enrichShifts(openShifts),
+      enrichShifts([lastShift]),
+    ])
+    const activeShift = activeWithOwner[0] || null
+    const balance = active ? await cashNet(active._id) : null
+    const openWithBalance = await Promise.all(openWithOwner.map(async (shift) => {
+      const shiftBalance = await cashNet(shift._id)
+      return {
+        ...shift,
+        ...shiftBalance,
+        expected: roundMoney(shift.openingBalance + shiftBalance.net),
+      }
+    }))
     return res.json({
-      open: true,
-      shift: {
-        _id: active._id,
-        number: active.number,
-        openedAt: active.openedAt,
-        openedBy: active.openedBy,
-        openingBalance: active.openingBalance,
-        note: active.note,
-        ...balance,
-        expected: roundMoney(active.openingBalance + balance.net),
-      },
-      lastShift,
+      open: Boolean(active),
+      shift: active
+        ? {
+            ...activeShift,
+            ...balance,
+            expected: roundMoney(active.openingBalance + balance.net),
+          }
+        : null,
+      openShifts: openWithBalance,
+      lastShift: lastWithOwner[0] || null,
       today: today[0] || { revenue: 0, orders: 0, cash: 0 },
     })
   } catch (error) {
@@ -97,16 +153,19 @@ router.post('/shifts', requirePermission('cash.manage'), async (req, res) => {
       openingBalance,
       note,
       openedBy: req.user?.email || null,
+      openedByUserId: actorId(req),
+      includeLegacy: legacyShiftAccess(req),
       tenant,
     })
     return res.status(201).json({ shift })
   } catch (error) {
+    if (error?.code === 11000) return res.status(400).json({ error: 'Ya tenés una caja abierta' })
     return res.status(error.status || 500).json({ error: error.message || 'No se pudo abrir la caja' })
   }
 })
 
 router.post('/shifts/close', requirePermission('cash.manage'), async (req, res) => {
-  const { countedBalance, note = '' } = req.body || {}
+  const { countedBalance, note = '', shiftId = null } = req.body || {}
   let tenant
   try {
     tenant = requireTenantIdOf(req)
@@ -114,15 +173,24 @@ router.post('/shifts/close', requirePermission('cash.manage'), async (req, res) 
     return res.status(error.status || 400).json({ error: error.message })
   }
   try {
+    if (shiftId && !(await tenantOwnedShift(tenant, shiftId, req))) {
+      return res.status(404).json({ error: 'Turno no encontrado' })
+    }
     const shift = await closeShift({
       countedBalance,
       note,
       closedBy: req.user?.email || null,
+      closedByUserId: actorId(req),
+      shiftId,
+      userId: actorId(req),
+      includeLegacy: legacyShiftAccess(req),
+      actorEmail: req.user?.email || null,
       tenant,
     })
     const balance = await cashNet(shift._id)
+    const [enriched] = await enrichShifts([shift.toObject()])
     return res.json({
-      shift,
+      shift: enriched,
       balance,
       netSales: balance.sales,
       salesCount: balance.salesCount,
@@ -132,21 +200,24 @@ router.post('/shifts/close', requirePermission('cash.manage'), async (req, res) 
   }
 })
 
-router.get('/shifts', async (req, res) => {
+router.get('/shifts', requirePermission('cash.manage'), async (req, res) => {
   try {
     const tenant = requireTenantIdOf(req)
     const { page, limit } = parsePagination(req.query)
     const filter = { adminId: tenant }
+    if (!canManageAllShifts(req)) {
+      filter.$or = [{ openedByUserId: actorId(req) }, { openedBy: req.user?.email || null }]
+    }
     if (req.query.status === 'open' || req.query.status === 'closed') {
       filter.status = req.query.status
     }
-    const [items, total] = await Promise.all([
+    const [rawItems, total] = await Promise.all([
       CashShift.find(filter).sort({ openedAt: -1 }).skip((page - 1) * limit).limit(limit).lean(),
       CashShift.countDocuments(filter),
     ])
 
     const enriched = []
-    for (const item of items) {
+    for (const item of rawItems) {
       const balance = await cashNet(item._id)
       enriched.push({
         ...item,
@@ -155,8 +226,9 @@ router.get('/shifts', async (req, res) => {
       })
     }
 
+    const items = await enrichShifts(enriched)
     return res.json({
-      items: enriched,
+      items,
       total,
       page,
       totalPages: Math.max(1, Math.ceil(total / limit)),
@@ -168,20 +240,24 @@ router.get('/shifts', async (req, res) => {
   }
 })
 
-router.get('/movements', async (req, res) => {
+router.get('/movements', requirePermission('cash.manage'), async (req, res) => {
   try {
     const tenant = requireTenantIdOf(req)
     const { page, limit } = parsePagination(req.query)
     let shiftId = req.query.shiftId
     let active = null
+    let activeShifts = []
     let ownedShift = null
     if (shiftId) {
-      ownedShift = await tenantOwnedShift(tenant, shiftId)
+      ownedShift = await tenantOwnedShift(tenant, shiftId, req)
       if (!ownedShift) {
         return res.status(404).json({ error: 'Turno no encontrado' })
       }
+    } else if (canManageAllShifts(req)) {
+      activeShifts = await CashShift.find({ status: 'open', adminId: tenant }).sort({ openedAt: -1 }).lean()
     } else {
-      active = await currentShift(tenant)
+      active = await currentShift(tenant, actorId(req), { userEmail: req.user?.email || null })
+      activeShifts = active ? [active] : []
     }
 
     const filter = { adminId: tenant }
@@ -193,10 +269,10 @@ router.get('/movements', async (req, res) => {
     }
     if (ownedShift) {
       filter.shiftId = ownedShift._id
-    } else if (active) {
-      filter.shiftId = active._id
+    } else if (activeShifts.length > 0) {
+      filter.shiftId = activeShifts.length === 1 ? activeShifts[0]._id : { $in: activeShifts.map((shift) => shift._id) }
     } else {
-      return res.json({ shift: null, items: [], total: 0, page, totalPages: 1, pageSize: limit, balance: { net: 0, income: 0, outcome: 0, sales: 0, salesCount: 0 } })
+      return res.json({ shift: null, shifts: [], items: [], total: 0, page, totalPages: 1, pageSize: limit, balance: { net: 0, income: 0, outcome: 0, sales: 0, salesCount: 0 } })
     }
 
     const [items, total] = await Promise.all([
@@ -204,13 +280,13 @@ router.get('/movements', async (req, res) => {
       CashMovement.countDocuments(filter),
     ])
 
-    const shift = active
-      ? { _id: active._id, number: active.number, openedAt: active.openedAt, status: active.status }
-      : ownedShift
+    const [shift] = await enrichShifts(ownedShift ? [ownedShift] : activeShifts)
+    const shifts = await enrichShifts(activeShifts)
     const balance = await cashNet(filter.shiftId)
 
     return res.json({
-      shift,
+      shift: ownedShift ? shift : active,
+      shifts,
       items,
       total,
       page,
@@ -233,7 +309,7 @@ router.post('/movements', requirePermission('cash.manage'), async (req, res) => 
     return res.status(error.status || 400).json({ error: error.message })
   }
   try {
-    const active = await currentShift(tenant)
+    const active = await currentShift(tenant, actorId(req), { includeLegacy: legacyShiftAccess(req), userEmail: req.user?.email || null })
     if (!active) {
       return res.status(400).json({ error: 'No hay una caja abierta para registrar el movimiento' })
     }
@@ -250,6 +326,7 @@ router.post('/movements', requirePermission('cash.manage'), async (req, res) => 
       amount,
       description,
       by: req.user?.email || null,
+      byUserId: actorId(req),
     })
     return res.status(201).json({ movement })
   } catch (error) {
@@ -257,19 +334,19 @@ router.post('/movements', requirePermission('cash.manage'), async (req, res) => 
   }
 })
 
-router.get('/counts', async (req, res) => {
+router.get('/counts', requirePermission('cash.manage'), async (req, res) => {
   try {
     const tenant = requireTenantIdOf(req)
     let shiftId = req.query.shiftId
     let active = null
     let ownedShift = null
     if (shiftId) {
-      ownedShift = await tenantOwnedShift(tenant, shiftId)
+      ownedShift = await tenantOwnedShift(tenant, shiftId, req)
       if (!ownedShift) {
         return res.status(404).json({ error: 'Turno no encontrado' })
       }
     } else {
-      active = await currentShift(tenant)
+      active = await currentShift(tenant, actorId(req), { includeLegacy: legacyShiftAccess(req), userEmail: req.user?.email || null })
     }
     if (!shiftId && !active) {
       return res.json({ shift: null, items: [] })
@@ -292,7 +369,7 @@ router.get('/counts', async (req, res) => {
 })
 
 router.post('/counts', requirePermission('cash.manage'), async (req, res) => {
-  const { countedAmount, note = '' } = req.body || {}
+  const { countedAmount, note = '', shiftId = null } = req.body || {}
   let tenant
   try {
     tenant = requireTenantIdOf(req)
@@ -300,10 +377,18 @@ router.post('/counts', requirePermission('cash.manage'), async (req, res) => {
     return res.status(error.status || 400).json({ error: error.message })
   }
   try {
+    if (shiftId && !(await tenantOwnedShift(tenant, shiftId, req))) {
+      return res.status(404).json({ error: 'Turno no encontrado' })
+    }
     const count = await createArqueo({
       countedAmount,
       note,
       by: req.user?.email || null,
+      byUserId: actorId(req),
+      shiftId,
+      userId: actorId(req),
+      includeLegacy: legacyShiftAccess(req),
+      actorEmail: req.user?.email || null,
       tenant,
     })
     return res.status(201).json({ count })

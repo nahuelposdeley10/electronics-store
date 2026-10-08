@@ -16,6 +16,12 @@ const movementSchema = new mongoose.Schema(
     description: { type: String, trim: true, default: '' },
     ref: { type: String, default: null },
     by: { type: String, default: null },
+    byUserId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+      index: true,
+    },
     expiresAt: { type: Date, default: () => movementsExpireAt() },
   },
   { timestamps: true },

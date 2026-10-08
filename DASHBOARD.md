@@ -35,8 +35,12 @@ categoría sin salir de la pantalla si todavía no existe.
 
 ### Caja
 
-- Apertura de turno.
-- Movimientos de caja.
+- Apertura de una caja propia por operador.
+- El administrador ve las cajas abiertas de todo el equipo, identificadas por
+  nombre y email, y puede cerrar cualquiera dejando registrado quién hizo el
+  cierre.
+- Ventas en efectivo del POS asignadas automáticamente a la caja del operador.
+- Ingresos y egresos manuales separados de las ventas.
 - Arqueos.
 - Cierre con diferencia entre monto esperado y contado.
 

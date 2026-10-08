@@ -15,6 +15,7 @@ import { CashMovement } from '../models/CashMovement.js'
 import { requireTenantIdOf } from '../lib/tenant.js'
 import { allowedImageFilter } from '../lib/image-guard.js'
 import { nextSequence, sequenceKey } from '../lib/counter.js'
+import { emitQuoteUpdate } from '../socketio.js'
 
 import { productImages, retainedProductImages } from '../lib/product-images.js'
 
@@ -390,6 +391,7 @@ router.post('/products', requirePermission('catalog.manage'), upload.array('imag
               },
             ],
             by: req.user?.email || null,
+            byUserId: req.user?.sub || null,
           })
           payload.stock = result.logged?.[0]?.stockAfter ?? payload.stock
           payload.stockNumber = result.number
@@ -581,6 +583,13 @@ router.post('/pos', requirePermission('pos.manage'), async (req, res) => {
 
     const posPayment = POS_PAYMENTS.has(payment) ? payment : 'efectivo'
     const isCash = posPayment === 'efectivo'
+    const ownOpenShift = isCash
+      ? await currentShift(tenant, req.user?.sub, { includeLegacy: req.user?.role === 'admin' || req.user?.role === 'superadmin', userEmail: req.user?.email || null })
+      : null
+
+    if (isCash && !ownOpenShift) {
+      return res.status(400).json({ error: 'Abrí tu caja antes de registrar una venta en efectivo' })
+    }
 
     let receivedCash = null
     let change = null
@@ -631,7 +640,7 @@ router.post('/pos', requirePermission('pos.manage'), async (req, res) => {
 
     if (order.payment === 'efectivo') {
       try {
-        const open = await currentShift(tenant)
+        const open = ownOpenShift
         if (open) {
           await CashMovement.create({
             adminId: tenant,
@@ -642,6 +651,7 @@ router.post('/pos', requirePermission('pos.manage'), async (req, res) => {
             description: `Venta #${String(order._id).slice(-6).toUpperCase()}`,
             ref: String(order._id),
             by: req.user?.email || null,
+            byUserId: req.user?.sub || null,
           })
         }
       } catch (cashError) {
@@ -703,7 +713,7 @@ router.post('/orders/:id/return', requirePermission('sales.return'), async (req,
 
     if (order.payment === 'efectivo') {
       try {
-        const open = await currentShift(tenant)
+        const open = await currentShift(tenant, req.user?.sub, { includeLegacy: req.user?.role === 'admin' || req.user?.role === 'superadmin', userEmail: req.user?.email || null })
         if (open) {
           await CashMovement.create({
             adminId: tenant,
@@ -714,6 +724,7 @@ router.post('/orders/:id/return', requirePermission('sales.return'), async (req,
             description: `Devolución #${String(order._id).slice(-6).toUpperCase()}`,
             ref: String(order._id),
             by: req.user?.email || null,
+            byUserId: req.user?.sub || null,
           })
         }
       } catch (cashError) {
@@ -889,6 +900,7 @@ router.delete('/quotes/:id', requirePermission('quotes.delete'), async (req, res
     if (!quote) {
       return res.status(404).json({ error: 'Presupuesto no encontrado' })
     }
+    emitQuoteUpdate(quote, 'deleted')
     return res.json({ ok: true, id: quote._id })
   } catch (error) {
     console.error('Quotes delete error:', error)

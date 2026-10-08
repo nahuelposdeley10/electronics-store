@@ -113,6 +113,10 @@ function getOrderToken(orderId) {
   }
 }
 
+export function getOrderRefreshToken(orderId) {
+  return getOrderToken(orderId)
+}
+
 export async function apiConfirmOrder(orderId) {
   const headers = {}
   const refreshToken = getOrderToken(orderId)

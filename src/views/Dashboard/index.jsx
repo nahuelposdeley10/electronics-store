@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { apiGet, clearSession, getSession, login as apiLogin } from '@/lib/api'
 import { useOrderEvents } from '@/lib/useOrderEvents'
 import { clearSuperTenant, getSuperTenant, setSuperTenant } from '@/lib/tenant'
@@ -23,45 +23,47 @@ import {
 import DashboardLoading from '@/components/DashboardLoading'
 import BrandLogo from '@/components/BrandLogo'
 import { initials, ROLE_LABELS } from './consts.js'
-import {
-  CashCurrentScreen,
-  CashMovementsScreen,
-  CashShiftScreen,
-  CashCountScreen,
-} from './components/cash'
-import { SalesScreen, ReturnsScreen, QuotesScreen } from './components/sales'
-import { PosScreen } from './components/pos'
-import {
-  ProductsScreen,
-  MetaScreen,
-  ImportScreen,
-  OffersScreen,
-} from './components/products'
-import {
-  StockScreen,
-  MovementsScreen,
-  AdjustmentsScreen,
-  PurchasesScreen,
-  MinStockScreen,
-  PhysicalInventoryScreen,
-} from './components/stock'
-import {
-  OverviewScreen,
-  SalesReportScreen,
-  ProductsReportScreen,
-  ProfitReportScreen,
-  StockReportScreen,
-  CustomersReportScreen,
-} from './components/reports'
-import { CouponsScreen } from './components/marketing'
-import { BusinessesScreen, UsersScreen, RolesScreen } from './components/users'
-import { PaymentsScreen, StoreScreen, GeneralScreen } from './components/settings'
-import AppearanceScreen from './components/appearance'
-import StoreHub from './components/storeHub'
-import Onboarding from './components/onboarding'
 import { STORE_PAGES, isNavGroupActive } from './storeNavigation.js'
 
 import './styles.css'
+
+const lazyNamed = (loader, exportName) =>
+  lazy(() => loader().then((module) => ({ default: module[exportName] })))
+
+const CashCurrentScreen = lazyNamed(() => import('./components/cash'), 'CashCurrentScreen')
+const CashMovementsScreen = lazyNamed(() => import('./components/cash'), 'CashMovementsScreen')
+const CashShiftScreen = lazyNamed(() => import('./components/cash'), 'CashShiftScreen')
+const CashCountScreen = lazyNamed(() => import('./components/cash'), 'CashCountScreen')
+const SalesScreen = lazyNamed(() => import('./components/sales'), 'SalesScreen')
+const ReturnsScreen = lazyNamed(() => import('./components/sales'), 'ReturnsScreen')
+const QuotesScreen = lazyNamed(() => import('./components/sales'), 'QuotesScreen')
+const PosScreen = lazyNamed(() => import('./components/pos'), 'PosScreen')
+const ProductsScreen = lazyNamed(() => import('./components/products'), 'ProductsScreen')
+const MetaScreen = lazyNamed(() => import('./components/products'), 'MetaScreen')
+const ImportScreen = lazyNamed(() => import('./components/products'), 'ImportScreen')
+const OffersScreen = lazyNamed(() => import('./components/products'), 'OffersScreen')
+const StockScreen = lazyNamed(() => import('./components/stock'), 'StockScreen')
+const MovementsScreen = lazyNamed(() => import('./components/stock'), 'MovementsScreen')
+const AdjustmentsScreen = lazyNamed(() => import('./components/stock'), 'AdjustmentsScreen')
+const PurchasesScreen = lazyNamed(() => import('./components/stock'), 'PurchasesScreen')
+const MinStockScreen = lazyNamed(() => import('./components/stock'), 'MinStockScreen')
+const PhysicalInventoryScreen = lazyNamed(() => import('./components/stock'), 'PhysicalInventoryScreen')
+const OverviewScreen = lazyNamed(() => import('./components/reports'), 'OverviewScreen')
+const SalesReportScreen = lazyNamed(() => import('./components/reports'), 'SalesReportScreen')
+const ProductsReportScreen = lazyNamed(() => import('./components/reports'), 'ProductsReportScreen')
+const ProfitReportScreen = lazyNamed(() => import('./components/reports'), 'ProfitReportScreen')
+const StockReportScreen = lazyNamed(() => import('./components/reports'), 'StockReportScreen')
+const CustomersReportScreen = lazyNamed(() => import('./components/reports'), 'CustomersReportScreen')
+const CouponsScreen = lazyNamed(() => import('./components/marketing'), 'CouponsScreen')
+const BusinessesScreen = lazyNamed(() => import('./components/users'), 'BusinessesScreen')
+const UsersScreen = lazyNamed(() => import('./components/users'), 'UsersScreen')
+const RolesScreen = lazyNamed(() => import('./components/users'), 'RolesScreen')
+const PaymentsScreen = lazyNamed(() => import('./components/settings'), 'PaymentsScreen')
+const StoreScreen = lazyNamed(() => import('./components/settings'), 'StoreScreen')
+const GeneralScreen = lazyNamed(() => import('./components/settings'), 'GeneralScreen')
+const AppearanceScreen = lazy(() => import('./components/appearance'))
+const StoreHub = lazy(() => import('./components/storeHub'))
+const Onboarding = lazy(() => import('./components/onboarding'))
 
 const SCREEN_PERMS = {
   onboarding: 'settings.manage',
@@ -564,6 +566,7 @@ export default function Dashboard({ onExit }) {
             </a>}
           </div>
         )}
+        <Suspense fallback={<DashboardLoading />}>
         {gate === 'ready' && setupMode && <Onboarding key={`${user?.id}:${superTenant || 'own'}`} screen={activeScreen} role={user?.role} userId={user?.id} assistance={setupMode === 'assistance'} onView={changeScreen} canView={canView} onBusinessSaved={() => setAttempt((n) => n + 1)} />}
         {gate === 'ready' && activeScreen === 'onboarding' && userIsSuper && !superTenant && <section className="dash-screen"><h1>Asistir a un negocio</h1><p>Elegí el comercio al que querés ayudar. Esta guía configura su tienda, no tu cuenta de dueño general.</p><button className="primary-btn" type="button" onClick={() => changeScreen('businesses')}>Elegir negocio</button></section>}
         {userIsSuper && (activeScreen === 'businesses' || businessBlock) && (
@@ -667,16 +670,16 @@ export default function Dashboard({ onExit }) {
           <PhysicalInventoryScreen canManage={can('inventory.write')} />
         )}
         {gate === 'ready' && activeScreen === 'cash-current' && (
-          <CashCurrentScreen canManage={can('cash.manage')} onView={changeScreen} />
+          <CashCurrentScreen canManage={can('cash.manage')} isAdmin={userIsSuper || user?.role === 'admin'} onView={changeScreen} />
         )}
         {gate === 'ready' && activeScreen === 'cash-movements' && (
           <CashMovementsScreen canManage={can('cash.manage')} />
         )}
         {gate === 'ready' && activeScreen === 'cash-openclose' && (
-          <CashShiftScreen canManage={can('cash.manage')} />
+          <CashShiftScreen canManage={can('cash.manage')} isAdmin={userIsSuper || user?.role === 'admin'} />
         )}
         {gate === 'ready' && activeScreen === 'cash-counts' && (
-          <CashCountScreen canManage={can('cash.manage')} />
+          <CashCountScreen canManage={can('cash.manage')} isAdmin={userIsSuper || user?.role === 'admin'} />
         )}
         {gate === 'ready' && activeScreen === 'report-sales' && <SalesReportScreen />}
         {gate === 'ready' && activeScreen === 'report-products' && <ProductsReportScreen />}
@@ -691,6 +694,7 @@ export default function Dashboard({ onExit }) {
         {gate === 'ready' && activeScreen === 'settings-hub' && <StoreHub onView={changeScreen} canView={canView} storeUrl={user?.role === 'admin' && user?.businessSlug ? storeUrl() : null} />}
         {gate === 'ready' && activeScreen === 'settings-general' && <GeneralScreen />}
         {gate === 'ready' && activeScreen === 'settings-appearance' && <AppearanceScreen key={superTenant || user?.id} />}
+        </Suspense>
       </main>
 
     </div>

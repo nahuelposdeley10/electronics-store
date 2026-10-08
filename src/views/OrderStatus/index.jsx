@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useCart } from '@/context/useCart'
 import { apiConfirmOrder } from '@/lib/api'
-import { subscribeToOrders } from '@/lib/orderSocket'
+import { subscribeToOrders, watchOrder } from '@/lib/orderSocket'
 import { IconCheck, IconClose, IconClock } from '@/components/Icons'
 
 import './styles.css'
@@ -18,6 +18,7 @@ export default function OrderStatus({ status, orderId, onNavigate }) {
     const unsubscribe = subscribeToOrders((data) => {
       if (data.id === orderId && data.status) setCurrent(data.status)
     })
+    const unwatch = watchOrder(orderId)
     apiConfirmOrder(orderId)
       .then((data) => {
         if (data.status) setCurrent(data.status)
@@ -27,6 +28,7 @@ export default function OrderStatus({ status, orderId, onNavigate }) {
       })
     return () => {
       unsubscribe()
+      unwatch?.()
     }
   }, [orderId])
 

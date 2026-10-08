@@ -34,15 +34,34 @@ export async function cashNet(shiftId) {
   }
 }
 
-export async function currentShift(tenant = null) {
-  const filter = tenant ? { status: 'open', adminId: tenant } : { status: 'open', adminId: null }
-  return CashShift.findOne(filter).lean()
+function tenantShiftFilter(tenant, status = 'open') {
+  return tenant ? { status, adminId: tenant } : { status, adminId: null }
 }
 
-export async function openShift({ openingBalance = 0, note = '', openedBy = null, tenant = null }) {
-  const existing = await currentShift(tenant)
+function ownerFilter(filter, userId, { includeLegacy = false, userEmail = null } = {}) {
+  if (!userId) return filter
+  filter.$or = [{ openedByUserId: userId }]
+  if (userEmail) filter.$or.push({ openedBy: userEmail })
+  if (includeLegacy) filter.$or.push({ openedByUserId: null })
+  return filter
+}
+
+export async function currentShift(tenant = null, userId = null, { includeLegacy = false, userEmail = null } = {}) {
+  const filter = ownerFilter(tenantShiftFilter(tenant), userId, { includeLegacy, userEmail })
+  return CashShift.findOne(filter).sort({ openedAt: -1 }).lean()
+}
+
+export async function openShift({
+  openingBalance = 0,
+  note = '',
+  openedBy = null,
+  openedByUserId = null,
+  tenant = null,
+  includeLegacy = false,
+}) {
+  const existing = await currentShift(tenant, openedByUserId, { includeLegacy, userEmail: openedBy })
   if (existing) {
-    const error = new Error('Ya hay una caja abierta')
+    const error = new Error('Ya tenés una caja abierta')
     error.status = 400
     throw error
   }
@@ -55,13 +74,26 @@ export async function openShift({ openingBalance = 0, note = '', openedBy = null
     openingBalance: roundMoney(Math.max(0, Number(openingBalance) || 0)),
     note: note || '',
     openedBy,
+    openedByUserId,
   })
   return shift
 }
 
-export async function closeShift({ countedBalance, note = '', closedBy = null, tenant = null }) {
-  const filter = tenant ? { status: 'open', adminId: tenant } : { status: 'open', adminId: null }
-  const shift = await CashShift.findOne(filter)
+export async function closeShift({
+  countedBalance,
+  note = '',
+  closedBy = null,
+  closedByUserId = null,
+  shiftId = null,
+  userId = null,
+  tenant = null,
+  includeLegacy = false,
+  actorEmail = null,
+}) {
+  const filter = tenantShiftFilter(tenant)
+  if (shiftId) filter._id = shiftId
+  else ownerFilter(filter, userId, { includeLegacy, userEmail: actorEmail })
+  const shift = await CashShift.findOne(filter).sort({ openedAt: -1 })
   if (!shift) {
     const error = new Error('No hay ninguna caja abierta')
     error.status = 400
@@ -74,6 +106,7 @@ export async function closeShift({ countedBalance, note = '', closedBy = null, t
   shift.closedBalance = counted
   shift.difference = roundMoney(counted - expectedClose)
   shift.closedBy = closedBy
+  shift.closedByUserId = closedByUserId
   shift.note = note ?? shift.note
   shift.status = 'closed'
   shift.closedAt = new Date()
@@ -81,7 +114,16 @@ export async function closeShift({ countedBalance, note = '', closedBy = null, t
   return shift
 }
 
-export async function addMovement({ shiftId, kind = 'ingreso', flow = 'in', amount, description = '', ref = null, by = null }) {
+export async function addMovement({
+  shiftId,
+  kind = 'ingreso',
+  flow = 'in',
+  amount,
+  description = '',
+  ref = null,
+  by = null,
+  byUserId = null,
+}) {
   const shift = await CashShift.findById(shiftId)
   if (!shift || shift.status !== 'open') {
     const error = new Error('No hay una caja abierta para registrar el movimiento')
@@ -97,11 +139,24 @@ export async function addMovement({ shiftId, kind = 'ingreso', flow = 'in', amou
     description: description || '',
     ref,
     by,
+    byUserId,
   })
 }
 
-export async function createArqueo({ countedAmount, note = '', by = null, tenant = null }) {
-  const shift = await currentShift(tenant)
+export async function createArqueo({
+  countedAmount,
+  note = '',
+  by = null,
+  byUserId = null,
+  shiftId = null,
+  userId = null,
+  tenant = null,
+  includeLegacy = false,
+  actorEmail = null,
+}) {
+  const shift = shiftId
+    ? await CashShift.findOne({ _id: shiftId, ...tenantShiftFilter(tenant, 'open') }).lean()
+    : await currentShift(tenant, userId, { includeLegacy, userEmail: actorEmail })
   if (!shift) {
     const error = new Error('No hay ninguna caja abierta')
     error.status = 400
@@ -119,6 +174,7 @@ export async function createArqueo({ countedAmount, note = '', by = null, tenant
     difference: diff,
     note: note || '',
     by,
+    byUserId,
   })
   return count
 }
