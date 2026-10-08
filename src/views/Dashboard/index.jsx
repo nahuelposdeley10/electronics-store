@@ -711,43 +711,74 @@ function LoginPanel({ attempts, error, onLogin }) {
 
   return (
     <div className="dash-screen dash-unlock">
-      <div className="unlock-card">
-        <BrandLogo className="unlock-brand" />
-        <span className="unlock-icon">
-          <IconLock />
-        </span>
-        <span className="dash-eyebrow">Caja cerrada</span>
-        <h1>Panel de ventas</h1>
-        <p>Entrá con tu usuario para abrir la caja.</p>
-        <form onSubmit={submit}>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="Email"
-            aria-label="Email"
-            autoComplete="username"
-            required
-          />
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="Contraseña"
-            aria-label="Contraseña"
-            autoComplete="current-password"
-            required
-            autoFocus
-          />
-          {error ? (
-            <em className="unlock-error">{error}</em>
-          ) : attempts > 1 ? (
-            <em className="unlock-error">Email o contraseña incorrectos</em>
-          ) : null}
-          <button type="submit" className="primary-btn">
-            Abrir caja
-          </button>
-        </form>
+      <div className="unlock-shell">
+        <header className="unlock-topbar">
+          <BrandLogo className="unlock-brand" />
+          <span className="unlock-top-status"><i /> Panel privado</span>
+        </header>
+
+        <div className="unlock-stage">
+          <section className="unlock-intro" aria-label="Funciones del panel">
+            <span className="unlock-kicker">Operación en tiempo real <b>01</b></span>
+            <h1>Tu negocio,<br /><em>en movimiento.</em></h1>
+            <p>Una vista clara para vender, controlar el efectivo y tomar decisiones con la información de tu local.</p>
+            <div className="unlock-features">
+              <span><IconTicket /> Ventas y pedidos</span>
+              <span><IconCash /> Caja y movimientos</span>
+              <span><IconBox /> Productos y stock</span>
+              <span><IconChart /> Reportes del negocio</span>
+            </div>
+          </section>
+
+          <section className="unlock-login" aria-label="Iniciar sesión">
+            <div className="unlock-login-mark"><IconLock /></div>
+            <div className="unlock-login-head">
+              <span className="dash-eyebrow">Acceso de equipo</span>
+              <h2>Entrá a tu panel</h2>
+              <p>Iniciá sesión para continuar.</p>
+            </div>
+          <form onSubmit={submit}>
+            <label>
+              <span>Email</span>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="tu@email.com"
+                aria-label="Email"
+                autoComplete="username"
+                required
+              />
+            </label>
+            <label>
+              <span>Contraseña</span>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Ingresá tu contraseña"
+                aria-label="Contraseña"
+                autoComplete="current-password"
+                required
+                autoFocus
+              />
+            </label>
+            {error ? (
+              <em className="unlock-error">{error}</em>
+            ) : attempts > 1 ? (
+              <em className="unlock-error">Email o contraseña incorrectos</em>
+            ) : null}
+            <button type="submit" className="primary-btn">
+              Entrar al panel
+            </button>
+          </form>
+          </section>
+        </div>
+
+        <footer className="unlock-footer">
+          <span>VENTAS</span><i /> <span>CAJA</span><i /> <span>INVENTARIO</span><i /> <span>REPORTES</span>
+          <small>Acceso protegido</small>
+        </footer>
       </div>
     </div>
   )
