@@ -359,16 +359,49 @@ body:has(.dash.theme-dark),
   .unlock-login { width: min(100%, 390px); justify-self: start; }
 }
 @media (max-width: 480px) {
-  .unlock-shell { padding: 18px 18px 22px; }
-  .unlock-topbar { padding-bottom: 20px; }
+  .dash-unlock::before { opacity: .22; background-size: 36px 36px; }
+  .unlock-shell { width: 100%; box-sizing: border-box; padding: 16px 16px 20px; }
+  .unlock-topbar { padding-bottom: 18px; }
   .unlock-topbar .unlock-brand { width: 140px; }
-  .unlock-top-status { font-size: 9px; }
-  .unlock-stage { padding: 42px 0 52px; }
-  .unlock-intro h1 { font-size: 52px; }
-  .unlock-features { grid-template-columns: 1fr; margin-top: 34px; }
-  .unlock-login { padding: 24px; }
-  .unlock-footer { gap: 7px; font-size: 8px; }
+  .unlock-top-status { gap: 6px; font-size: 8px; letter-spacing: .06em; }
+  .unlock-top-status i { width: 6px; height: 6px; }
+  .unlock-stage { gap: 34px; padding: 36px 0 42px; }
+  .unlock-kicker { gap: 9px; font-size: 9px; letter-spacing: .1em; }
+  .unlock-kicker b { padding-left: 9px; }
+  .unlock-intro h1 { margin: 18px 0 16px; font-size: clamp(42px, 13vw, 52px); line-height: .92; }
+  .unlock-intro > p { max-width: 34rem; font-size: 14px; line-height: 1.52; }
+  .unlock-features {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px 12px;
+    max-width: none;
+    margin-top: 28px;
+    padding-top: 16px;
+    font-size: 11px;
+  }
+  .unlock-features span { min-width: 0; align-items: flex-start; gap: 7px; line-height: 1.35; }
+  .unlock-features svg { flex: 0 0 auto; width: 15px; height: 15px; }
+  .unlock-login {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 22px;
+    justify-self: stretch;
+    box-shadow: 8px 8px 0 rgba(159, 243, 228, .1);
+  }
+  .unlock-login-mark { width: 36px; height: 36px; margin-bottom: 20px; }
+  .unlock-login-head h2 { font-size: 23px; }
+  .unlock-login-head p { margin-bottom: 20px; }
+  .unlock-login input { min-height: 48px; }
+  .unlock-login .primary-btn { min-height: 48px; }
+  .unlock-footer { flex-wrap: wrap; gap: 7px; font-size: 8px; line-height: 1.4; }
   .unlock-footer small { display: none; }
+}
+@media (max-width: 360px) {
+  .unlock-top-status { display: none; }
+  .unlock-shell { padding-inline: 13px; }
+  .unlock-intro h1 { font-size: 42px; }
+  .unlock-login { padding: 20px 18px; }
+  .unlock-footer span:nth-of-type(3),
+  .unlock-footer i:nth-of-type(3) { display: none; }
 }
 .dash-side {
   width: 236px;
