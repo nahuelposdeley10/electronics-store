@@ -7,8 +7,7 @@ import { Subscription } from '../models/Subscription.js'
 import { User } from '../models/User.js'
 import { Setting } from '../models/Setting.js'
 import { planByCode, normalizePlanCode } from '../lib/plans.js'
-import { getBillingService, isMercadoPagoAuthError } from '../services/mercadopago.js'
-import { sendCommercialActivationEmail } from '../services/email.js'
+import { sendCommercialActivationEmail, sendCommercialTrialWelcomeEmail } from '../services/email.js'
 import { env } from '../config/env.js'
 
 const router = express.Router()
@@ -32,6 +31,7 @@ function publicSignup(doc) {
     planCode: doc.planCode,
     planName: doc.planName,
     email: doc.email,
+    trialDays: doc.trialDays || 14,
     emailDelivery: doc.activationSentAt ? { sent: true } : null,
   }
 }
@@ -42,7 +42,7 @@ function activationUrl(token) {
   return url.toString()
 }
 
-async function deliverActivation(signup) {
+async function deliverActivation(signup, sendEmail = sendCommercialActivationEmail) {
   const token = crypto.randomBytes(32).toString('hex')
   const saved = await CommercialSignup.findOneAndUpdate(
     { _id: signup._id, status: { $ne: 'activated' }, activationSentAt: null },
@@ -52,12 +52,13 @@ async function deliverActivation(signup) {
   if (!saved) return { sent: false, skipped: true, reason: 'already_delivered' }
 
   try {
-    const delivery = await sendCommercialActivationEmail({
+    const delivery = await sendEmail({
       name: saved.name,
       email: saved.email,
       storeName: saved.storeName,
       planName: saved.planName,
       planPrice: `$${saved.price.toLocaleString('es-AR')}`,
+      trialDays: saved.trialDays || 14,
       activationUrl: activationUrl(token),
     })
     await CommercialSignup.updateOne({ _id: saved._id }, { $set: { activationSentAt: delivery.sent ? new Date() : null } })
@@ -66,6 +67,10 @@ async function deliverActivation(signup) {
     console.error('Commercial activation email error:', error.message)
     return { sent: false, skipped: false, reason: 'email_send_failed' }
   }
+}
+
+export async function deliverTrialActivation(signup) {
+  return deliverActivation(signup, sendCommercialTrialWelcomeEmail)
 }
 
 router.post('/', signupLimiter, async (req, res, next) => {
@@ -82,32 +87,26 @@ router.post('/', signupLimiter, async (req, res, next) => {
     if (!plan) return res.status(400).json({ error: 'Plan inválido' })
     if (await User.exists({ email })) return res.status(409).json({ error: 'Ya existe una cuenta con ese email. Ingresá desde el panel o usá otro email.' })
     if (await User.exists({ businessSlug })) return res.status(409).json({ error: 'La URL elegida para la tienda ya está ocupada.' })
-    const existingSignup = await CommercialSignup.findOne({ $or: [{ email }, { businessSlug }], status: { $in: ['pending_payment', 'ready'] } }).lean()
-    if (existingSignup) return res.status(409).json({ error: 'Ya hay una suscripción en proceso con esos datos. Revisá tu email o esperá la confirmación.' })
+    const existingSignup = await CommercialSignup.findOne({
+      $or: [{ email }, { businessSlug }],
+      status: { $in: ['pending_payment', 'trial_pending', 'ready'] },
+    }).lean()
+    if (existingSignup) return res.status(409).json({ error: 'Ya hay una prueba o suscripción en proceso con esos datos. Revisá tu email o esperá la confirmación.' })
 
-    const billing = getBillingService()
-    if (!billing) return res.status(503).json({ error: 'Las suscripciones online todavía no están configuradas.' })
-
-    const signup = await CommercialSignup.create({ name, email, storeName, businessSlug, planCode: plan.code, planName: plan.name, price: plan.price })
-    try {
-      const remote = await billing.create({ body: {
-        reason: `Tienda BNP · Plan ${plan.name}`.slice(0, 255),
-        external_reference: String(signup._id),
-        payer_email: email,
-        back_url: `${env.clientUrl}/home?subscription=return`,
-        auto_recurring: { frequency: 1, frequency_type: 'months', transaction_amount: plan.price, currency_id: 'ARS' },
-        status: 'pending',
-        notification_url: `${env.serverUrl}/api/webhooks/mercadopago/subscriptions`,
-      } })
-      signup.billing = { provider: 'mercadopago', preapprovalId: remote.id || '', initPoint: remote.init_point || remote.sandbox_init_point || '', status: 'pending' }
-      await signup.save()
-      return res.status(201).json({ ...publicSignup(signup), initPoint: signup.billing.initPoint })
-    } catch (error) {
-      await CommercialSignup.deleteOne({ _id: signup._id })
-      throw error
-    }
+    const signup = await CommercialSignup.create({
+      name,
+      email,
+      storeName,
+      businessSlug,
+      planCode: plan.code,
+      planName: plan.name,
+      price: plan.price,
+      trialDays: 14,
+      status: 'trial_pending',
+    })
+    const emailDelivery = await deliverTrialActivation(signup)
+    return res.status(201).json({ ...publicSignup(signup), emailDelivery })
   } catch (error) {
-    if (isMercadoPagoAuthError(error)) return res.status(502).json({ error: 'Mercado Pago rechazó las credenciales de Tienda BNP.' })
     return next(error)
   }
 })
@@ -129,14 +128,19 @@ router.post('/activate', signupLimiter, async (req, res, next) => {
       role: 'admin',
       businessSlug: signup.businessSlug,
     })
+    const paidSignup = Boolean(signup.billing?.preapprovalId)
+    const trialDays = Number(signup.trialDays) || 14
+    const dueDate = new Date(Date.now() + (paidSignup ? 30 : trialDays) * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
     await Subscription.create({
       adminId: user._id,
       planCode: signup.planCode,
       plan: signup.planName,
       price: signup.price,
-      status: 'active',
-      dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10),
-      billing: { provider: 'mercadopago', preapprovalId: signup.billing.preapprovalId, status: 'authorized' },
+      status: paidSignup ? 'active' : 'trial',
+      dueDate,
+      billing: paidSignup
+        ? { provider: 'mercadopago', preapprovalId: signup.billing.preapprovalId, status: 'authorized' }
+        : { provider: 'mercadopago', status: 'trial' },
     })
     await Setting.updateOne({ adminId: user._id, key: 'base' }, { $set: { 'value.store.name': signup.storeName } }, { upsert: true })
     await CommercialSignup.updateOne({ _id: signup._id }, { $set: { status: 'activated', adminId: user._id }, $unset: { activationTokenHash: '', activationTokenExpiresAt: '' } })

@@ -24,7 +24,18 @@ router.param('adminId', async (req, res, next, id) => {
 })
 
 function response(doc) {
-  return { ...subscriptionSummary(doc), payments: [...(doc?.payments || [])].reverse() }
+  const billing = doc?.billing
+    ? {
+        provider: doc.billing.provider,
+        preapprovalId: doc.billing.preapprovalId || '',
+        initPoint: doc.billing.initPoint || '',
+        status: doc.billing.status || 'pending',
+        lastPaymentId: doc.billing.lastPaymentId || '',
+        lastPaymentStatus: doc.billing.lastPaymentStatus || '',
+        lastPaymentAt: doc.billing.lastPaymentAt || null,
+      }
+    : null
+  return { ...subscriptionSummary(doc), billing, payments: [...(doc?.payments || [])].reverse() }
 }
 
 async function ensureSubscription(adminId) {
@@ -45,7 +56,16 @@ router.put('/:adminId', async (req, res, next) => {
     const value = validateSubscription(req.body)
     if (!Number.isInteger(req.body.revision) || req.body.revision < 0) return res.status(400).json({ error: 'Versión inválida' })
     await ensureSubscription(req.params.adminId)
-    const saved = await Subscription.findOneAndUpdate({ adminId: req.params.adminId, revision: req.body.revision }, { $set: value, $inc: { revision: 1 } }, { new: true, runValidators: true }).lean()
+    const set = { ...value }
+    if (value.status === 'active' || value.status === 'trial') {
+      set.pausedAt = null
+      set.pauseReason = ''
+      set.paymentFailureEmailSentAt = null
+    } else {
+      set.pausedAt = new Date()
+      set.pauseReason = 'manual'
+    }
+    const saved = await Subscription.findOneAndUpdate({ adminId: req.params.adminId, revision: req.body.revision }, { $set: set, $inc: { revision: 1 } }, { new: true, runValidators: true }).lean()
     if (!saved) return res.status(409).json({ error: 'La suscripción cambió. Volvé a abrirla antes de guardar.' })
     res.json(response(saved))
   } catch (error) { next(error) }
@@ -59,7 +79,7 @@ router.post('/:adminId/payments', async (req, res, next) => {
     const payment = validateSubscriptionPayment(req.body, current, req.user.sub)
     if (req.body.revision !== current.revision) return res.status(409).json({ error: 'La suscripción cambió. Volvé a abrirla antes de registrar el pago.' })
     const saved = await Subscription.findOneAndUpdate({ adminId: req.params.adminId, revision: current.revision, 'payments.requestId': { $ne: payment.requestId } }, {
-      $push: { payments: payment }, $set: { dueDate: payment.dueDate, status: 'active' }, $inc: { revision: 1 },
+      $push: { payments: payment }, $set: { dueDate: payment.dueDate, status: 'active', pausedAt: null, pauseReason: '', paymentFailureEmailSentAt: null }, $inc: { revision: 1 },
     }, { new: true, runValidators: true }).lean()
     if (!saved) {
       const latest = await Subscription.findOne({ adminId: req.params.adminId }).lean()

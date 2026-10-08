@@ -8,5 +8,11 @@
 .subscription-card fieldset:disabled { opacity: .65; }
 .subscription-error { color: #a51d16; margin: 12px 0; }
 .subscription-summary { margin: 16px 0; line-height: 1.7; }
+.subscription-alert { display: grid; gap: 4px; margin: 16px 0 20px; padding: 14px 16px; border: 1px solid #f0d28d; border-radius: 10px; background: #fff8e7; color: #805d00; }
+.subscription-alert span { color: #6f6246; font-size: 13px; }
+.subscription-metrics { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 18px 0 20px; }
+.subscription-metrics > div { display: grid; gap: 6px; min-width: 0; padding: 16px; border: 1px solid var(--gal-line); border-radius: 10px; background: var(--gal-panel-2); }
+.subscription-metrics span { color: var(--gal-ink-soft); font-size: 12px; }
+.subscription-metrics strong { overflow-wrap: anywhere; font-size: 14px; }
 .subscription-history { overflow-x: auto; }
-@media (max-width: 760px) { .subscription-forms { grid-template-columns: 1fr; } }
+@media (max-width: 760px) { .subscription-forms { grid-template-columns: 1fr; } .subscription-metrics { grid-template-columns: 1fr; } }

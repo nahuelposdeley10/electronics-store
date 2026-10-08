@@ -1,15 +1,19 @@
 import express from 'express'
 import { Order } from '../models/Order.js'
-import { getMpConfig, getMpServices } from '../services/mercadopago.js'
+import { getMpConfig } from '../services/mercadopago.js'
 import { orderStatusForPayment, canTransitionOrder } from '../lib/order-status.js'
 import { payerFieldsFromPayment } from '../lib/payer.js'
 import { verifyWebhookSignature } from '../lib/webhook-signature.js'
 import { deductApprovedStock } from '../lib/order-stock.js'
 import { env } from '../config/env.js'
 import { Subscription } from '../models/Subscription.js'
-import { getBillingService } from '../services/mercadopago.js'
+import { User } from '../models/User.js'
+import { getAuthorizedPayment, getBillingService, getMpServices } from '../services/mercadopago.js'
 import { CommercialSignup } from '../models/CommercialSignup.js'
 import { deliverActivation } from './commercial-subscriptions.js'
+import { recordSubscriptionPayment } from '../lib/subscription-payments.js'
+import { getSettings } from '../lib/settings.js'
+import { sendSubscriptionPaymentIssueEmail } from '../services/email.js'
 
 const router = express.Router()
 
@@ -25,6 +29,22 @@ router.post('/webhooks/mercadopago/subscriptions', async (req, res) => {
     secret: env.mpWebhookSecret,
   })) return res.sendStatus(401)
   try {
+    const topic = String(req.body?.type || req.query?.type || '').toLowerCase()
+    if (topic === 'subscription_authorized_payment') {
+      const invoice = await getAuthorizedPayment(id)
+      if (!invoice) return res.sendStatus(503)
+      await recordSubscriptionPayment({ invoice })
+      return res.sendStatus(200)
+    }
+
+    if (topic === 'payment') {
+      const { paymentService } = await getMpServices(null)
+      if (!paymentService) return res.sendStatus(503)
+      const payment = await paymentService.get({ id: String(id) })
+      const subscriptionPayment = await recordSubscriptionPayment({ payment })
+      if (subscriptionPayment.matched) return res.sendStatus(200)
+    }
+
     const billing = getBillingService()
     if (!billing) return res.sendStatus(503)
     const remote = await billing.get({ id: String(id) })
@@ -43,14 +63,45 @@ router.post('/webhooks/mercadopago/subscriptions', async (req, res) => {
       if (mapped === 'active') await deliverActivation(commercial)
       return res.sendStatus(200)
     }
+    const subscriptionUpdate = {
+      $set: { 'billing.status': status, status: mapped },
+      $inc: { revision: 1 },
+    }
+    if (mapped === 'active') {
+      subscriptionUpdate.$set.pausedAt = null
+      subscriptionUpdate.$set.pauseReason = ''
+      subscriptionUpdate.$set.paymentFailureEmailSentAt = null
+    } else {
+      subscriptionUpdate.$set.pausedAt = new Date()
+      subscriptionUpdate.$set.pauseReason = 'payment_failed'
+    }
+    const subscription = await Subscription.findOne({ 'billing.preapprovalId': String(id) })
     await Subscription.updateOne(
       { 'billing.preapprovalId': String(id) },
-      { $set: { 'billing.status': status, status: mapped }, $inc: { revision: 1 } },
+      subscriptionUpdate,
     )
+    if (subscription && mapped !== 'active' && !subscription.paymentFailureEmailSentAt && subscription.billing?.initPoint) {
+      const owner = await User.findOne({ _id: subscription.adminId, role: 'admin' }).lean()
+      if (owner) {
+        const settings = await getSettings({ fresh: true, tenant: owner._id })
+        const delivery = await sendSubscriptionPaymentIssueEmail({
+          name: owner.name,
+          email: owner.email,
+          storeName: settings.store?.name || owner.name,
+          planName: subscription.plan,
+          planPrice: `$${Number(subscription.price || 0).toLocaleString('es-AR')}`,
+          subscriptionUrl: subscription.billing.initPoint,
+          reason: mapped === 'cancelled' ? 'Mercado Pago canceló la suscripción o agotó sus reintentos de cobro.' : 'Mercado Pago pausó la suscripción mientras revisa el medio de pago.',
+        })
+        if (delivery.sent) {
+          await Subscription.updateOne({ _id: subscription._id, paymentFailureEmailSentAt: null }, { $set: { paymentFailureEmailSentAt: new Date() } })
+        }
+      }
+    }
     return res.sendStatus(200)
   } catch (error) {
     console.error('Subscription webhook error:', error)
-    return res.sendStatus(200)
+    return res.sendStatus(503)
   }
 })
 
@@ -154,6 +205,9 @@ router.post('/webhooks/mercadopago', async (req, res) => {
         /* ignorar */
       }
     }
+
+    const subscriptionPayment = await recordSubscriptionPayment({ payment })
+    if (subscriptionPayment.matched) return res.sendStatus(200)
 
     const externalReference = payment?.external_reference
     if (!externalReference) return res.sendStatus(200)

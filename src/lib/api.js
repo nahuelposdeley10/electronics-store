@@ -91,16 +91,21 @@ export async function apiGet(path) {
     throw netError('No se pudo conectar con el servidor')
   }
 
+  const data = await res.json().catch(() => ({}))
+
   if (res.status === 401) {
     throw new ApiError('Sesión requerida', 'AUTH')
   }
   if (res.status === 403) {
     throw new ApiError('No tenés permiso para esto', 'FORBIDDEN')
   }
+  if (res.status === 402) {
+    throw new ApiError(data?.error || 'Tu suscripción está pausada', data?.code || 'SUBSCRIPTION_REQUIRED')
+  }
   if (!res.ok) {
     throw new ApiError('No se pudo traer la información', 'ERROR')
   }
-  return res.json()
+  return data
 }
 
 const ORDER_TOKEN_PREFIX = 'ts-order-token:'
@@ -137,6 +142,9 @@ export async function apiConfirmOrder(orderId) {
 
   if (res.status === 403) {
     throw new ApiError('No tenés permiso para esto', 'FORBIDDEN')
+  }
+  if (res.status === 402) {
+    throw new ApiError(data?.error || 'Tu suscripción está pausada', data?.code || 'SUBSCRIPTION_REQUIRED')
   }
   if (!res.ok) {
     throw new ApiError(data.error || 'No se pudo corroborar el pago', 'ERROR')
@@ -177,6 +185,9 @@ async function apiFile(path, method, formData) {
   if (res.status === 403) {
     throw new ApiError('No tenés permiso para esto', 'FORBIDDEN')
   }
+  if (res.status === 402) {
+    throw new ApiError(data?.error || 'Tu suscripción está pausada', data?.code || 'SUBSCRIPTION_REQUIRED')
+  }
   if (!res.ok) {
     throw new ApiError(data.error || 'No se pudo guardar el producto', 'ERROR')
   }
@@ -206,6 +217,9 @@ export async function apiDelete(path) {
   }
   if (res.status === 403) {
     throw new ApiError('No tenés permiso para esto', 'FORBIDDEN')
+  }
+  if (res.status === 402) {
+    throw new ApiError(data?.error || 'Tu suscripción está pausada', data?.code || 'SUBSCRIPTION_REQUIRED')
   }
   if (!res.ok) {
     throw new ApiError(data.error || 'No se pudo eliminar el producto', 'ERROR')
@@ -245,6 +259,9 @@ async function apiJson(path, method, body) {
   }
   if (res.status === 403) {
     throw new ApiError('No tenés permiso para esto', 'FORBIDDEN')
+  }
+  if (res.status === 402) {
+    throw new ApiError(data?.error || 'Tu suscripción está pausada', data?.code || 'SUBSCRIPTION_REQUIRED')
   }
   if (!res.ok) {
     throw new ApiError(data.error || 'No se pudo guardar', 'ERROR')

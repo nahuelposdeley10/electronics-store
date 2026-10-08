@@ -1,5 +1,6 @@
 import mongoose from 'mongoose'
 import { User } from '../models/User.js'
+import { Subscription } from '../models/Subscription.js'
 
 
 export function castId(value) {
@@ -54,8 +55,11 @@ export async function slugToAdminId(slug) {
   })
     .select('_id')
     .lean()
-  const id = admin ? admin._id : null
-  return id
+  if (!admin) return null
+
+  const subscription = await Subscription.findOne({ adminId: admin._id }).select('status').lean()
+  if (subscription && ['paused', 'cancelled'].includes(subscription.status)) return null
+  return admin._id
 }
 
 export async function publicTenantId(req) {

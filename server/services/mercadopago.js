@@ -58,6 +58,21 @@ export function getBillingService() {
   return token ? new PreApproval(new MercadoPagoConfig({ accessToken: token })) : null
 }
 
+export async function getAuthorizedPayment(id) {
+  const token = String(env.mpAccessToken || '').trim()
+  if (!token) return null
+
+  const response = await fetch(`https://api.mercadopago.com/authorized_payments/${encodeURIComponent(String(id))}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  if (!response.ok) {
+    const error = new Error(`Mercado Pago authorized payment request failed with ${response.status}`)
+    error.status = response.status
+    throw error
+  }
+  return response.json()
+}
+
 export function isMercadoPagoAuthError(error) {
   const status = Number(error?.status)
 

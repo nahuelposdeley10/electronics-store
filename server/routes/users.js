@@ -78,6 +78,8 @@ router.get('/businesses', async (req, res) => {
       items.push({
         ...toUserDoc(admin),
         storeName: settings.store?.name || admin.name,
+        logoUrl: settings.store?.logoUrl || null,
+        online: settings.payments?.online !== false,
         subscription: subscriptionSummary(byAdmin.get(String(admin._id))),
         productCount,
         orderCount,
@@ -267,6 +269,7 @@ router.post('/', async (req, res) => {
 
 router.put('/:id', async (req, res) => {
   const { name, role, active, password, businessSlug, adminId, email, planCode } = req.body || {}
+  const storeName = req.body?.storeName
   const self = String(req.user.sub) === String(req.params.id)
   const isSuperadmin = req.user.role === 'superadmin'
 
@@ -329,6 +332,17 @@ router.put('/:id', async (req, res) => {
       return res.status(403).json({ error: 'No tenés permiso para otorgar super admin' })
     }
 
+    let cleanStoreName
+    if (storeName !== undefined) {
+      if (!isSuperadmin || nextRole !== 'admin') {
+        return res.status(403).json({ error: 'Solo el superadmin puede editar el nombre del negocio' })
+      }
+      cleanStoreName = String(storeName).trim()
+      if (cleanStoreName.length < 2 || cleanStoreName.length > 160) {
+        return res.status(400).json({ error: 'El nombre del negocio debe tener entre 2 y 160 caracteres' })
+      }
+    }
+
     if (name !== undefined) user.name = String(name).trim()
     if (email !== undefined) {
       const cleanEmail = String(email).trim().toLowerCase()
@@ -374,6 +388,15 @@ router.put('/:id', async (req, res) => {
     }
     await user.save()
 
+    if (cleanStoreName !== undefined) {
+      const currentSettings = await getSettings({ fresh: true, tenant: user._id })
+      await saveSettings({
+        section: 'store',
+        value: { ...currentSettings.store, name: cleanStoreName },
+        tenant: user._id,
+      })
+    }
+
     if (isSuperadmin && nextRole === 'admin' && selectedPlan) {
       const trialUntil = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
       await Subscription.updateOne(
@@ -386,7 +409,10 @@ router.put('/:id', async (req, res) => {
       )
     }
 
-    return res.json(toUserDoc(user, { planCode: selectedPlan?.code }))
+    return res.json(toUserDoc(user, {
+      planCode: selectedPlan?.code,
+      ...(cleanStoreName !== undefined ? { storeName: cleanStoreName } : {}),
+    }))
   } catch (error) {
     console.error('Users update error:', error)
     return res.status(500).json({ error: 'No se pudo actualizar el usuario' })

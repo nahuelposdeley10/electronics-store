@@ -8,7 +8,8 @@ const schema = new mongoose.Schema({
   planCode: { type: String, enum: ['inicial', 'profesional', 'negocio'], required: true },
   planName: { type: String, required: true },
   price: { type: Number, required: true, min: 0 },
-  status: { type: String, enum: ['pending_payment', 'ready', 'activated', 'cancelled'], default: 'pending_payment' },
+  trialDays: { type: Number, default: 14, min: 1, max: 90 },
+  status: { type: String, enum: ['pending_payment', 'trial_pending', 'ready', 'activated', 'cancelled'], default: 'trial_pending' },
   billing: {
     provider: { type: String, enum: ['mercadopago'], default: 'mercadopago' },
     preapprovalId: { type: String, default: '' },

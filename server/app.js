@@ -22,6 +22,7 @@ import subscriptionsRouter from './routes/subscriptions.js'
 import onboardingRouter from './routes/onboarding.js'
 import commercialSubscriptionsRouter from './routes/commercial-subscriptions.js'
 import { indexingHeaders } from './middleware/indexing.js'
+import { requireSubscriptionAccess } from './middleware/auth.js'
 
 const DIST_DIR = path.resolve('dist')
 const CANONICAL_HOST = 'www.tiendabnp.com'
@@ -108,6 +109,7 @@ export function createApp() {
   app.use('/api', catalogRouter)
   app.use('/api/auth', authRouter)
   app.use('/api', settingsRouter)
+  app.use('/api/admin', requireSubscriptionAccess)
   app.use('/api/admin/onboarding', onboardingRouter)
   app.use('/api/admin', adminRouter)
   app.use('/api/admin/subscriptions', subscriptionsRouter)

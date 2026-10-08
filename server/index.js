@@ -4,6 +4,7 @@ import { createApp, connectDb } from './app.js'
 import { createSocketServer, closeSocketServer } from './socketio.js'
 import { initTracker } from './lib/order-tracker.js'
 import { validateEnv } from './config/env.js'
+import { startSubscriptionNotifications } from './services/subscription-notifications.js'
 
 const port = Number(process.env.PORT || 4000)
 const host = process.env.HOST || '0.0.0.0'
@@ -21,11 +22,13 @@ process.on('uncaughtException', (error) => {
 })
 
 let server = null
+let stopSubscriptionNotifications = () => {}
 
 async function start() {
   validateEnv()
   await connectDb()
   initTracker()
+  stopSubscriptionNotifications = startSubscriptionNotifications()
   server = http.createServer(createApp())
   server.requestTimeout = 120_000
   server.headersTimeout = 60_000
@@ -55,6 +58,7 @@ async function start() {
 
 async function shutdown(signal) {
   console.log(`[${signal}] Cerrando server…`)
+  stopSubscriptionNotifications()
   const onClose = () => {
     mongoose.disconnect().catch(() => {})
     setTimeout(() => process.exit(0), 300)

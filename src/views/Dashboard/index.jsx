@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { Fragment, lazy, Suspense, useEffect, useState } from 'react'
 import { apiGet, clearSession, getSession, login as apiLogin } from '@/lib/api'
 import { useOrderEvents } from '@/lib/useOrderEvents'
 import { clearSuperTenant, getSuperTenant, setSuperTenant } from '@/lib/tenant'
@@ -88,6 +88,7 @@ const SCREEN_PERMS = {
   'cash-openclose': 'cash.manage',
   'cash-counts': 'cash.manage',
   'settings-users': 'users.manage',
+  'settings-businesses': 'users.manage',
   'settings-roles': 'settings.manage',
   'settings-payments': 'settings.manage',
   'settings-store': 'settings.manage',
@@ -106,6 +107,48 @@ const PLAN_LEVEL = { inicial: 1, profesional: 2, negocio: 3 }
 const SCREEN_PLANS = {
   'settings-payments': 'profesional',
   'settings-roles': 'negocio',
+}
+
+const BUSINESS_AVATAR_COLORS = [
+  { background: '#ff5d8f', foreground: '#4d1029' },
+  { background: '#ffb703', foreground: '#4a3000' },
+  { background: '#00b4d8', foreground: '#063746' },
+  { background: '#8067ff', foreground: '#fff' },
+  { background: '#06d6a0', foreground: '#063d32' },
+  { background: '#ff7043', foreground: '#4a1b0d' },
+  { background: '#ef476f', foreground: '#fff' },
+  { background: '#8ac926', foreground: '#213d08' },
+]
+
+function businessAvatarColor(business) {
+  const source = String(business?.id || business?.storeName || business?.name || 'BNP')
+  let hash = 0
+  for (let index = 0; index < source.length; index += 1) {
+    hash = ((hash * 31) + source.charCodeAt(index)) | 0
+  }
+  return BUSINESS_AVATAR_COLORS[Math.abs(hash) % BUSINESS_AVATAR_COLORS.length]
+}
+
+function BusinessMark({ business, all = false }) {
+  if (business?.logoUrl) {
+    return <img className="dash-business-logo" src={business.logoUrl} alt="" />
+  }
+  if (all) {
+    return <BrandLogo variant="mark" className="dash-business-logo" alt="" />
+  }
+  const avatarColor = businessAvatarColor(business)
+  return (
+    <span
+      className="dash-business-fallback mono"
+      style={{
+        '--business-avatar-bg': avatarColor.background,
+        '--business-avatar-fg': avatarColor.foreground,
+      }}
+      aria-hidden="true"
+    >
+      {initials(business?.storeName || business?.name || 'BNP')}
+    </span>
+  )
 }
 
 export default function Dashboard({ onExit }) {
@@ -144,6 +187,8 @@ export default function Dashboard({ onExit }) {
   })
   const [attempt, setAttempt] = useState(0)
   const [superTenant, setSuperTenantState] = useState(() => getSuperTenant())
+  const [businessOptions, setBusinessOptions] = useState(null)
+  const [businessMenuOpen, setBusinessMenuOpen] = useState(false)
   const [copiedStoreUrl, setCopiedStoreUrl] = useState(false)
   const userIsSuper = user?.role === 'superadmin'
   const canOnboard = (userIsSuper || user?.role === 'admin') && (userIsSuper || perms.includes('settings.manage'))
@@ -157,9 +202,13 @@ export default function Dashboard({ onExit }) {
     planAllows(id) &&
     (userIsSuper || !SCREEN_PERMS[id] || (perms || []).includes(SCREEN_PERMS[id]))
   const activeScreen = canView(screen) ? screen : 'overview'
+  const tenantScreenKey = userIsSuper ? (superTenant || 'all') : (user?.id || 'own')
+  const selectedBusiness = (businessOptions || []).find(
+    (business) => String(business.id) === String(superTenant),
+  ) || null
   const setupMode = onboardingMode({ role: user?.role, canConfigure: canOnboard, screen: activeScreen, tenantId: superTenant })
   // El superadmin trabaja en modo agregado por defecto. La selección de un local
-  // queda disponible desde la pantalla de negocios, pero nunca bloquea el panel.
+  // queda disponible desde el menú lateral, pero nunca bloquea el panel.
   const needsBusiness = false
   const businessBlock = false
 
@@ -227,6 +276,23 @@ export default function Dashboard({ onExit }) {
 
   useEffect(() => {
     let alive = true
+    if (!getSession().token || !userIsSuper) {
+      return undefined
+    }
+    apiGet('/api/admin/users/businesses')
+      .then((data) => {
+        if (alive) setBusinessOptions(Array.isArray(data?.items) ? data.items : [])
+      })
+      .catch(() => {
+        if (alive) setBusinessOptions([])
+      })
+    return () => {
+      alive = false
+    }
+  }, [attempt, userIsSuper])
+
+  useEffect(() => {
+    let alive = true
     if (!getSession().token) return undefined
     if (activeScreen !== 'overview') return undefined
     apiGet('/api/admin/overview')
@@ -240,6 +306,11 @@ export default function Dashboard({ onExit }) {
           clearSession()
           setGate('login')
           setGateError('Tu sesión expiró. Entrá de nuevo.')
+        } else if (err.code === 'SUBSCRIPTION_REQUIRED') {
+          setScreen('overview')
+          sessionStorage.setItem('ts-admin-screen', 'overview')
+          setGate('subscription')
+          setGateError(err.message)
         } else {
           setGate('error')
           setGateError(err.message)
@@ -254,6 +325,15 @@ export default function Dashboard({ onExit }) {
     if (!canView(id)) return
     setScreen(id)
     sessionStorage.setItem('ts-admin-screen', id)
+  }
+
+  const selectSuperTenant = (value) => {
+    const id = String(value || '')
+    if (id) setSuperTenant(id)
+    else clearSuperTenant()
+    setSuperTenantState(id || null)
+    setBusinessMenuOpen(false)
+    setAttempt((n) => n + 1)
   }
 
   const can = (code) =>
@@ -299,6 +379,8 @@ export default function Dashboard({ onExit }) {
     setUser(null)
     setPerms([])
     setOverview(null)
+    setBusinessOptions(null)
+    setBusinessMenuOpen(false)
     setGate('login')
   }
 
@@ -310,22 +392,6 @@ export default function Dashboard({ onExit }) {
   )
 
   const NAV = [
-    ...(userIsSuper
-      ? [
-          {
-            id: 'businesses',
-            label: 'Negocios',
-            icon: IconReport,
-            prefix: 'business-',
-            children: [
-              {
-                id: 'businesses',
-                label: superTenant ? 'Cambiar de negocio' : 'Elegir negocio',
-              },
-            ],
-          },
-        ]
-      : []),
     { id: 'overview', label: 'Panel', icon: IconChart },
     ...(canOnboard ? [{ id: 'onboarding', label: userIsSuper ? 'Asistir a negocio' : 'Puesta en marcha', icon: IconWrench }] : []),
     {
@@ -417,6 +483,7 @@ export default function Dashboard({ onExit }) {
       icon: IconWrench,
       prefix: 'settings-',
       children: [
+        ...(userIsSuper ? [{ id: 'settings-businesses', label: 'Negocios y administradores', require: 'users.manage' }] : []),
         { id: 'settings-users', label: 'Usuarios', require: 'users.manage' },
         { id: 'settings-roles', label: 'Permisos por usuario', require: 'settings.manage' },
         { id: 'settings-payments', label: 'Medios de pago', require: 'settings.manage' },
@@ -446,6 +513,67 @@ export default function Dashboard({ onExit }) {
               <em>{user.email}</em>
             </span>
             <span className={`role-chip role-${user.role}`}>{ROLE_LABELS[user.role] || user.role}</span>
+          </div>
+        )}
+
+        {userIsSuper && (
+          <div className="dash-side-business">
+            <span className="dash-side-business-label">Trabajando sobre</span>
+            <button
+              type="button"
+              className="dash-nav-item dash-business-trigger"
+              aria-expanded={businessMenuOpen}
+              aria-haspopup="listbox"
+              onClick={() => setBusinessMenuOpen((open) => !open)}
+            >
+              <BusinessMark business={selectedBusiness} all={!selectedBusiness} />
+              <span className="dash-business-trigger-copy">
+                <strong>{selectedBusiness?.storeName || selectedBusiness?.name || 'Todos los negocios'}</strong>
+                <small>
+                  {selectedBusiness
+                    ? (selectedBusiness.businessSlug ? `/u/${selectedBusiness.businessSlug}` : 'Sin slug público')
+                    : 'Vista general'}
+                </small>
+              </span>
+              <IconChevron className={`dash-nav-chevron${businessMenuOpen ? ' expanded' : ''}`} />
+            </button>
+            {businessMenuOpen && (
+              <div className="dash-business-options" role="listbox" aria-label="Seleccionar negocio">
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={!superTenant}
+                  className={`dash-nav-sub-item dash-business-option${!superTenant ? ' active' : ''}`}
+                  onClick={() => selectSuperTenant('')}
+                >
+                  <BusinessMark all />
+                  <span className="dash-business-option-copy">
+                    <strong>Todos los negocios</strong>
+                    <small>Vista general</small>
+                  </span>
+                </button>
+                {businessOptions === null && <span className="dash-business-loading">Cargando negocios…</span>}
+                {(businessOptions || []).map((business) => (
+                  <button
+                    key={business.id}
+                    type="button"
+                    role="option"
+                    aria-selected={String(superTenant) === String(business.id)}
+                    className={`dash-nav-sub-item dash-business-option${String(superTenant) === String(business.id) ? ' active' : ''}`}
+                    onClick={() => selectSuperTenant(business.id)}
+                  >
+                    <BusinessMark business={business} />
+                    <span className="dash-business-option-copy">
+                      <strong>{business.storeName || business.name}</strong>
+                      <small>
+                        {business.businessSlug ? `/u/${business.businessSlug}` : 'Sin slug público'}
+                        {!business.active ? ' · pausado' : ''}
+                      </small>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -567,12 +695,16 @@ export default function Dashboard({ onExit }) {
           </div>
         )}
         <Suspense fallback={<DashboardLoading />}>
+        <Fragment key={tenantScreenKey}>
         {gate === 'ready' && setupMode && <Onboarding key={`${user?.id}:${superTenant || 'own'}`} screen={activeScreen} role={user?.role} userId={user?.id} assistance={setupMode === 'assistance'} onView={changeScreen} canView={canView} onBusinessSaved={() => setAttempt((n) => n + 1)} />}
-        {gate === 'ready' && activeScreen === 'onboarding' && userIsSuper && !superTenant && <section className="dash-screen"><h1>Asistir a un negocio</h1><p>Elegí el comercio al que querés ayudar. Esta guía configura su tienda, no tu cuenta de dueño general.</p><button className="primary-btn" type="button" onClick={() => changeScreen('businesses')}>Elegir negocio</button></section>}
-        {userIsSuper && (activeScreen === 'businesses' || businessBlock) && (
+        {gate === 'ready' && activeScreen === 'onboarding' && userIsSuper && !superTenant && <section className="dash-screen"><h1>Asistir a un negocio</h1><p>Elegí el comercio al que querés ayudar. Esta guía configura su tienda, no tu cuenta de dueño general.</p><button className="primary-btn" type="button" onClick={() => changeScreen('settings-businesses')}>Elegir negocio</button></section>}
+        {userIsSuper && (activeScreen === 'settings-businesses' || businessBlock) && (
           <BusinessesScreen
             current={superTenant}
             onCreateAdmin={() => changeScreen('settings-users')}
+            onBusinessUpdated={(updated) => {
+              setBusinessOptions((all) => (all || []).map((item) => String(item.id) === String(updated.id) ? { ...item, ...updated } : item))
+            }}
             onPick={(id) => {
               if (id) setSuperTenant(id)
               else clearSuperTenant()
@@ -582,6 +714,10 @@ export default function Dashboard({ onExit }) {
             }}
           />
         )}
+        {gate === 'subscription' && (
+          <SubscriptionRequiredPanel message={gateError} onLogout={handleLogout} />
+        )}
+
         {gate === 'login' && (
           <LoginPanel attempts={loginAttempts} error={gateError} onLogin={handleLogin} />
         )}
@@ -694,6 +830,7 @@ export default function Dashboard({ onExit }) {
         {gate === 'ready' && activeScreen === 'settings-hub' && <StoreHub onView={changeScreen} canView={canView} storeUrl={user?.role === 'admin' && user?.businessSlug ? storeUrl() : null} />}
         {gate === 'ready' && activeScreen === 'settings-general' && <GeneralScreen />}
         {gate === 'ready' && activeScreen === 'settings-appearance' && <AppearanceScreen key={superTenant || user?.id} />}
+        </Fragment>
         </Suspense>
       </main>
 
@@ -703,6 +840,21 @@ export default function Dashboard({ onExit }) {
 
 
 
+
+function SubscriptionRequiredPanel({ message, onLogout }) {
+  return (
+    <div className="dash-screen dash-unlock">
+      <div className="unlock-card subscription-required-card">
+        <span className="unlock-icon"><IconCard /></span>
+        <span className="dash-eyebrow">Suscripción requerida</span>
+        <h1>El plan está pausado</h1>
+        <p>{message || 'La prueba terminó o Mercado Pago no pudo confirmar el último débito.'}</p>
+        <p className="subscription-required-help">Revisá el email de Tienda BNP para abrir el enlace de Mercado Pago y actualizar el medio de pago. Cuando el cobro se confirme, el acceso se habilita automáticamente.</p>
+        <button type="button" className="ghost-btn" onClick={onLogout}><IconLogout /> Cerrar sesión</button>
+      </div>
+    </div>
+  )
+}
 
 function LoginPanel({ attempts, error, onLogin }) {
   const [email, setEmail] = useState('')
@@ -716,71 +868,56 @@ function LoginPanel({ attempts, error, onLogin }) {
   return (
     <div className="dash-screen dash-unlock">
       <div className="unlock-shell">
-        <header className="unlock-topbar">
-          <BrandLogo className="unlock-brand" />
-          <span className="unlock-top-status"><i /> Panel privado</span>
-        </header>
-
-        <div className="unlock-stage">
-          <section className="unlock-intro" aria-label="Funciones del panel">
-            <span className="unlock-kicker">Operación en tiempo real <b>01</b></span>
-            <h1>Tu negocio,<br /><em>en movimiento.</em></h1>
-            <p>Una vista clara para vender, controlar el efectivo y tomar decisiones con la información de tu local.</p>
-            <div className="unlock-features">
-              <span><IconTicket /> Ventas y pedidos</span>
-              <span><IconCash /> Caja y movimientos</span>
-              <span><IconBox /> Productos y stock</span>
-              <span><IconChart /> Reportes del negocio</span>
-            </div>
-          </section>
-
+        <main className="unlock-content">
           <section className="unlock-login" aria-label="Iniciar sesión">
+            <BrandLogo className="unlock-login-brand" />
             <div className="unlock-login-mark"><IconLock /></div>
             <div className="unlock-login-head">
-              <span className="dash-eyebrow">Acceso de equipo</span>
-              <h2>Entrá a tu panel</h2>
-              <p>Iniciá sesión para continuar.</p>
+              <span className="dash-eyebrow">Panel de gestión</span>
+              <h1>Ingresá a tu panel</h1>
+              <p>Ingresá para administrar tu negocio.</p>
             </div>
-          <form onSubmit={submit}>
-            <label>
-              <span>Email</span>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="tu@email.com"
-                aria-label="Email"
-                autoComplete="username"
-                required
-              />
-            </label>
-            <label>
-              <span>Contraseña</span>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Ingresá tu contraseña"
-                aria-label="Contraseña"
-                autoComplete="current-password"
-                required
-                autoFocus
-              />
-            </label>
-            {error ? (
-              <em className="unlock-error">{error}</em>
-            ) : attempts > 1 ? (
-              <em className="unlock-error">Email o contraseña incorrectos</em>
-            ) : null}
-            <button type="submit" className="primary-btn">
-              Entrar al panel
-            </button>
-          </form>
+            <form onSubmit={submit}>
+              <label>
+                <span>Email</span>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="tu@email.com"
+                  aria-label="Email"
+                  autoComplete="username"
+                  required
+                />
+              </label>
+              <label>
+                <span>Contraseña</span>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Ingresá tu contraseña"
+                  aria-label="Contraseña"
+                  autoComplete="current-password"
+                  required
+                  autoFocus
+                />
+              </label>
+              {error ? (
+                <em className="unlock-error">{error}</em>
+              ) : attempts > 1 ? (
+                <em className="unlock-error">Email o contraseña incorrectos</em>
+              ) : null}
+              <button type="submit" className="primary-btn">
+                Ingresar
+              </button>
+            </form>
+            <p className="unlock-hint">Ventas · Caja · Stock · Reportes</p>
           </section>
-        </div>
+        </main>
 
         <footer className="unlock-footer">
-          <span>VENTAS</span><i /> <span>CAJA</span><i /> <span>INVENTARIO</span><i /> <span>REPORTES</span>
+          <span>TIENDA BNP</span>
           <small>Acceso protegido</small>
         </footer>
       </div>

@@ -3,7 +3,7 @@ import { formatARS } from '@/data/format'
 import { BUSINESS_PLANS } from '@/data/plans'
 import { apiDelete, apiGet, apiPost, apiPut, getSession } from '@/lib/api'
 import { getSuperTenant } from '@/lib/tenant'
-import { IconCheck, IconCross, IconEdit, IconPlus, IconSearch, IconTrash } from '@/components/Icons'
+import { IconCheck, IconChevron, IconCross, IconEdit, IconPlus, IconSearch, IconTrash } from '@/components/Icons'
 import { useToast } from '@/context/useToast'
 import { useConfirm } from '@/context/useConfirm'
 import { PERM_CODES, PERM_LABELS, ROLE_LABELS, initials, shortDate } from '../../consts.js'
@@ -14,11 +14,167 @@ import Subscription from './components/Subscription'
 import './styles.css'
 
 const SUBSCRIPTION_LABELS = { unconfigured: 'Sin configurar', trial: 'En prueba', active: 'Activa', overdue: 'Vencida', paused: 'Pausada', cancelled: 'Cancelada' }
+const BUSINESS_STATUS_OPTIONS = [
+  { value: 'all', label: 'Todos' },
+  { value: 'active', label: 'Activos' },
+  { value: 'paused', label: 'Pausados' },
+]
 
-function BusinessesScreen({ current, onPick, onCreateAdmin }) {
+function BusinessAdminEditor({ business, onClose, onUpdated }) {
+  const { showToast } = useToast()
+  const { confirm } = useConfirm()
+  const [form, setForm] = useState({
+    name: business.name || '',
+    email: business.email || '',
+    storeName: business.storeName || '',
+    businessSlug: business.businessSlug || '',
+    password: '',
+  })
+  const [saving, setSaving] = useState(false)
+  const [action, setAction] = useState('')
+
+  const set = (key) => (event) => setForm((old) => ({ ...old, [key]: event.target.value }))
+  const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())
+  const validSlug = !form.businessSlug || /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(form.businessSlug.trim().toLowerCase())
+  const canSave = form.name.trim().length >= 2 && form.storeName.trim().length >= 2 && validEmail && validSlug && (!form.password || form.password.length >= 6)
+
+  const updateLocal = (patch) => onUpdated({ ...business, ...patch })
+
+  const submit = async (event) => {
+    event.preventDefault()
+    if (!canSave || saving) return
+    setSaving(true)
+    try {
+      const payload = {
+        name: form.name.trim(),
+        email: form.email.trim(),
+        storeName: form.storeName.trim(),
+        businessSlug: form.businessSlug.trim().toLowerCase(),
+      }
+      if (form.password) payload.password = form.password
+      const saved = await apiPut(`/api/admin/users/${business.id}`, payload)
+      updateLocal({
+        ...saved,
+        name: payload.name,
+        email: payload.email,
+        storeName: payload.storeName,
+        businessSlug: payload.businessSlug || null,
+      })
+      setForm((old) => ({ ...old, password: '' }))
+      showToast('Datos del admin actualizados.', 'success')
+    } catch (err) {
+      showToast(err.message, 'error')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const toggleAccess = async () => {
+    const nextActive = !business.active
+    if (!nextActive) {
+      const ok = await confirm({
+        title: 'Pausar acceso del negocio',
+        message: <>El admin y sus operadores no podrán iniciar sesión hasta reactivarlo. La información del negocio se conserva.</>,
+        confirmLabel: 'Pausar acceso',
+      })
+      if (!ok) return
+    }
+    setAction('access')
+    try {
+      const saved = await apiPut(`/api/admin/users/${business.id}`, { active: nextActive })
+      updateLocal(saved)
+      showToast(nextActive ? 'Acceso del negocio reactivado.' : 'Acceso del negocio pausado.', 'success')
+    } catch (err) {
+      showToast(err.message, 'error')
+    } finally {
+      setAction('')
+    }
+  }
+
+  const toggleOnline = async () => {
+    setAction('online')
+    const online = !business.online
+    try {
+      await apiPut(`/api/admin/users/businesses/${business.id}/online`, { online })
+      updateLocal({ online })
+      showToast(online ? 'Pagos online activados.' : 'Pagos online pausados.', 'success')
+    } catch (err) {
+      showToast(err.message, 'error')
+    } finally {
+      setAction('')
+    }
+  }
+
+  return (
+    <section className="dash-card business-editor">
+      <div className="dash-card-head">
+        <div>
+          <span className="dash-eyebrow">Editar negocio</span>
+          <h2>{business.storeName || business.name}</h2>
+        </div>
+        <button type="button" className="ghost-btn" onClick={onClose}>
+          <IconCross />
+          Cerrar
+        </button>
+      </div>
+      <div className="business-editor-status">
+        <span className={`status-tag${business.active ? '' : ' status-muted'}`}>
+          {business.active ? <IconCheck /> : <IconCross />}
+          {business.active ? 'Acceso activo' : 'Acceso pausado'}
+        </span>
+        <span className={`status-tag${business.online ? '' : ' status-muted'}`}>
+          {business.online ? 'Pagos online activos' : 'Pagos online pausados'}
+        </span>
+      </div>
+      <form className="set-form business-editor-form" onSubmit={submit}>
+        <label className="inv-field">
+          <span>Nombre del negocio</span>
+          <input value={form.storeName} onChange={set('storeName')} minLength={2} maxLength={160} required />
+        </label>
+        <label className="inv-field">
+          <span>Nombre del administrador</span>
+          <input value={form.name} onChange={set('name')} minLength={2} required />
+        </label>
+        <label className="inv-field">
+          <span>Email de acceso</span>
+          <input type="email" value={form.email} onChange={set('email')} required />
+        </label>
+        <label className="inv-field">
+          <span>Slug de la tienda</span>
+          <div className="slug-input">
+            <span className="mono slug-prefix">{`${window.location.origin}/u/`}</span>
+            <input value={form.businessSlug} onChange={set('businessSlug')} placeholder="mi-tienda" pattern="[a-z0-9]+(?:-[a-z0-9]+)*" />
+          </div>
+          <span className="set-hint">Minúsculas, números y guiones. Cambiarlo modifica la URL pública.</span>
+        </label>
+        <label className="inv-field">
+          <span>Nueva contraseña <small>(opcional)</small></span>
+          <input type="password" value={form.password} onChange={set('password')} autoComplete="new-password" minLength={6} placeholder="Dejar vacía para no cambiarla" />
+        </label>
+        <div className="business-editor-actions">
+          <button type="submit" className="primary-btn" disabled={saving || !canSave}>
+            {saving ? 'Guardando…' : 'Guardar cambios'}
+          </button>
+          <button type="button" className="ghost-btn" onClick={toggleAccess} disabled={Boolean(action)}>
+            {action === 'access' ? 'Actualizando…' : business.active ? 'Pausar acceso' : 'Reactivar acceso'}
+          </button>
+          <button type="button" className="ghost-btn" onClick={toggleOnline} disabled={Boolean(action)}>
+            {action === 'online' ? 'Actualizando…' : business.online ? 'Pausar pagos online' : 'Activar pagos online'}
+          </button>
+        </div>
+      </form>
+    </section>
+  )
+}
+
+function BusinessesScreen({ current, onPick, onCreateAdmin, onBusinessUpdated }) {
   const [billingBusiness, setBillingBusiness] = useState(null)
+  const [editingBusiness, setEditingBusiness] = useState(null)
   const [items, setItems] = useState(null)
   const [error, setError] = useState('')
+  const [query, setQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState('all')
+  const [statusMenuOpen, setStatusMenuOpen] = useState(false)
 
   useEffect(() => {
     let alive = true
@@ -39,69 +195,191 @@ function BusinessesScreen({ current, onPick, onCreateAdmin }) {
   if (!items && !error) return <ScreenLoading label="Leyendo negocios…" />
   if (error) return <ScreenBlocked message={error} />
 
-  return (
-    <div className="dash-screen">
-      <header className="dash-head">
-        <div>
-          <span className="dash-eyebrow">Super admin</span>
-          <h1>Elegí el negocio</h1>
-        </div>
-      </header>
+  const normalizedQuery = query.trim().toLowerCase()
+  const visibleItems = items.filter((business) => {
+    const matchesStatus = statusFilter === 'all' || (statusFilter === 'active' ? business.active : !business.active)
+    if (!matchesStatus) return false
+    if (!normalizedQuery) return true
+    return [business.storeName, business.name, business.email, business.businessSlug]
+      .filter(Boolean)
+      .some((value) => String(value).toLowerCase().includes(normalizedQuery))
+  })
+  const activeCount = items.filter((business) => business.active).length
+  const pausedCount = items.length - activeCount
+  const onlineCount = items.filter((business) => business.online).length
+  const selectedStatus = BUSINESS_STATUS_OPTIONS.find((option) => option.value === statusFilter) || BUSINESS_STATUS_OPTIONS[0]
 
-      <div className="dash-toolbar">
-        <p className="list-note">
-          Como super admin ves todos los negocios. Elegí uno para operar su panel:
-          ventas, inventario, caja, reportes y configuración.
-        </p>
-        <button type="button" className="primary-btn dash-add" onClick={onCreateAdmin}>
+  return (
+    <div className="dash-screen businesses-screen">
+      <section className="businesses-hero">
+        <div className="businesses-hero-copy">
+          <span className="dash-eyebrow">Centro de control</span>
+          <h1>Negocios y administradores</h1>
+          <p>Gestioná el acceso, la tienda pública y la suscripción de cada negocio desde un solo lugar.</p>
+        </div>
+        <button type="button" className="primary-btn businesses-create" onClick={onCreateAdmin}>
           <IconPlus />
           Crear empresa
         </button>
-        <button type="button" className="ghost-btn" onClick={() => onPick(null)}>
-          Todos los negocios
-        </button>
-      </div>
+      </section>
+
+      <section className="businesses-kpis" aria-label="Resumen de negocios">
+        <div className="business-kpi business-kpi-featured">
+          <strong>{items.length}</strong>
+          <span>negocios registrados</span>
+          <small>Todos tus locales en una vista</small>
+        </div>
+        <div className="business-kpi">
+          <strong>{activeCount}</strong>
+          <span>accesos activos</span>
+          <small>Admins y operadores habilitados</small>
+        </div>
+        <div className="business-kpi">
+          <strong>{pausedCount}</strong>
+          <span>pausados</span>
+          <small>Datos preservados</small>
+        </div>
+        <div className="business-kpi">
+          <strong>{onlineCount}</strong>
+          <span>pagos online</span>
+          <small>Tiendas listas para cobrar</small>
+        </div>
+      </section>
+
+      {editingBusiness && (
+        <BusinessAdminEditor
+          business={editingBusiness}
+          onClose={() => setEditingBusiness(null)}
+          onUpdated={(updated) => {
+            setItems((all) => all.map((item) => String(item.id) === String(updated.id) ? updated : item))
+            setEditingBusiness(updated)
+            onBusinessUpdated?.(updated)
+          }}
+        />
+      )}
 
       {items.length === 0 && (
         <EmptyNote text="Todavía no hay negocios. Creá un admin de negocio en Usuarios." />
       )}
 
+      {items.length > 0 && (
+        <div className="businesses-toolbar">
+          <label className="business-search">
+            <IconSearch />
+            <span className="sr-only">Buscar negocio</span>
+            <input
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Buscar por negocio, admin, email o slug"
+              aria-label="Buscar por negocio, admin, email o slug"
+            />
+          </label>
+          <div className={`business-filter${statusMenuOpen ? ' is-open' : ''}`}>
+            <span id="business-status-label">Estado</span>
+            <div className="business-status-select">
+              <button
+                type="button"
+                className="business-filter-trigger"
+                aria-label={`Estado: ${selectedStatus.label}`}
+                aria-expanded={statusMenuOpen}
+                aria-haspopup="listbox"
+                onClick={() => setStatusMenuOpen((open) => !open)}
+              >
+                <strong>{selectedStatus.label}</strong>
+                <IconChevron className={`business-filter-chevron${statusMenuOpen ? ' expanded' : ''}`} />
+              </button>
+              {statusMenuOpen && (
+                <div className="business-status-options" role="listbox" aria-labelledby="business-status-label">
+                  {BUSINESS_STATUS_OPTIONS.map((option) => {
+                    const selected = option.value === statusFilter
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        role="option"
+                        aria-selected={selected}
+                        className={`business-status-option${selected ? ' active' : ''}`}
+                        onClick={() => {
+                          setStatusFilter(option.value)
+                          setStatusMenuOpen(false)
+                        }}
+                      >
+                        <span>{option.label}</span>
+                        {selected && <IconCheck aria-hidden="true" />}
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+          <span className="business-results">{visibleItems.length} de {items.length}</span>
+        </div>
+      )}
+
+      {items.length > 0 && visibleItems.length === 0 && (
+        <EmptyNote text="No encontramos negocios con esos filtros." />
+      )}
+
       <div className="biz-grid">
-        {items.map((b) => {
+        {visibleItems.map((b) => {
           const selected = current && String(current) === String(b.id)
           return (
             <div key={b.id} className="biz-subscription-card">
-            <button
-              type="button"
-              className={`biz-card${selected ? ' biz-card-active' : ''}`}
-              onClick={() => onPick(b.id)}
-            >
-              <span className="user-avatar mono" aria-hidden="true">
-                {initials(b.storeName)}
-              </span>
-              <span className="biz-card-meta">
-                <strong>{b.storeName}</strong>
-                <em>{b.name} · {b.email}</em>
-                {b.businessSlug && <code className="mono">/u/{b.businessSlug}</code>}
-              </span>
-              <span className="biz-card-stats">
-                <span>{b.productCount} productos</span>
-                <span>{b.orderCount} ventas</span>
-                <span>{formatARS(b.revenue)}</span>
-                <span>{b.operatorCount} operadores</span>
-              </span>
-              {selected && (
-                <span className="status-tag">
-                  <IconCheck />
-                  Seleccionado
+              <button
+                type="button"
+                className={`biz-card${selected ? ' biz-card-active' : ''}`}
+                onClick={() => onPick(b.id)}
+                aria-label={`Abrir panel de ${b.storeName}`}
+              >
+                <span className="user-avatar mono" aria-hidden="true">
+                  {initials(b.storeName)}
                 </span>
-              )}
-            </button>
-            <div className="biz-subscription-summary">
-              <span>{SUBSCRIPTION_LABELS[b.subscription?.effectiveStatus] || 'Sin configurar'} · {b.subscription?.plan || 'Sin plan'}</span>
-              {b.subscription?.dueDate && <small>{formatARS(b.subscription.price)} / mes · Vence {b.subscription.dueDate.split('-').reverse().join('/')}</small>}
-              <button type="button" className="ghost-btn" onClick={() => setBillingBusiness(b)}>Suscripción</button>
-            </div>
+                <span className="biz-card-main">
+                  <span className="biz-card-title">
+                    <strong>{b.storeName}</strong>
+                    <span className={`status-tag${b.active ? '' : ' status-muted'}`}>
+                      {b.active ? <IconCheck /> : <IconCross />}
+                      {b.active ? 'Activo' : 'Pausado'}
+                    </span>
+                  </span>
+                  <em>{b.name} · {b.email}</em>
+                  {b.businessSlug ? <code className="mono">/u/{b.businessSlug}</code> : <code className="mono biz-card-no-slug">Sin slug público</code>}
+                </span>
+                {selected && (
+                  <span className="biz-selected-badge">
+                    <IconCheck />
+                    En uso
+                  </span>
+                )}
+              </button>
+              <div className="biz-card-body">
+                <div className="biz-card-metrics">
+                  <span><strong>{b.productCount}</strong><small>Productos</small></span>
+                  <span><strong>{b.orderCount}</strong><small>Ventas</small></span>
+                  <span><strong>{b.operatorCount}</strong><small>Operadores</small></span>
+                  <span><strong>{formatARS(b.revenue)}</strong><small>Facturación</small></span>
+                </div>
+                <div className="biz-card-summary">
+                  <span className="biz-subscription-state">
+                    <span className="biz-summary-dot" />
+                    {SUBSCRIPTION_LABELS[b.subscription?.effectiveStatus] || 'Sin configurar'}
+                    <b>{b.subscription?.plan || 'Sin plan'}</b>
+                  </span>
+                  <span className={`biz-online-state${b.online ? '' : ' is-paused'}`}>
+                    {b.online ? 'Pagos online activos' : 'Pagos online pausados'}
+                  </span>
+                  {b.subscription?.dueDate && <small>Vence {b.subscription.dueDate.split('-').reverse().join('/')}</small>}
+                </div>
+                <div className="biz-card-actions">
+                  <button type="button" className="ghost-btn" onClick={() => setEditingBusiness(b)}>
+                    <IconEdit />
+                    Editar admin
+                  </button>
+                  <button type="button" className="ghost-btn" onClick={() => setBillingBusiness(b)}>Suscripción</button>
+                </div>
+              </div>
             </div>
           )
         })}

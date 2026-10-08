@@ -7,6 +7,7 @@ import './styles.css'
 
 const LABELS = { unconfigured: 'Sin configurar', trial: 'En prueba', active: 'Activa', overdue: 'Vencida', paused: 'Pausada', cancelled: 'Cancelada' }
 const displayDate = (value) => value ? value.split('-').reverse().join('/') : 'Sin fecha'
+const displayDateTime = (value) => value ? new Intl.DateTimeFormat('es-AR', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value)) : 'Sin pagos todavía'
 const today = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Argentina/Buenos_Aires', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
 
 function SubscriptionForms({ data, business, onChange }) {
@@ -93,17 +94,23 @@ export default function Subscription({ business, onBack, onUpdated }) {
   return <div className="dash-screen">
     <header className="dash-head"><div><span className="dash-eyebrow">Superadmin · Suscripciones</span><h1>{business.storeName}</h1></div></header>
     <div className="dash-toolbar"><button type="button" className="ghost-btn" onClick={onBack}>Volver a negocios</button><button type="button" className="ghost-btn" onClick={() => setReload((n) => n + 1)}>Actualizar datos</button></div>
-    <p className="list-note">Administración del abono mensual. El local autoriza el débito desde Mercado Pago; estos estados todavía no desactivan automáticamente una tienda vencida.</p>
+    <p className="list-note">Administración del abono mensual. El local autoriza el débito desde Mercado Pago y el sistema actualiza el estado y el historial con cada notificación.</p>
     {error && <p role="alert" className="subscription-error">{error}</p>}
     {billingError && <p role="alert" className="subscription-error">{billingError}</p>}
     {!data && !error && <p role="status">Cargando suscripción…</p>}
     {data && <>
-      <p className="subscription-summary"><strong>{LABELS[data.effectiveStatus]}</strong> · {data.plan || 'Sin plan'} · {formatARS(data.price)} / mes · Vence: {displayDate(data.dueDate)}</p>
-      <section className="subscription-card subscription-billing"><h2>Cobro automático</h2><p>Generá un enlace de Mercado Pago para que el local autorice el débito mensual.</p><button type="button" className="primary-btn" disabled={billingBusy || !data.plan || !data.price} onClick={createBillingLink}>{billingBusy ? 'Generando…' : 'Generar enlace de suscripción'}</button>{data.billing?.initPoint && <a className="ghost-btn" href={data.billing.initPoint} target="_blank" rel="noreferrer">Abrir enlace de autorización</a>}</section>
+      <p className="subscription-summary"><strong>{LABELS[data.effectiveStatus]}</strong> · {data.plan || 'Sin plan'} · {formatARS(data.price)} / mes · Próximo vencimiento: {displayDate(data.dueDate)}</p>
+      {data.effectiveStatus === 'paused' || data.effectiveStatus === 'cancelled' || data.effectiveStatus === 'overdue' ? <div className="subscription-alert"><strong>{LABELS[data.effectiveStatus]}</strong><span>El acceso queda restringido hasta confirmar el pago o reactivar la suscripción.</span></div> : null}
+      <section className="subscription-metrics" aria-label="Estado del cobro">
+        <div><span>Último pago</span><strong>{displayDateTime(data.billing?.lastPaymentAt)}</strong></div>
+        <div><span>Estado del último pago</span><strong>{data.billing?.lastPaymentStatus || 'Sin cobros automáticos'}</strong></div>
+        <div><span>Próximo vencimiento</span><strong>{displayDate(data.dueDate)}</strong></div>
+      </section>
+      <section className="subscription-card subscription-billing"><h2>Cobro automático</h2><p>Generá un enlace de Mercado Pago para que el local autorice o actualice el débito mensual.</p><button type="button" className="primary-btn" disabled={billingBusy || !data.plan || !data.price} onClick={createBillingLink}>{billingBusy ? 'Generando…' : data.billing?.initPoint ? 'Regenerar enlace de suscripción' : 'Generar enlace de suscripción'}</button>{data.billing?.initPoint && <a className="ghost-btn" href={data.billing.initPoint} target="_blank" rel="noreferrer">Abrir enlace de autorización</a>}</section>
       <SubscriptionForms key={`${data.revision}-${reload}`} data={data} business={business} onChange={update} />
       <section className="subscription-card"><h2>Historial de pagos ({data.payments.length})</h2>
         {!data.payments.length ? <p>Todavía no hay pagos registrados.</p> : <div className="subscription-history"><table className="table"><thead><tr><th>Fecha</th><th>Plan</th><th>Importe</th><th>Medio</th><th>Referencia</th><th>Vencimiento</th></tr></thead><tbody>
-          {data.payments.map((p) => <tr key={p.requestId}><td>{displayDate(p.paidAt)}</td><td>{p.plan}</td><td>{formatARS(p.amount)}</td><td>{p.method}</td><td>{p.reference || '—'}</td><td>{displayDate(p.dueDate)}</td></tr>)}
+          {data.payments.map((p) => <tr key={p.requestId}><td>{displayDate(p.paidAt)}</td><td>{p.plan}</td><td>{formatARS(p.amount)}</td><td>{p.method === 'mercadopago' ? 'Mercado Pago' : p.method}</td><td>{p.reference || '—'}</td><td>{displayDate(p.dueDate)}</td></tr>)}
         </tbody></table></div>}
       </section>
     </>}
