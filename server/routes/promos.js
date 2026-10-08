@@ -30,6 +30,7 @@ function parseActive(value) {
 function toCouponDoc(c) {
   return {
     id: c._id,
+    adminId: c.adminId ? String(c.adminId) : null,
     code: c.code,
     percent: c.percent,
     active: !!c.active,

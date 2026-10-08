@@ -5,7 +5,7 @@ import { useOrderEvents } from '@/lib/useOrderEvents'
 import { useQuoteEvents } from '@/lib/useQuoteEvents.js'
 import { IconCross, IconEye, IconPlus, IconRefresh, IconReturn, IconSearch, IconTrash } from '@/components/Icons'
 import { PENDING_GROUP, PAYMENT_LABELS, PAYMENT_OPTIONS, QUOTE_STATUS_LABELS, fullDate, idDoc, itemsSummary, salePaymentLabel, shortDate, shortId } from '../../consts.js'
-import { EmptyNote, FilterReset, OperatorSelect, ProductPicker, ScreenBlocked, ScreenLoading, SortSelect, StatusTag } from '../common'
+import { BusinessCell, EmptyNote, FilterReset, OperatorSelect, ProductPicker, ScreenBlocked, ScreenLoading, SortSelect, StatusTag } from '../common'
 import { useToast } from '@/context/useToast'
 import { useConfirm } from '@/context/useConfirm'
 
@@ -145,7 +145,8 @@ function SaleDetail({ order, onClose }) {
 }
 
 
-function SalesScreen() {
+function SalesScreen({ businesses = [] }) {
+  const showBusiness = businesses.length > 0
   const { showToast } = useToast()
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
@@ -319,6 +320,7 @@ function SalesScreen() {
         <table className="dash-table">
           <thead>
             <tr>
+              {showBusiness && <th>Negocio</th>}
               <th>Pedido</th>
               <th>Fecha</th>
               <th>Cliente</th>
@@ -333,7 +335,8 @@ function SalesScreen() {
           </thead>
           <tbody>
             {data.items.map((order) => (
-              <tr key={order.id}>
+              <tr key={`${order.adminId || 'global'}:${order.id}`}>
+                {showBusiness && <td><BusinessCell adminId={order.adminId} businesses={businesses} /></td>}
                 <td className="mono t-id">#{shortId(order.id)}</td>
                 <td className="t-date">{shortDate(order.createdAt)}</td>
                 <td className="t-payer">
@@ -420,7 +423,8 @@ function SalesScreen() {
 }
 
 
-function ReturnsScreen({ canManage }) {
+function ReturnsScreen({ canManage, businesses = [] }) {
+  const showBusiness = businesses.length > 0
   const { showToast } = useToast()
   const { confirm } = useConfirm()
   const [data, setData] = useState(null)
@@ -529,6 +533,7 @@ function ReturnsScreen({ canManage }) {
         <table className="dash-table">
           <thead>
             <tr>
+              {showBusiness && <th>Negocio</th>}
               <th>Venta</th>
               <th>Fecha</th>
               <th>Cliente</th>
@@ -541,7 +546,8 @@ function ReturnsScreen({ canManage }) {
           </thead>
           <tbody>
             {data.items.map((order) => (
-              <tr key={order.id}>
+              <tr key={`${order.adminId || 'global'}:${order.id}`}>
+                {showBusiness && <td><BusinessCell adminId={order.adminId} businesses={businesses} /></td>}
                 <td className="mono t-id">#{shortId(order.id)}</td>
                 <td className="t-date">{shortDate(order.createdAt)}</td>
                 <td className="t-payer">
@@ -614,7 +620,8 @@ function ReturnsScreen({ canManage }) {
 }
 
 
-function QuotesScreen({ canManage }) {
+function QuotesScreen({ canManage, businesses = [] }) {
+  const showBusiness = businesses.length > 0
   const { showToast } = useToast()
   const { confirm } = useConfirm()
   const [data, setData] = useState(null)
@@ -763,6 +770,7 @@ function QuotesScreen({ canManage }) {
         <table className="dash-table">
           <thead>
             <tr>
+              {showBusiness && <th>Negocio</th>}
               <th>Nº</th>
               <th>Cliente</th>
               <th>Detalle</th>
@@ -774,7 +782,8 @@ function QuotesScreen({ canManage }) {
           </thead>
           <tbody>
             {data.items.map((quote) => (
-              <tr key={quote._id}>
+              <tr key={`${quote.adminId || 'global'}:${quote._id}`}>
+                {showBusiness && <td><BusinessCell adminId={quote.adminId} businesses={businesses} /></td>}
                 <td className="mono t-id">#{quote.number}</td>
                 <td className="t-payer">
                   {quote.customer?.name ? (

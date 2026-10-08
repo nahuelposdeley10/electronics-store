@@ -5,7 +5,7 @@ import { apiDelete, apiGet, apiPost, apiPut, apiUpdate, apiUpload } from '@/lib/
 import { productImage } from '@/lib/productImage'
 import { IconCheck, IconClock, IconCross, IconEdit, IconEye, IconInventory, IconLock, IconPlus, IconSearch, IconTrash } from '@/components/Icons'
 import { CATEGORY_LABELS, IMPORT_EXAMPLE, PAYMENT_LABELS, stockStatusOf } from '../../consts.js'
-import { EmptyNote, FilterReset, ProductPicker, ScreenBlocked, ScreenLoading, SortSelect, StockValue } from '../common'
+import { BusinessCell, EmptyNote, FilterReset, ProductPicker, ScreenBlocked, ScreenLoading, SortSelect, StockValue } from '../common'
 import { loadCatalogOptions } from '../common/catalogOptions.js'
 import { useToast } from '@/context/useToast'
 import { useConfirm } from '@/context/useConfirm'
@@ -15,7 +15,7 @@ import ProductImagesEditor from './components/ProductImagesEditor'
 
 import './styles.css'
 
-function ProductsScreen({ canManage, canInventory, canCash }) {
+function ProductsScreen({ canManage, canInventory, canCash, businesses = [] }) {
   const { showToast } = useToast()
   const { confirm } = useConfirm()
   const [data, setData] = useState(null)
@@ -30,12 +30,13 @@ function ProductsScreen({ canManage, canInventory, canCash }) {
   const [brands, setBrands] = useState([])
   const [bulk, setBulk] = useState({ mode: 'percent', value: '', category: 'todas' })
   const [bulkSaving, setBulkSaving] = useState(false)
+  const showBusiness = businesses.length > 0
 
-  useStockEvents(({ productId, stock, minStock }) => {
+  useStockEvents(({ productId, adminId, stock, minStock }) => {
     setData((current) => current
       ? {
           ...current,
-          items: current.items.map((product) => product.id === productId
+          items: current.items.map((product) => product.id === productId && String(product.adminId || '') === String(adminId || '')
             ? { ...product, stock: Number(stock), minStock: Number(minStock ?? product.minStock) }
             : product),
         }
@@ -356,6 +357,7 @@ function ProductsScreen({ canManage, canInventory, canCash }) {
         <table className="dash-table">
           <thead>
             <tr>
+              {showBusiness && <th>Negocio</th>}
               <th>Producto</th>
               <th>Categoría</th>
               <th>Precio</th>
@@ -370,7 +372,7 @@ function ProductsScreen({ canManage, canInventory, canCash }) {
           <tbody>
             {data.items.map((p) => (
               <tr
-                key={p.id}
+                key={`${p.adminId || 'global'}:${p.id}`}
                 className={`stock-row-${stockStatusOf(p.stock, p.minStock)} product-row-clickable`}
                 role="button"
                 tabIndex={0}
@@ -383,6 +385,7 @@ function ProductsScreen({ canManage, canInventory, canCash }) {
                   }
                 }}
               >
+                {showBusiness && <td><BusinessCell adminId={p.adminId} businesses={businesses} /></td>}
                 <td>
                   <span className="t-cell-product">
                     <img className="prod-thumb" src={productImage(p.image)} alt="" loading="lazy" />
@@ -1232,7 +1235,7 @@ function QuickStockModal({ product, canCash, canInventory, onClose, onSaved }) {
 }
 
 
-function MetaScreen({ kind, title, eyebrow, empty, canManage }) {
+function MetaScreen({ kind, title, eyebrow, empty, canManage, businesses = [] }) {
   const { showToast } = useToast()
   const { confirm } = useConfirm()
   const [items, setItems] = useState(null)
@@ -1243,6 +1246,7 @@ function MetaScreen({ kind, title, eyebrow, empty, canManage }) {
   const [page, setPage] = useState(1)
   const [lastKind, setLastKind] = useState(kind)
   const PAGE_SIZE = 10
+  const showBusiness = businesses.length > 0
 
   if (kind !== lastKind) {
     setLastKind(kind)
@@ -1374,6 +1378,7 @@ function MetaScreen({ kind, title, eyebrow, empty, canManage }) {
         <table className="dash-table">
           <thead>
             <tr>
+              {showBusiness && <th>Negocio</th>}
               <th>Nombre</th>
               {hasKey && <th>Clave</th>}
               <th>Productos</th>
@@ -1383,7 +1388,8 @@ function MetaScreen({ kind, title, eyebrow, empty, canManage }) {
           </thead>
           <tbody>
             {visible.map((item) => (
-              <tr key={hasKey ? item.key : item.name}>
+              <tr key={`${item.adminId || 'global'}:${hasKey ? item.key : item.name}`}>
+                {showBusiness && <td><BusinessCell adminId={item.adminId} businesses={businesses} /></td>}
                 <td>
                   <strong>{item.name}</strong>
                 </td>
@@ -1562,7 +1568,7 @@ function MetaForm({ hasKey, item, noun, path, onClose, onSaved }) {
 }
 
 
-function OffersScreen({ canManage }) {
+function OffersScreen({ canManage, businesses = [] }) {
   const { showToast } = useToast()
   const { confirm } = useConfirm()
   const [data, setData] = useState(null)
@@ -1574,6 +1580,7 @@ function OffersScreen({ canManage }) {
   const [savingId, setSavingId] = useState(null)
   const [edits, setEdits] = useState({})
   const [formOpen, setFormOpen] = useState(false)
+  const showBusiness = businesses.length > 0
 
   useEffect(() => {
     let alive = true
@@ -1770,6 +1777,7 @@ function OffersScreen({ canManage }) {
         <table className="dash-table">
           <thead>
             <tr>
+              {showBusiness && <th>Negocio</th>}
               <th>Producto</th>
               <th>Precio</th>
               <th>Nuevo $</th>
@@ -1786,7 +1794,8 @@ function OffersScreen({ canManage }) {
               const discount =
                 old > cur && cur > 0 ? Math.round((1 - cur / old) * 100) : 0
               return (
-                <tr key={p.id} className={`stock-row-${stockStatusOf(p.stock, p.minStock)}`}>
+                <tr key={`${p.adminId || 'global'}:${p.id}`} className={`stock-row-${stockStatusOf(p.stock, p.minStock)}`}>
+                  {showBusiness && <td><BusinessCell adminId={p.adminId} businesses={businesses} /></td>}
                   <td>
                     <span className="t-cell-product">
                       <img className="prod-thumb" src={productImage(p.image)} alt="" loading="lazy" />

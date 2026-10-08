@@ -7,7 +7,7 @@ import { IconCheck, IconChevron, IconCross, IconEdit, IconPlus, IconSearch, Icon
 import { useToast } from '@/context/useToast'
 import { useConfirm } from '@/context/useConfirm'
 import { PERM_CODES, PERM_LABELS, ROLE_LABELS, initials, shortDate } from '../../consts.js'
-import { EmptyNote, FilterReset, ScreenBlocked, ScreenLoading, SortSelect, ToggleRow, ToggleSwitch } from '../common'
+import { BusinessCell, EmptyNote, FilterReset, ScreenBlocked, ScreenLoading, SortSelect, ToggleRow, ToggleSwitch } from '../common'
 
 import Subscription from './components/Subscription'
 
@@ -404,6 +404,7 @@ function UsersScreen({ allowBusinessCreate = false }) {
   const [sessionUser] = useState(() => getSession().user)
   const [businesses, setBusinesses] = useState(null)
   const isSuper = sessionUser?.role === 'superadmin'
+  const showBusiness = isSuper && Array.isArray(businesses) && businesses.length > 0
 
   useEffect(() => {
     let alive = true
@@ -703,6 +704,7 @@ function UsersScreen({ allowBusinessCreate = false }) {
         <table className="dash-table">
           <thead>
             <tr>
+              {showBusiness && <th>Negocio</th>}
               <th>Usuario</th>
               <th>Rol</th>
               <th>Estado</th>
@@ -713,6 +715,7 @@ function UsersScreen({ allowBusinessCreate = false }) {
           <tbody>
             {users.map((u) => (
               <tr key={u.id}>
+                {showBusiness && <td><BusinessCell adminId={u.role === 'admin' ? u.id : u.adminId} businesses={businesses} /></td>}
                 <td>
                   <span className="t-cell-product">
                     <span className="user-avatar mono" aria-hidden="true">

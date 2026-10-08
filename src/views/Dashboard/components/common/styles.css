@@ -555,3 +555,30 @@ a.set-image-preview:focus-visible .set-image-zoom {
   opacity: 0.48;
   cursor: default;
 }
+
+.business-owner-cell {
+  display: flex;
+  flex-direction: column;
+  min-width: 130px;
+  max-width: 190px;
+  gap: 2px;
+}
+.business-owner-cell strong,
+.business-owner-cell small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.business-owner-cell strong {
+  color: var(--gal-ink);
+  font-size: 12px;
+}
+.business-owner-cell small {
+  color: var(--gal-ink-faint);
+  font-size: 10.5px;
+}
+.business-owner-cell.is-global,
+.business-owner-cell.is-unknown {
+  color: var(--gal-ink-faint);
+  font-size: 12px;
+}

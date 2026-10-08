@@ -68,10 +68,14 @@ function sumOrders(orders) {
   return { count: orders.length, total, subtotal, discount, units }
 }
 
+function productKey(adminId, productId) {
+  return `${adminId ? String(adminId) : 'global'}:${productId}`
+}
+
 async function loadCatalog(scope) {
   const products = await Product.find(scope).lean()
   const byId = new Map()
-  for (const p of products) byId.set(p.id, p)
+  for (const p of products) byId.set(productKey(p.adminId, p.id), p)
   return byId
 }
 
@@ -161,14 +165,18 @@ router.get('/products', async (req, res) => {
 
     const map = new Map()
     for (const order of orders) {
+      const adminId = order.adminId ? String(order.adminId) : null
       for (const item of order.items) {
-        const row = map.get(item.productId) || {
+        const key = productKey(adminId, item.productId)
+        const product = catalog.get(key)
+        const row = map.get(key) || {
+          adminId,
           productId: item.productId,
           name: item.name,
-          brand: catalog.get(item.productId)?.brand || '',
-          category: catalog.get(item.productId)?.category || '',
-          stock: catalog.get(item.productId)?.stock ?? 0,
-          costPrice: catalog.get(item.productId)?.costPrice || 0,
+          brand: product?.brand || '',
+          category: product?.category || '',
+          stock: product?.stock ?? 0,
+          costPrice: product?.costPrice || 0,
           units: 0,
           revenue: 0,
           avgPrice: 0,
@@ -176,7 +184,7 @@ router.get('/products', async (req, res) => {
         row.units += item.quantity
         row.revenue += roundLine(item.unitPrice, item.quantity)
         row.avgPrice = roundMoney(row.revenue / row.units)
-        map.set(row.productId, row)
+        map.set(key, row)
       }
     }
 
@@ -217,14 +225,18 @@ router.get('/profit', async (req, res) => {
     let units = 0
 
     for (const order of orders) {
+      const adminId = order.adminId ? String(order.adminId) : null
       const day = dayKey(order.createdAt)
       const dayRow = seriesMap.get(day) || { date: day, revenue: 0, cogs: 0 }
       for (const item of order.items) {
-        const costPrice = catalog.get(item.productId)?.costPrice || 0
-        const row = byProduct.get(item.productId) || {
+        const key = productKey(adminId, item.productId)
+        const product = catalog.get(key)
+        const costPrice = product?.costPrice || 0
+        const row = byProduct.get(key) || {
+          adminId,
           productId: item.productId,
           name: item.name,
-          brand: catalog.get(item.productId)?.brand || '',
+          brand: product?.brand || '',
           units: 0,
           revenue: 0,
           costPrice,
@@ -241,7 +253,7 @@ router.get('/profit', async (req, res) => {
         units += item.quantity
         dayRow.revenue += lineRevenue
         dayRow.cogs += lineCogs
-        byProduct.set(row.productId, row)
+        byProduct.set(key, row)
       }
       seriesMap.set(day, dayRow)
     }
@@ -310,6 +322,7 @@ router.get('/stock', async (req, res) => {
       .map((p) => ({
         _id: p._id,
         id: p.id,
+        adminId: p.adminId ? String(p.adminId) : null,
         name: p.name,
         brand: p.brand,
         price: p.price,
@@ -322,7 +335,7 @@ router.get('/stock', async (req, res) => {
     const topValue = [...products]
       .sort((a, b) => (b.stock || 0) * b.price - (a.stock || 0) * a.price)
       .slice(0, 10)
-      .map((p) => ({ id: p.id, name: p.name, brand: p.brand, stock: p.stock, value: roundLine(p.price, p.stock || 0) }))
+      .map((p) => ({ adminId: p.adminId ? String(p.adminId) : null, id: p.id, name: p.name, brand: p.brand, stock: p.stock, value: roundLine(p.price, p.stock || 0) }))
 
     return res.json({
       totals: { products: products.length, units, value, costValue, potentialProfit: roundMoney(value - costValue) },
@@ -347,10 +360,12 @@ router.get('/customers', async (req, res) => {
 
     const map = new Map()
     for (const order of orders) {
+      const adminId = order.adminId ? String(order.adminId) : null
       const email = order.payerEmail ? String(order.payerEmail).trim().toLowerCase() : null
       const name = [order.payerName, order.payerSurname].filter(Boolean).join(' ').trim()
-      const key = email || name || 'sin-id'
+      const key = `${adminId || 'global'}:${email || name || 'sin-id'}`
       const row = map.get(key) || {
+        adminId,
         key,
         email: email || '',
         name: name || (email ? 'Cliente web' : 'Sin identificar'),

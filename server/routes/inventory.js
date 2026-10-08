@@ -71,6 +71,7 @@ router.get('/stock', async (req, res) => {
       items: products.map((p) => ({
         _id: p._id,
         id: p.id,
+        adminId: p.adminId ? String(p.adminId) : null,
         name: p.name,
         brand: p.brand,
         category: p.category,
@@ -124,6 +125,7 @@ router.get('/movements', async (req, res) => {
     return res.json({
       items: movements.map((m) => ({
         id: String(m._id),
+        adminId: m.adminId ? String(m.adminId) : null,
         productId: m.productId,
         productName: m.productName,
         delta: m.delta,
@@ -328,6 +330,7 @@ router.get('/purchases', async (req, res) => {
     return res.json({
       items: purchases.map((p) => ({
         id: String(p._id),
+        adminId: p.adminId ? String(p.adminId) : null,
         number: p.number,
         supplier: p.supplier,
         invoice: p.invoice,

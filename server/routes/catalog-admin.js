@@ -40,11 +40,11 @@ function requireTenant(req, res, next) {
 router.use(requireTenant)
 
 function publicCategory(c, used = 0) {
-  return { key: c.key, name: c.name, active: c.active, productCount: used }
+  return { adminId: c.adminId ? String(c.adminId) : null, key: c.key, name: c.name, active: c.active, productCount: used }
 }
 
 function publicBrand(b, used = 0) {
-  return { name: b.name, active: b.active, productCount: used }
+  return { adminId: b.adminId ? String(b.adminId) : null, name: b.name, active: b.active, productCount: used }
 }
 
 async function productCountBy(field, scope) {
@@ -328,6 +328,7 @@ router.get('/variants', requirePermission('catalog.manage'), async (req, res) =>
         const product = productMap.get(v.product)
         return {
           id: v._id,
+          adminId: v.adminId ? String(v.adminId) : null,
           product: v.product,
           productName: product?.name || '—',
           productBrand: product?.brand || '',
@@ -466,6 +467,7 @@ router.get('/prices', requirePermission('catalog.manage'), async (req, res) => {
     return res.json({
       items: products.map((p) => ({
         id: p.id,
+        adminId: p.adminId ? String(p.adminId) : null,
         name: p.name,
         brand: p.brand,
         category: p.category,

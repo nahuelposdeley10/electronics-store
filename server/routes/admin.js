@@ -69,20 +69,21 @@ router.get('/overview', async (req, res) => {
     const byProduct = new Map()
     for (const order of approved) {
       for (const item of order.items) {
-        const current = byProduct.get(item.productId) || { units: 0, revenue: 0 }
+        const adminId = order.adminId ? String(order.adminId) : null
+        const key = `${adminId || 'global'}:${item.productId}`
+        const current = byProduct.get(key) || { adminId, productId: item.productId, units: 0, revenue: 0 }
         current.units += item.quantity
         current.revenue += item.quantity * item.unitPrice
-        byProduct.set(item.productId, current)
+        byProduct.set(key, current)
       }
     }
 
-    const bestSellers = [...byProduct.entries()]
-      .map(([productId, agg]) => {
-        const product = dbProducts.find((p) => p.id === Number(productId))
+    const bestSellers = [...byProduct.values()]
+      .map((agg) => {
+        const product = dbProducts.find((p) => String(p.adminId || '') === String(agg.adminId || '') && p.id === Number(agg.productId))
         if (!product) return null
         return {
           ...agg,
-          productId,
           name: product.name,
           brand: product.brand,
         }
@@ -107,6 +108,7 @@ router.get('/overview', async (req, res) => {
       statusCounts,
       recentOrders: orders.slice(0, 6).map((o) => ({
         id: o._id,
+        adminId: o.adminId ? String(o.adminId) : null,
         status: o.status,
         total: o.total,
         itemsCount: o.items.reduce((sum, i) => sum + i.quantity, 0),
@@ -196,6 +198,7 @@ router.get('/orders', async (req, res) => {
     return res.json({
       items: orders.map((o) => ({
         id: o._id,
+        adminId: o.adminId ? String(o.adminId) : null,
         status: o.status,
         coupon: o.coupon,
         subtotal: o.subtotal,
@@ -264,6 +267,7 @@ router.get('/products', async (req, res) => {
     return res.json({
       items: dbProducts.map((p) => ({
         id: p.id,
+        adminId: p.adminId ? String(p.adminId) : null,
         name: p.name,
         brand: p.brand,
         category: p.category,
@@ -770,7 +774,7 @@ router.get('/quotes', async (req, res) => {
     ])
 
     return res.json({
-      items: quotes,
+      items: quotes.map((quote) => ({ ...quote, adminId: quote.adminId ? String(quote.adminId) : null })),
       page,
       limit,
       total,

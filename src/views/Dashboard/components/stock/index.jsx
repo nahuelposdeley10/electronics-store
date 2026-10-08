@@ -5,7 +5,7 @@ import { apiGet, apiPost, apiPut } from '@/lib/api'
 import { productImage } from '@/lib/productImage'
 import { IconCheck, IconCross, IconPlus, IconSearch } from '@/components/Icons'
 import { CATEGORY_LABELS, MOVEMENT_CHIPS, MOVEMENT_TYPE_LABELS, PAYMENT_LABELS, shortDate, fullDate, itemsSummary, stockStatusOf } from '../../consts.js'
-import { EmptyNote, FilterReset, OperatorSelect, ProductPicker, ScreenBlocked, ScreenLoading, SortSelect, StockBadge, StockValue } from '../common'
+import { BusinessCell, EmptyNote, FilterReset, OperatorSelect, ProductPicker, ScreenBlocked, ScreenLoading, SortSelect, StockBadge, StockValue } from '../common'
 import { loadCatalogOptions } from '../common/catalogOptions.js'
 import { useToast } from '@/context/useToast'
 import { useConfirm } from '@/context/useConfirm'
@@ -13,7 +13,7 @@ import { useStockEvents } from '@/lib/useStockEvents.js'
 
 import './styles.css'
 
-function StockScreen() {
+function StockScreen({ businesses = [] }) {
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
   const [query, setQuery] = useState('')
@@ -21,11 +21,11 @@ function StockScreen() {
   const [brands, setBrands] = useState([])
   const [params, setParams] = useState({ q: '', low: '', category: '', brand: '', sort: '', page: 1 })
 
-  useStockEvents(({ productId, stock, minStock }) => {
+  useStockEvents(({ productId, adminId, stock, minStock }) => {
     setData((current) => current
       ? {
           ...current,
-          items: current.items.map((product) => product.id === productId
+          items: current.items.map((product) => product.id === productId && String(product.adminId || '') === String(adminId || '')
             ? { ...product, stock: Number(stock), minStock: Number(minStock ?? product.minStock) }
             : product),
         }
@@ -101,6 +101,7 @@ function StockScreen() {
   if (error) return <ScreenBlocked message={error} />
 
   const lowCount = data.items.filter((p) => p.status !== 'ok').length
+  const showBusiness = businesses.length > 0
 
   return (
     <div className="dash-screen">
@@ -171,6 +172,7 @@ function StockScreen() {
         <table className="dash-table">
           <thead>
             <tr>
+              {showBusiness && <th>Negocio</th>}
               <th>Producto</th>
               <th>Categoría</th>
               <th>Precio</th>
@@ -179,8 +181,9 @@ function StockScreen() {
             </tr>
           </thead>
           <tbody>
-{data.items.map((p) => (
-              <tr key={p.id} className={`stock-row-${stockStatusOf(p.stock, p.minStock)}`}>
+            {data.items.map((p) => (
+              <tr key={`${p.adminId || 'global'}:${p.id}`} className={`stock-row-${stockStatusOf(p.stock, p.minStock)}`}>
+                {showBusiness && <td><BusinessCell adminId={p.adminId} businesses={businesses} /></td>}
                 <td>
                   <span className="t-cell-product">
                     <img className="prod-thumb" src={productImage(p.image)} alt="" loading="lazy" />
@@ -232,7 +235,7 @@ function StockScreen() {
 }
 
 
-function MovementsScreen() {
+function MovementsScreen({ businesses = [] }) {
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
   const [query, setQuery] = useState('')
@@ -276,6 +279,8 @@ function MovementsScreen() {
 
   if (!data && !error) return <ScreenLoading label="Leyendo los movimientos…" />
   if (error) return <ScreenBlocked message={error} />
+
+  const showBusiness = businesses.length > 0
 
   return (
     <div className="dash-screen">
@@ -330,6 +335,7 @@ function MovementsScreen() {
         <table className="dash-table">
           <thead>
             <tr>
+              {showBusiness && <th>Negocio</th>}
               <th>Fecha</th>
               <th>Producto</th>
               <th>Tipo</th>
@@ -341,7 +347,8 @@ function MovementsScreen() {
           </thead>
           <tbody>
             {data.items.map((m) => (
-              <tr key={m.id}>
+              <tr key={`${m.adminId || 'global'}:${m.id}`}>
+                {showBusiness && <td><BusinessCell adminId={m.adminId} businesses={businesses} /></td>}
                 <td className="t-date" title={fullDate(m.createdAt)}>
                   {shortDate(m.createdAt)}
                 </td>
@@ -557,7 +564,7 @@ function AdjustmentsScreen({ canManage }) {
 }
 
 
-function MinStockScreen({ canManage }) {
+function MinStockScreen({ canManage, businesses = [] }) {
   const { showToast } = useToast()
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
@@ -645,6 +652,7 @@ function MinStockScreen({ canManage }) {
   if (error) return <ScreenBlocked message={error} />
 
   const lowCount = data.items.filter((p) => p.status !== 'ok').length
+  const showBusiness = businesses.length > 0
 
   const minUntouched = (product) =>
     String(drafts[product.id] ?? String(product.minStock)) === String(product.minStock)
@@ -712,6 +720,7 @@ function MinStockScreen({ canManage }) {
         <table className="dash-table">
           <thead>
             <tr>
+              {showBusiness && <th>Negocio</th>}
               <th>Producto</th>
               <th>Stock</th>
               <th>Mínimo</th>
@@ -720,7 +729,8 @@ function MinStockScreen({ canManage }) {
           </thead>
           <tbody>
             {data.items.map((p) => (
-              <tr key={p.id} className={`stock-row-${stockStatusOf(p.stock, p.minStock)}`}>
+              <tr key={`${p.adminId || 'global'}:${p.id}`} className={`stock-row-${stockStatusOf(p.stock, p.minStock)}`}>
+                {showBusiness && <td><BusinessCell adminId={p.adminId} businesses={businesses} /></td>}
                 <td>
                   <span className="t-cell-name">
                     <strong title={p.name}>{p.name}</strong>
@@ -1160,7 +1170,7 @@ function PurchasesScreen({ canManage }) {
 }
 
 
-function PhysicalInventoryScreen({ canManage }) {
+function PhysicalInventoryScreen({ canManage, businesses = [] }) {
   const { showToast } = useToast()
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
@@ -1261,6 +1271,8 @@ function PhysicalInventoryScreen({ canManage }) {
     return Number.isFinite(counted) ? counted - product.stock : 0
   }
 
+  const showBusiness = businesses.length > 0
+
   return (
     <div className="dash-screen">
       <header className="dash-head">
@@ -1325,6 +1337,7 @@ function PhysicalInventoryScreen({ canManage }) {
           <table className="dash-table">
             <thead>
               <tr>
+                {showBusiness && <th>Negocio</th>}
                 <th>Producto</th>
                 <th>Stock actual</th>
                 <th>Conteo físico</th>
@@ -1335,7 +1348,8 @@ function PhysicalInventoryScreen({ canManage }) {
               {data.items.map((p) => {
                 const diff = diffFor(p)
                 return (
-                  <tr key={p.id} className={diff !== 0 ? 'inv-alert-row' : ''}>
+                  <tr key={`${p.adminId || 'global'}:${p.id}`} className={diff !== 0 ? 'inv-alert-row' : ''}>
+                    {showBusiness && <td><BusinessCell adminId={p.adminId} businesses={businesses} /></td>}
                     <td>
                       <span className="t-cell-name">
                         <strong title={p.name}>{p.name}</strong>

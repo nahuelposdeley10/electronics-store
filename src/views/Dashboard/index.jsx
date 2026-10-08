@@ -743,13 +743,14 @@ export default function Dashboard({ onExit }) {
         )}
 
         {gate === 'ready' && !needsBusiness && overview && activeScreen === 'overview' && (
-          <OverviewScreen data={overview} onView={changeScreen} />
+          <OverviewScreen data={overview} onView={changeScreen} businesses={businessOptions || []} />
         )}
         {gate === 'ready' && activeScreen === 'products' && (
           <ProductsScreen
             canManage={can('catalog.manage')}
             canInventory={can('inventory.write')}
             canCash={can('cash.manage')}
+            businesses={businessOptions || []}
           />
         )}
         {gate === 'ready' && activeScreen === 'product-categories' && (
@@ -759,6 +760,7 @@ export default function Dashboard({ onExit }) {
             eyebrow="Estantería"
             empty="Todavía no hay categorías."
             canManage={can('catalog.manage')}
+            businesses={businessOptions || []}
           />
         )}
         {gate === 'ready' && activeScreen === 'product-brands' && (
@@ -768,60 +770,61 @@ export default function Dashboard({ onExit }) {
             eyebrow="Estantería"
             empty="Todavía no hay marcas."
             canManage={can('catalog.manage')}
+            businesses={businessOptions || []}
           />
         )}
         {gate === 'ready' && activeScreen === 'product-import' && (
           <ImportScreen canManage={can('catalog.manage')} />
         )}
         {gate === 'ready' && activeScreen === 'promo-coupons' && (
-          <CouponsScreen canManage={can('coupons.manage')} />
+          <CouponsScreen canManage={can('coupons.manage')} businesses={businessOptions || []} />
         )}
         {gate === 'ready' && activeScreen === 'promo-offers' && (
-          <OffersScreen canManage={can('offers.manage')} />
+          <OffersScreen canManage={can('offers.manage')} businesses={businessOptions || []} />
         )}
         {gate === 'ready' && activeScreen === 'sales-pos' && (
           <PosScreen canManage={can('pos.manage')} />
         )}
-        {gate === 'ready' && activeScreen === 'sales-history' && <SalesScreen />}
+        {gate === 'ready' && activeScreen === 'sales-history' && <SalesScreen businesses={businessOptions || []} />}
         {gate === 'ready' && activeScreen === 'sales-returns' && (
-          <ReturnsScreen canManage={can('sales.return')} />
+          <ReturnsScreen canManage={can('sales.return')} businesses={businessOptions || []} />
         )}
         {gate === 'ready' && activeScreen === 'sales-quotes' && (
-          <QuotesScreen canManage={can('quotes.delete')} />
+          <QuotesScreen canManage={can('quotes.delete')} businesses={businessOptions || []} />
         )}
         {gate === 'ready' && activeScreen === 'stock-overview' && (
-          <StockScreen canManage={can('inventory.write')} />
+          <StockScreen canManage={can('inventory.write')} businesses={businessOptions || []} />
         )}
-        {gate === 'ready' && activeScreen === 'stock-movements' && <MovementsScreen />}
+        {gate === 'ready' && activeScreen === 'stock-movements' && <MovementsScreen businesses={businessOptions || []} />}
         {gate === 'ready' && activeScreen === 'stock-adjustments' && (
-          <AdjustmentsScreen canManage={can('inventory.write')} />
+          <AdjustmentsScreen canManage={can('inventory.write')} businesses={businessOptions || []} />
         )}
         {gate === 'ready' && activeScreen === 'stock-purchases' && (
-          <PurchasesScreen canManage={can('inventory.write')} />
+          <PurchasesScreen canManage={can('inventory.write')} businesses={businessOptions || []} />
         )}
         {gate === 'ready' && activeScreen === 'stock-min' && (
-          <MinStockScreen canManage={can('inventory.write')} />
+          <MinStockScreen canManage={can('inventory.write')} businesses={businessOptions || []} />
         )}
         {gate === 'ready' && activeScreen === 'stock-physical' && (
-          <PhysicalInventoryScreen canManage={can('inventory.write')} />
+          <PhysicalInventoryScreen canManage={can('inventory.write')} businesses={businessOptions || []} />
         )}
         {gate === 'ready' && activeScreen === 'cash-current' && (
-          <CashCurrentScreen canManage={can('cash.manage')} isAdmin={userIsSuper || user?.role === 'admin'} onView={changeScreen} />
+          <CashCurrentScreen canManage={can('cash.manage')} isAdmin={userIsSuper || user?.role === 'admin'} onView={changeScreen} businesses={businessOptions || []} />
         )}
         {gate === 'ready' && activeScreen === 'cash-movements' && (
-          <CashMovementsScreen canManage={can('cash.manage')} />
+          <CashMovementsScreen canManage={can('cash.manage')} businesses={businessOptions || []} />
         )}
         {gate === 'ready' && activeScreen === 'cash-openclose' && (
-          <CashShiftScreen canManage={can('cash.manage')} isAdmin={userIsSuper || user?.role === 'admin'} />
+          <CashShiftScreen canManage={can('cash.manage')} isAdmin={userIsSuper || user?.role === 'admin'} businesses={businessOptions || []} />
         )}
         {gate === 'ready' && activeScreen === 'cash-counts' && (
-          <CashCountScreen canManage={can('cash.manage')} isAdmin={userIsSuper || user?.role === 'admin'} />
+          <CashCountScreen canManage={can('cash.manage')} isAdmin={userIsSuper || user?.role === 'admin'} businesses={businessOptions || []} />
         )}
         {gate === 'ready' && activeScreen === 'report-sales' && <SalesReportScreen />}
-        {gate === 'ready' && activeScreen === 'report-products' && <ProductsReportScreen />}
-        {gate === 'ready' && activeScreen === 'report-profit' && <ProfitReportScreen />}
-        {gate === 'ready' && activeScreen === 'report-stock' && <StockReportScreen />}
-        {gate === 'ready' && activeScreen === 'report-customers' && <CustomersReportScreen />}
+        {gate === 'ready' && activeScreen === 'report-products' && <ProductsReportScreen businesses={businessOptions || []} />}
+        {gate === 'ready' && activeScreen === 'report-profit' && <ProfitReportScreen businesses={businessOptions || []} />}
+        {gate === 'ready' && activeScreen === 'report-stock' && <StockReportScreen businesses={businessOptions || []} />}
+        {gate === 'ready' && activeScreen === 'report-customers' && <CustomersReportScreen businesses={businessOptions || []} />}
         {(gate === 'ready' || needsBusiness) && activeScreen === 'settings-users' && <UsersScreen allowBusinessCreate={userIsSuper} />}
         {(gate === 'ready' || needsBusiness) && activeScreen === 'settings-roles' && <RolesScreen />}
         {gate === 'ready' && activeScreen === 'settings-payments' && <PaymentsScreen />}

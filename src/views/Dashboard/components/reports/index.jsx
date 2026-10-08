@@ -3,11 +3,12 @@ import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Label, LabelList, 
 import { formatARS } from '@/data/format'
 import { apiGet } from '@/lib/api'
 import { CHART_COLORS, CHART_GRID, CHART_TICK, chartDayShort, compactARS, reportPaymentLabel, shortDate, shortId, stockStatusOf } from '../../consts.js'
-import { ChartLegend, ChartTip, EmptyNote, KpiTicket, ReportPeriodBar, ScreenBlocked, ScreenLoading, StatusTag, StockBadge, StockValue } from '../common'
+import { BusinessCell, ChartLegend, ChartTip, EmptyNote, KpiTicket, ReportPeriodBar, ScreenBlocked, ScreenLoading, StatusTag, StockBadge, StockValue } from '../common'
 
 import './styles.css'
 
-function OverviewScreen({ data, onView }) {
+function OverviewScreen({ data, onView, businesses = [] }) {
+  const showBusiness = businesses.length > 0
   const kpis = [
     { label: 'Ingresos', value: formatARS(data.revenue), note: 'iniciales' },
     { label: 'Ventas aprobadas', value: data.counts.salesCount, note: 'pagadas' },
@@ -55,6 +56,7 @@ function OverviewScreen({ data, onView }) {
                     {product.name}
                     <em>{product.brand}</em>
                   </span>
+                  {showBusiness && <BusinessCell adminId={product.adminId} businesses={businesses} />}
                   <span className="best-units mono">
                     {product.units} uds
                   </span>
@@ -86,6 +88,7 @@ function OverviewScreen({ data, onView }) {
                     {order.itemsCount} art.
                   </span>
                   <StatusTag status={order.status} />
+                  {showBusiness && <BusinessCell adminId={order.adminId} businesses={businesses} />}
                   <span className="recent-total mono">
                     {formatARS(order.total)}
                   </span>
@@ -245,7 +248,8 @@ function SalesReportScreen() {
 }
 
 
-function ProductsReportScreen() {
+function ProductsReportScreen({ businesses = [] }) {
+  const showBusiness = businesses.length > 0
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
   const [days, setDays] = useState(30)
@@ -294,6 +298,7 @@ function ProductsReportScreen() {
         <table className="dash-table">
           <thead>
             <tr>
+              {showBusiness && <th>Negocio</th>}
               <th>Producto</th>
               <th>Unidades</th>
               <th>Precio medio</th>
@@ -303,7 +308,8 @@ function ProductsReportScreen() {
           </thead>
           <tbody>
             {data.items.map((p) => (
-              <tr key={p.productId} className={`stock-row-${stockStatusOf(p.stock, p.minStock)}`}>
+              <tr key={`${p.adminId || 'global'}:${p.productId}`} className={`stock-row-${stockStatusOf(p.stock, p.minStock)}`}>
+                {showBusiness && <td><BusinessCell adminId={p.adminId} businesses={businesses} /></td>}
                 <td>
                   <span className="t-cell-name">
                     <strong title={p.name}>{p.name}</strong>
@@ -359,7 +365,8 @@ function ProductsReportScreen() {
 }
 
 
-function ProfitReportScreen() {
+function ProfitReportScreen({ businesses = [] }) {
+  const showBusiness = businesses.length > 0
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
   const [days, setDays] = useState(30)
@@ -410,6 +417,7 @@ function ProfitReportScreen() {
         <table className="dash-table">
           <thead>
             <tr>
+              {showBusiness && <th>Negocio</th>}
               <th>Producto</th>
               <th>Unidades</th>
               <th>Facturado</th>
@@ -420,7 +428,8 @@ function ProfitReportScreen() {
           </thead>
           <tbody>
             {data.items.map((p) => (
-              <tr key={p.productId}>
+              <tr key={`${p.adminId || 'global'}:${p.productId}`}>
+                {showBusiness && <td><BusinessCell adminId={p.adminId} businesses={businesses} /></td>}
                 <td>
                   <span className="t-cell-name">
                     <strong title={p.name}>{p.name}</strong>
@@ -495,7 +504,8 @@ function ProfitReportScreen() {
 }
 
 
-function StockReportScreen() {
+function StockReportScreen({ businesses = [] }) {
+  const showBusiness = businesses.length > 0
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
 
@@ -633,6 +643,7 @@ function StockReportScreen() {
             <table className="dash-table">
               <thead>
                 <tr>
+                  {showBusiness && <th>Negocio</th>}
                   <th>Producto</th>
                   <th>Stock</th>
                   <th>Mínimo</th>
@@ -641,7 +652,8 @@ function StockReportScreen() {
               </thead>
               <tbody>
                 {data.low.map((p) => (
-                  <tr key={p.id} className={`stock-row-${stockStatusOf(p.stock, p.minStock)}`}>
+                  <tr key={`${p.adminId || 'global'}:${p.id}`} className={`stock-row-${stockStatusOf(p.stock, p.minStock)}`}>
+                    {showBusiness && <td><BusinessCell adminId={p.adminId} businesses={businesses} /></td>}
                     <td>
                       <span className="t-cell-name">
                       <strong title={p.name}>{p.name}</strong>
@@ -663,7 +675,8 @@ function StockReportScreen() {
 }
 
 
-function CustomersReportScreen() {
+function CustomersReportScreen({ businesses = [] }) {
+  const showBusiness = businesses.length > 0
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
   const [days, setDays] = useState(30)
@@ -791,6 +804,7 @@ function CustomersReportScreen() {
         <table className="dash-table">
           <thead>
             <tr>
+              {showBusiness && <th>Negocio</th>}
               <th>Cliente</th>
               <th>Compras</th>
               <th>Total</th>
@@ -800,7 +814,8 @@ function CustomersReportScreen() {
           </thead>
           <tbody>
             {data.items.map((c, idx) => (
-              <tr key={idx}>
+              <tr key={`${c.adminId || 'global'}:${c.key || idx}`}>
+                {showBusiness && <td><BusinessCell adminId={c.adminId} businesses={businesses} /></td>}
                 <td>
                   <span className="t-cell-name">
                     <strong>{c.name}</strong>

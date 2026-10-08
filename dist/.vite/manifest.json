@@ -1,6 +1,6 @@
 {
-  "_BrandLogo-CF77O86D.js": {
-    "file": "assets/BrandLogo-CF77O86D.js",
+  "_BrandLogo-BVDQ28Lj.js": {
+    "file": "assets/BrandLogo-BVDQ28Lj.js",
     "name": "BrandLogo",
     "imports": [
       "index.html"
@@ -13,30 +13,30 @@
     "file": "assets/BrandLogo-CzrBPadF.css",
     "src": "_BrandLogo-CzrBPadF.css"
   },
-  "_LiveStorePreview-DhHL5A26.css": {
-    "file": "assets/LiveStorePreview-DhHL5A26.css",
-    "src": "_LiveStorePreview-DhHL5A26.css"
-  },
-  "_LiveStorePreview-m1QdEHu0.js": {
-    "file": "assets/LiveStorePreview-m1QdEHu0.js",
+  "_LiveStorePreview-CRJOjTEm.js": {
+    "file": "assets/LiveStorePreview-CRJOjTEm.js",
     "name": "LiveStorePreview",
     "imports": [
       "_rolldown-runtime-hePW80VL.js",
       "index.html",
-      "_siteSettings-p6JdEjOS.js",
-      "_SearchSelect-DZcdfBTx.js",
+      "_siteSettings-BCI4R8OK.js",
+      "_SearchSelect-Wxcnt52-.js",
       "_demoCatalog-B_w7rnB6.js"
     ],
     "css": [
       "assets/LiveStorePreview-DhHL5A26.css"
     ]
   },
+  "_LiveStorePreview-DhHL5A26.css": {
+    "file": "assets/LiveStorePreview-DhHL5A26.css",
+    "src": "_LiveStorePreview-DhHL5A26.css"
+  },
   "_SearchSelect-BDPz6gxU.css": {
     "file": "assets/SearchSelect-BDPz6gxU.css",
     "src": "_SearchSelect-BDPz6gxU.css"
   },
-  "_SearchSelect-DZcdfBTx.js": {
-    "file": "assets/SearchSelect-DZcdfBTx.js",
+  "_SearchSelect-Wxcnt52-.js": {
+    "file": "assets/SearchSelect-Wxcnt52-.js",
     "name": "SearchSelect",
     "imports": [
       "_rolldown-runtime-hePW80VL.js",
@@ -50,23 +50,23 @@
     "file": "assets/api-Deym7aH8.js",
     "name": "api"
   },
-  "_common-DILMqANi.js": {
-    "file": "assets/common-DILMqANi.js",
+  "_common-B0cQ-Fw8.js": {
+    "file": "assets/common-B0cQ-Fw8.js",
     "name": "common",
     "imports": [
       "_rolldown-runtime-hePW80VL.js",
       "_api-Deym7aH8.js",
       "index.html",
-      "_SearchSelect-DZcdfBTx.js",
+      "_SearchSelect-Wxcnt52-.js",
       "src/views/Dashboard/index.jsx"
     ],
     "css": [
-      "assets/common-DkPwmviB.css"
+      "assets/common-Cswluzib.css"
     ]
   },
-  "_common-DkPwmviB.css": {
-    "file": "assets/common-DkPwmviB.css",
-    "src": "_common-DkPwmviB.css"
+  "_common-Cswluzib.css": {
+    "file": "assets/common-Cswluzib.css",
+    "src": "_common-Cswluzib.css"
   },
   "_demoCatalog-B_w7rnB6.js": {
     "file": "assets/demoCatalog-B_w7rnB6.js",
@@ -88,8 +88,8 @@
     "file": "assets/rolldown-runtime-hePW80VL.js",
     "name": "rolldown-runtime"
   },
-  "_siteSettings-p6JdEjOS.js": {
-    "file": "assets/siteSettings-p6JdEjOS.js",
+  "_siteSettings-BCI4R8OK.js": {
+    "file": "assets/siteSettings-BCI4R8OK.js",
     "name": "siteSettings",
     "imports": [
       "_rolldown-runtime-hePW80VL.js",
@@ -97,8 +97,8 @@
       "index.html"
     ]
   },
-  "_useStockEvents-DvFr5DTA.js": {
-    "file": "assets/useStockEvents-DvFr5DTA.js",
+  "_useStockEvents-PYmlFLHJ.js": {
+    "file": "assets/useStockEvents-PYmlFLHJ.js",
     "name": "useStockEvents",
     "imports": [
       "_rolldown-runtime-hePW80VL.js",
@@ -107,7 +107,7 @@
     ]
   },
   "index.html": {
-    "file": "assets/index-CaR6WfQM.js",
+    "file": "assets/index-DWIVYwww.js",
     "name": "index",
     "src": "index.html",
     "isEntry": true,
@@ -126,7 +126,7 @@
     ]
   },
   "src/StoreApp.jsx": {
-    "file": "assets/StoreApp-CFzQE2Pq.js",
+    "file": "assets/StoreApp-CqDGNzTW.js",
     "name": "StoreApp",
     "src": "src/StoreApp.jsx",
     "isDynamicEntry": true,
@@ -135,9 +135,9 @@
       "_api-Deym7aH8.js",
       "index.html",
       "_orderSocket-DfBe929M.js",
-      "_useStockEvents-DvFr5DTA.js",
-      "_siteSettings-p6JdEjOS.js",
-      "_SearchSelect-DZcdfBTx.js",
+      "_useStockEvents-PYmlFLHJ.js",
+      "_siteSettings-BCI4R8OK.js",
+      "_SearchSelect-Wxcnt52-.js",
       "_demoCatalog-B_w7rnB6.js"
     ],
     "css": [
@@ -149,7 +149,7 @@
     "src": "src/assets/mercado-pago-logo.png"
   },
   "src/views/AccountActivation/index.jsx": {
-    "file": "assets/AccountActivation-ZvcHyujT.js",
+    "file": "assets/AccountActivation-CiN8l-an.js",
     "name": "AccountActivation",
     "src": "src/views/AccountActivation/index.jsx",
     "isDynamicEntry": true,
@@ -157,14 +157,14 @@
       "_rolldown-runtime-hePW80VL.js",
       "_api-Deym7aH8.js",
       "index.html",
-      "_BrandLogo-CF77O86D.js"
+      "_BrandLogo-BVDQ28Lj.js"
     ],
     "css": [
       "assets/AccountActivation-CN5hDS6c.css"
     ]
   },
   "src/views/CompanyHome/index.jsx": {
-    "file": "assets/CompanyHome-CmdrI6q3.js",
+    "file": "assets/CompanyHome-B6NM7d5l.js",
     "name": "CompanyHome",
     "src": "src/views/CompanyHome/index.jsx",
     "isDynamicEntry": true,
@@ -172,7 +172,7 @@
       "_rolldown-runtime-hePW80VL.js",
       "_api-Deym7aH8.js",
       "index.html",
-      "_BrandLogo-CF77O86D.js",
+      "_BrandLogo-BVDQ28Lj.js",
       "_plans-DL3R4EVl.js"
     ],
     "css": [
@@ -180,7 +180,7 @@
     ]
   },
   "src/views/Dashboard/components/appearance/index.jsx": {
-    "file": "assets/appearance-GCc2OBt4.js",
+    "file": "assets/appearance-Cid5QKWq.js",
     "name": "appearance",
     "src": "src/views/Dashboard/components/appearance/index.jsx",
     "isDynamicEntry": true,
@@ -188,16 +188,16 @@
       "_rolldown-runtime-hePW80VL.js",
       "_api-Deym7aH8.js",
       "index.html",
-      "_siteSettings-p6JdEjOS.js",
-      "_common-DILMqANi.js",
-      "_LiveStorePreview-m1QdEHu0.js"
+      "_siteSettings-BCI4R8OK.js",
+      "_common-B0cQ-Fw8.js",
+      "_LiveStorePreview-CRJOjTEm.js"
     ],
     "css": [
       "assets/appearance-eXs6hGa8.css"
     ]
   },
   "src/views/Dashboard/components/cash/index.jsx": {
-    "file": "assets/cash-C44TkTb8.js",
+    "file": "assets/cash-CubVRTse.js",
     "name": "cash",
     "src": "src/views/Dashboard/components/cash/index.jsx",
     "isDynamicEntry": true,
@@ -206,8 +206,8 @@
       "_api-Deym7aH8.js",
       "index.html",
       "_orderSocket-DfBe929M.js",
-      "_SearchSelect-DZcdfBTx.js",
-      "_common-DILMqANi.js",
+      "_SearchSelect-Wxcnt52-.js",
+      "_common-B0cQ-Fw8.js",
       "src/views/Dashboard/index.jsx"
     ],
     "css": [
@@ -215,7 +215,7 @@
     ]
   },
   "src/views/Dashboard/components/marketing/index.jsx": {
-    "file": "assets/marketing-BwWgM3da.js",
+    "file": "assets/marketing-CGK--o1g.js",
     "name": "marketing",
     "src": "src/views/Dashboard/components/marketing/index.jsx",
     "isDynamicEntry": true,
@@ -223,7 +223,7 @@
       "_rolldown-runtime-hePW80VL.js",
       "_api-Deym7aH8.js",
       "index.html",
-      "_common-DILMqANi.js",
+      "_common-B0cQ-Fw8.js",
       "src/views/Dashboard/index.jsx"
     ],
     "css": [
@@ -231,7 +231,7 @@
     ]
   },
   "src/views/Dashboard/components/onboarding/index.jsx": {
-    "file": "assets/onboarding-DgG-H7xF.js",
+    "file": "assets/onboarding-eSVs-Cpc.js",
     "name": "onboarding",
     "src": "src/views/Dashboard/components/onboarding/index.jsx",
     "isDynamicEntry": true,
@@ -239,14 +239,14 @@
       "_rolldown-runtime-hePW80VL.js",
       "_api-Deym7aH8.js",
       "index.html",
-      "_siteSettings-p6JdEjOS.js"
+      "_siteSettings-BCI4R8OK.js"
     ],
     "css": [
       "assets/onboarding-SH3_UU9C.css"
     ]
   },
   "src/views/Dashboard/components/pos/index.jsx": {
-    "file": "assets/pos-iZyknujQ.js",
+    "file": "assets/pos-D-BGID6S.js",
     "name": "pos",
     "src": "src/views/Dashboard/components/pos/index.jsx",
     "isDynamicEntry": true,
@@ -254,9 +254,9 @@
       "_rolldown-runtime-hePW80VL.js",
       "_api-Deym7aH8.js",
       "index.html",
-      "_useStockEvents-DvFr5DTA.js",
-      "_SearchSelect-DZcdfBTx.js",
-      "_common-DILMqANi.js",
+      "_useStockEvents-PYmlFLHJ.js",
+      "_SearchSelect-Wxcnt52-.js",
+      "_common-B0cQ-Fw8.js",
       "src/views/Dashboard/index.jsx"
     ],
     "css": [
@@ -264,7 +264,7 @@
     ]
   },
   "src/views/Dashboard/components/products/index.jsx": {
-    "file": "assets/products-D6dAn5di.js",
+    "file": "assets/products-Buv8vwHW.js",
     "name": "products",
     "src": "src/views/Dashboard/components/products/index.jsx",
     "isDynamicEntry": true,
@@ -272,9 +272,9 @@
       "_rolldown-runtime-hePW80VL.js",
       "_api-Deym7aH8.js",
       "index.html",
-      "_useStockEvents-DvFr5DTA.js",
-      "_SearchSelect-DZcdfBTx.js",
-      "_common-DILMqANi.js",
+      "_useStockEvents-PYmlFLHJ.js",
+      "_SearchSelect-Wxcnt52-.js",
+      "_common-B0cQ-Fw8.js",
       "src/views/Dashboard/index.jsx"
     ],
     "css": [
@@ -282,7 +282,7 @@
     ]
   },
   "src/views/Dashboard/components/reports/index.jsx": {
-    "file": "assets/reports-DkneiJhL.js",
+    "file": "assets/reports-DWnfNlYr.js",
     "name": "reports",
     "src": "src/views/Dashboard/components/reports/index.jsx",
     "isDynamicEntry": true,
@@ -290,8 +290,8 @@
       "_rolldown-runtime-hePW80VL.js",
       "_api-Deym7aH8.js",
       "index.html",
-      "_SearchSelect-DZcdfBTx.js",
-      "_common-DILMqANi.js",
+      "_SearchSelect-Wxcnt52-.js",
+      "_common-B0cQ-Fw8.js",
       "src/views/Dashboard/index.jsx"
     ],
     "css": [
@@ -299,7 +299,7 @@
     ]
   },
   "src/views/Dashboard/components/sales/index.jsx": {
-    "file": "assets/sales-Dec4mhSs.js",
+    "file": "assets/sales-DcgLhztp.js",
     "name": "sales",
     "src": "src/views/Dashboard/components/sales/index.jsx",
     "isDynamicEntry": true,
@@ -308,8 +308,8 @@
       "_api-Deym7aH8.js",
       "index.html",
       "_orderSocket-DfBe929M.js",
-      "_SearchSelect-DZcdfBTx.js",
-      "_common-DILMqANi.js",
+      "_SearchSelect-Wxcnt52-.js",
+      "_common-B0cQ-Fw8.js",
       "src/views/Dashboard/index.jsx"
     ],
     "css": [
@@ -317,7 +317,7 @@
     ]
   },
   "src/views/Dashboard/components/settings/index.jsx": {
-    "file": "assets/settings-CAG7ZbCU.js",
+    "file": "assets/settings-N5JmtsBi.js",
     "name": "settings",
     "src": "src/views/Dashboard/components/settings/index.jsx",
     "isDynamicEntry": true,
@@ -325,9 +325,9 @@
       "_rolldown-runtime-hePW80VL.js",
       "_api-Deym7aH8.js",
       "index.html",
-      "_siteSettings-p6JdEjOS.js",
-      "_common-DILMqANi.js",
-      "_LiveStorePreview-m1QdEHu0.js"
+      "_siteSettings-BCI4R8OK.js",
+      "_common-B0cQ-Fw8.js",
+      "_LiveStorePreview-CRJOjTEm.js"
     ],
     "css": [
       "assets/settings-wK6wRkJ-.css"
@@ -337,7 +337,7 @@
     ]
   },
   "src/views/Dashboard/components/stock/index.jsx": {
-    "file": "assets/stock-Bbyq7o2e.js",
+    "file": "assets/stock-D4o1i_KZ.js",
     "name": "stock",
     "src": "src/views/Dashboard/components/stock/index.jsx",
     "isDynamicEntry": true,
@@ -345,9 +345,9 @@
       "_rolldown-runtime-hePW80VL.js",
       "_api-Deym7aH8.js",
       "index.html",
-      "_useStockEvents-DvFr5DTA.js",
-      "_SearchSelect-DZcdfBTx.js",
-      "_common-DILMqANi.js",
+      "_useStockEvents-PYmlFLHJ.js",
+      "_SearchSelect-Wxcnt52-.js",
+      "_common-B0cQ-Fw8.js",
       "src/views/Dashboard/index.jsx"
     ],
     "css": [
@@ -355,7 +355,7 @@
     ]
   },
   "src/views/Dashboard/components/storeHub/index.jsx": {
-    "file": "assets/storeHub-UIJPOFIp.js",
+    "file": "assets/storeHub-8s6vPZQs.js",
     "name": "storeHub",
     "src": "src/views/Dashboard/components/storeHub/index.jsx",
     "isDynamicEntry": true,
@@ -368,7 +368,7 @@
     ]
   },
   "src/views/Dashboard/components/users/index.jsx": {
-    "file": "assets/users-B--O7dzH.js",
+    "file": "assets/users-ChNZaNWU.js",
     "name": "users",
     "src": "src/views/Dashboard/components/users/index.jsx",
     "isDynamicEntry": true,
@@ -376,9 +376,9 @@
       "_rolldown-runtime-hePW80VL.js",
       "_api-Deym7aH8.js",
       "index.html",
-      "_SearchSelect-DZcdfBTx.js",
+      "_SearchSelect-Wxcnt52-.js",
       "_plans-DL3R4EVl.js",
-      "_common-DILMqANi.js",
+      "_common-B0cQ-Fw8.js",
       "src/views/Dashboard/index.jsx"
     ],
     "css": [
@@ -386,7 +386,7 @@
     ]
   },
   "src/views/Dashboard/index.jsx": {
-    "file": "assets/Dashboard-vQNUDZlH.js",
+    "file": "assets/Dashboard-DCAND86p.js",
     "name": "Dashboard",
     "src": "src/views/Dashboard/index.jsx",
     "isDynamicEntry": true,
@@ -395,7 +395,7 @@
       "_api-Deym7aH8.js",
       "index.html",
       "_orderSocket-DfBe929M.js",
-      "_BrandLogo-CF77O86D.js"
+      "_BrandLogo-BVDQ28Lj.js"
     ],
     "dynamicImports": [
       "src/views/Dashboard/components/cash/index.jsx",

@@ -3,7 +3,7 @@ import { formatARS } from '@/data/format'
 import { apiGet, apiPost } from '@/lib/api'
 import { IconCross, IconPlus } from '@/components/Icons'
 import { CASH_KIND_CHIPS, CASH_KIND_LABELS, fullDate, shortDate } from '../../consts.js'
-import { EmptyNote, KpiTicket, OperatorSelect, ScreenBlocked, ScreenLoading } from '../common'
+import { BusinessCell, EmptyNote, KpiTicket, OperatorSelect, ScreenBlocked, ScreenLoading } from '../common'
 import SearchSelect from '@/components/SearchSelect'
 import { useToast } from '@/context/useToast'
 import { useCashEvents } from '@/lib/useCashEvents.js'
@@ -14,8 +14,9 @@ function operatorLabel(shift) {
   return shift?.operator?.name || shift?.operator?.email || shift?.openedBy || 'Operador sin identificar'
 }
 
-function CashOpenShifts({ shifts, onSelect }) {
+function CashOpenShifts({ shifts, onSelect, businesses = [] }) {
   if (!shifts?.length) return null
+  const showBusiness = businesses.length > 0
   return (
     <section className="dash-card">
       <div className="dash-card-head">
@@ -29,6 +30,7 @@ function CashOpenShifts({ shifts, onSelect }) {
         <table className="dash-table">
           <thead>
             <tr>
+              {showBusiness && <th>Negocio</th>}
               <th>Operador</th>
               <th>Turno</th>
               <th>Ventas</th>
@@ -39,6 +41,7 @@ function CashOpenShifts({ shifts, onSelect }) {
           <tbody>
             {shifts.map((shift) => (
               <tr key={shift._id}>
+                {showBusiness && <td><BusinessCell adminId={shift.adminId} businesses={businesses} /></td>}
                 <td>
                   <span className="t-cell-name">
                     <strong>{operatorLabel(shift)}</strong>
@@ -64,7 +67,7 @@ function CashOpenShifts({ shifts, onSelect }) {
   )
 }
 
-function CashCurrentScreen({ canManage, isAdmin, onView }) {
+function CashCurrentScreen({ canManage, isAdmin, onView, businesses = [] }) {
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
 
@@ -163,13 +166,13 @@ function CashCurrentScreen({ canManage, isAdmin, onView }) {
           </>
         )}
       </div>
-      {isAdmin && <CashOpenShifts shifts={openShifts} onSelect={() => onView('cash-openclose')} />}
+      {isAdmin && <CashOpenShifts shifts={openShifts} onSelect={() => onView('cash-openclose')} businesses={businesses} />}
     </div>
   )
 }
 
 
-function CashMovementsScreen({ canManage }) {
+function CashMovementsScreen({ canManage, businesses = [] }) {
   const { showToast } = useToast()
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
@@ -205,6 +208,8 @@ function CashMovementsScreen({ canManage }) {
 
   if (!data && !error) return <ScreenLoading label="Leyendo los movimientos…" />
   if (error) return <ScreenBlocked message={error} />
+
+  const showBusiness = businesses.length > 0
 
   const movementValid = form.amount !== '' && Number.isFinite(Number(form.amount)) && Number(form.amount) > 0
 
@@ -353,6 +358,7 @@ function CashMovementsScreen({ canManage }) {
         <table className="dash-table">
           <thead>
             <tr>
+              {showBusiness && <th>Negocio</th>}
               <th>Fecha</th>
               <th>Concepto</th>
               <th>Tipo</th>
@@ -363,6 +369,7 @@ function CashMovementsScreen({ canManage }) {
           <tbody>
             {data.items.map((m) => (
               <tr key={m._id}>
+                {showBusiness && <td><BusinessCell adminId={m.adminId} businesses={businesses} /></td>}
                 <td className="t-date" title={fullDate(m.createdAt)}>
                   {shortDate(m.createdAt)}
                 </td>
@@ -414,7 +421,7 @@ function CashMovementsScreen({ canManage }) {
 }
 
 
-function CashShiftScreen({ canManage, isAdmin }) {
+function CashShiftScreen({ canManage, isAdmin, businesses = [] }) {
   const { showToast } = useToast()
   const [status, setStatus] = useState(null)
   const [shifts, setShifts] = useState(null)
@@ -443,6 +450,8 @@ function CashShiftScreen({ canManage, isAdmin }) {
     if (error) return <ScreenBlocked message={error} />
     return <ScreenLoading label="Escuchando la campana…" />
   }
+
+  const showBusiness = businesses.length > 0
 
   const openBox = (e) => {
     e.preventDefault()
@@ -641,6 +650,7 @@ function CashShiftScreen({ canManage, isAdmin }) {
             <table className="dash-table">
               <thead>
                 <tr>
+                  {showBusiness && <th>Negocio</th>}
                   <th>Operador</th>
                   <th>Turno</th>
                   <th>Esperado</th>
@@ -650,6 +660,7 @@ function CashShiftScreen({ canManage, isAdmin }) {
               <tbody>
                 {openShifts.map((shift) => (
                   <tr key={shift._id}>
+                    {showBusiness && <td><BusinessCell adminId={shift.adminId} businesses={businesses} /></td>}
                     <td>
                       <span className="t-cell-name">
                         <strong>{operatorLabel(shift)}</strong>
@@ -675,6 +686,7 @@ function CashShiftScreen({ canManage, isAdmin }) {
         <table className="dash-table">
           <thead>
             <tr>
+              {showBusiness && <th>Negocio</th>}
               <th>Turno</th>
               <th>Operador</th>
               <th>Apertura</th>
@@ -692,6 +704,7 @@ function CashShiftScreen({ canManage, isAdmin }) {
               const diff = s.difference ?? 0
               return (
                 <tr key={s._id}>
+                  {showBusiness && <td><BusinessCell adminId={s.adminId} businesses={businesses} /></td>}
                   <td className="mono">#{s.number}</td>
                   <td>
                     <span className="t-cell-name">
@@ -727,7 +740,7 @@ function CashShiftScreen({ canManage, isAdmin }) {
 }
 
 
-function CashCountScreen({ canManage, isAdmin }) {
+function CashCountScreen({ canManage, isAdmin, businesses = [] }) {
   const { showToast } = useToast()
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
@@ -803,6 +816,8 @@ function CashCountScreen({ canManage, isAdmin }) {
     if (error) return <ScreenBlocked message={error} />
     return <ScreenLoading label="Contando los pesos…" />
   }
+
+  const showBusiness = businesses.length > 0
 
   const doArqueo = (e) => {
     e.preventDefault()
@@ -915,6 +930,7 @@ function CashCountScreen({ canManage, isAdmin }) {
         <table className="dash-table">
           <thead>
             <tr>
+              {showBusiness && <th>Negocio</th>}
               <th>Fecha</th>
               <th>Turno</th>
               <th>Esperado</th>
@@ -929,6 +945,7 @@ function CashCountScreen({ canManage, isAdmin }) {
               const diff = c.difference ?? 0
               return (
                 <tr key={c._id}>
+                  {showBusiness && <td><BusinessCell adminId={c.adminId} businesses={businesses} /></td>}
                   <td className="t-date" title={fullDate(c.createdAt)}>
                     {shortDate(c.createdAt)}
                   </td>

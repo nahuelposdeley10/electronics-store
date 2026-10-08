@@ -288,6 +288,24 @@ function StockValue({ stock, min }) {
   return <span className={`stock-value ${stockStatusOf(stock, min)}`}>{stock}</span>
 }
 
+function BusinessCell({ adminId, businesses = [] }) {
+  if (!adminId) {
+    return <span className="business-owner-cell is-global">General</span>
+  }
+
+  const business = businesses.find((item) => String(item.id) === String(adminId))
+  if (!business) {
+    return <span className="business-owner-cell is-unknown">Negocio no disponible</span>
+  }
+
+  return (
+    <span className="business-owner-cell" title={`${business.storeName || business.name} · ${business.email}`}>
+      <strong>{business.storeName || business.name}</strong>
+      <small>{business.email}</small>
+    </span>
+  )
+}
+
 
 function ChartTip({ active, payload, label, formatter }) {
   if (!active || !payload || !payload.length) return null
@@ -498,4 +516,4 @@ function SettingsFetcher({ render }) {
 }
 
 
-export { StatusTag, EmptyNote, ScreenLoading, KpiTicket, StockBadge, StockValue, ChartTip, ChartLegend, ReportPeriodBar, ScreenBlocked, ToggleRow, ToggleSwitch, SettingsNote, SetImageField, SettingsFetcher, SortSelect, FilterReset, OperatorSelect, ProductPicker }
+export { StatusTag, EmptyNote, ScreenLoading, KpiTicket, StockBadge, StockValue, BusinessCell, ChartTip, ChartLegend, ReportPeriodBar, ScreenBlocked, ToggleRow, ToggleSwitch, SettingsNote, SetImageField, SettingsFetcher, SortSelect, FilterReset, OperatorSelect, ProductPicker }

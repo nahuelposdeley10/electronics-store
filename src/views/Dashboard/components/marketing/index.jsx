@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { apiDelete, apiGet, apiPost, apiPut } from '@/lib/api'
 import { IconCross, IconEdit, IconPlus, IconTrash } from '@/components/Icons'
 import { shortDate } from '../../consts.js'
-import { EmptyNote, ScreenBlocked, ScreenLoading, ToggleSwitch } from '../common'
+import { BusinessCell, EmptyNote, ScreenBlocked, ScreenLoading, ToggleSwitch } from '../common'
 import { useToast } from '@/context/useToast'
 import { useConfirm } from '@/context/useConfirm'
 
@@ -16,7 +16,7 @@ function promoStateChip(active, onLabel, offLabel) {
   )
 }
 
-function CouponsScreen({ canManage }) {
+function CouponsScreen({ canManage, businesses = [] }) {
   const { showToast } = useToast()
   const { confirm } = useConfirm()
   const [data, setData] = useState(null)
@@ -129,6 +129,8 @@ function CouponsScreen({ canManage }) {
   if (!data && !error) return <ScreenLoading label="Cargando cupones…" />
   if (error) return <ScreenBlocked message={error} />
 
+  const showBusiness = businesses.length > 0
+
   const activeCount = data.items.filter((c) => c.active).length
 
   return (
@@ -234,6 +236,7 @@ function CouponsScreen({ canManage }) {
         <table className="dash-table">
           <thead>
             <tr>
+              {showBusiness && <th>Negocio</th>}
               <th>Código</th>
               <th>Descuento</th>
               <th>Descripción</th>
@@ -243,7 +246,8 @@ function CouponsScreen({ canManage }) {
           </thead>
           <tbody>
             {data.items.map((c) => (
-              <tr key={String(c.id)} className={!c.active ? 'inv-muted-row' : ''}>
+              <tr key={`${c.adminId || 'global'}:${String(c.id)}`} className={!c.active ? 'inv-muted-row' : ''}>
+                {showBusiness && <td><BusinessCell adminId={c.adminId} businesses={businesses} /></td>}
                 <td>
                   <span className="t-cell-name">
                     <strong className="mono">{c.code}</strong>

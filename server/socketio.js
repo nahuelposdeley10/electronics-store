@@ -37,6 +37,7 @@ function stockStatus(stock, minStock) {
 function stockPayload(product, event = 'updated') {
   return {
     productId: product.id,
+    adminId: product.adminId ? String(product.adminId) : null,
     name: product.name,
     stock: product.stock,
     minStock: product.minStock || 0,
