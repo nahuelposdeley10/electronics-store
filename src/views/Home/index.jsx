@@ -96,8 +96,8 @@ export default function Home({ onView }) {
       (p) => p.onSale && p.oldPrice && p.oldPrice > p.price,
     )
     return onSale.length > 0
-      ? { title: 'Ofertas de la semana', items: onSale.slice(0, 4), demo: false }
-      : { title: 'Ofertas de la semana', items: DEMO_PRODUCTS.slice(0, 4), demo: true }
+      ? { title: 'Ofertas de la semana', items: onSale.slice(0, 5), demo: false }
+      : { title: 'Ofertas de la semana', items: DEMO_PRODUCTS.slice(0, 5), demo: true }
   }, [visibleProducts])
 
   const newest = useMemo(() => {
