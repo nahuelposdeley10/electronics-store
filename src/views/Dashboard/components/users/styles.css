@@ -379,11 +379,39 @@
 
 .biz-card-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .biz-card-actions .ghost-btn svg { width: 14px; height: 14px; }
-.business-editor { margin-bottom: 18px; }
-.business-editor-status { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 0 0 18px; }
-.business-editor-form { max-width: 760px; }
+.business-editor-modal {
+  position: fixed;
+  z-index: 70;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(11, 21, 31, .56);
+  backdrop-filter: blur(4px);
+  overscroll-behavior: contain;
+}
+.business-editor {
+  width: min(760px, 100%);
+  max-height: min(88vh, 780px);
+  margin: 0;
+  overflow: auto;
+  border-color: var(--gal-line-strong);
+  border-radius: 14px;
+  background: var(--gal-white);
+  box-shadow: 0 24px 70px rgba(11, 21, 31, .28);
+}
+.business-editor .dash-card-head {
+  position: sticky;
+  z-index: 1;
+  top: 0;
+  background: var(--gal-white);
+}
+.business-editor-status { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 0; padding: 18px 16px 0; }
+.business-editor-form { max-width: none; padding: 18px 16px 16px; }
 .business-editor-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
 @media (max-width: 620px) {
+  .business-editor-modal { align-items: end; padding: 10px; }
+  .business-editor { max-height: 92vh; border-radius: 12px; }
   .business-editor .dash-card-head { align-items: flex-start; gap: 12px; }
   .business-editor-actions { align-items: stretch; flex-direction: column; }
   .business-editor-actions button { width: 100%; justify-content: center; }

@@ -40,6 +40,18 @@ function BusinessAdminEditor({ business, onClose, onUpdated }) {
 
   const updateLocal = (patch) => onUpdated({ ...business, ...patch })
 
+  useEffect(() => {
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape' && !saving && !action) onClose()
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [action, onClose, saving])
+
+  const requestClose = () => {
+    if (!saving && !action) onClose()
+  }
+
   const submit = async (event) => {
     event.preventDefault()
     if (!canSave || saving) return
@@ -106,13 +118,16 @@ function BusinessAdminEditor({ business, onClose, onUpdated }) {
   }
 
   return (
-    <section className="dash-card business-editor">
+    <div className="business-editor-modal" role="presentation" onMouseDown={(event) => {
+      if (event.target === event.currentTarget) requestClose()
+    }}>
+      <section className="dash-card business-editor" role="dialog" aria-modal="true" aria-labelledby="business-editor-title">
       <div className="dash-card-head">
         <div>
           <span className="dash-eyebrow">Editar negocio</span>
-          <h2>{business.storeName || business.name}</h2>
+          <h2 id="business-editor-title">{business.storeName || business.name}</h2>
         </div>
-        <button type="button" className="ghost-btn" onClick={onClose}>
+        <button type="button" className="ghost-btn" onClick={requestClose} disabled={saving || Boolean(action)}>
           <IconCross />
           Cerrar
         </button>
@@ -163,7 +178,8 @@ function BusinessAdminEditor({ business, onClose, onUpdated }) {
           </button>
         </div>
       </form>
-    </section>
+      </section>
+    </div>
   )
 }
 

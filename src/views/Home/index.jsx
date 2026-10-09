@@ -4,7 +4,7 @@ import ProductCard from '@/components/ProductCard'
 import { formatARS } from '@/data/format'
 import { useSiteSettings, mergeSettings } from '@/lib/siteSettings'
 import { IconArrow, IconCheck, IconBolt } from '@/components/Icons'
-import { DEMO_BRANDS, DEMO_PRODUCTS } from '@/data/demoCatalog.js'
+import { DEMO_BRANDS, DEMO_PRODUCTS, DEMO_SECTION_SIZE } from '@/data/demoCatalog.js'
 import GallerySection from './components/GallerySection'
 
 import './styles.css'
@@ -96,15 +96,15 @@ export default function Home({ onView }) {
       (p) => p.onSale && p.oldPrice && p.oldPrice > p.price,
     )
     return onSale.length > 0
-      ? { title: 'Ofertas de la semana', items: onSale.slice(0, 5), demo: false }
-      : { title: 'Ofertas de la semana', items: DEMO_PRODUCTS.slice(0, 5), demo: true }
+      ? { title: 'Ofertas de la semana', items: onSale.slice(0, DEMO_SECTION_SIZE), demo: false }
+      : { title: 'Ofertas de la semana', items: DEMO_PRODUCTS.slice(0, DEMO_SECTION_SIZE), demo: true }
   }, [visibleProducts])
 
   const newest = useMemo(() => {
     const newArrivals = visibleProducts.filter((p) => p.badge === 'Nuevo')
     return newArrivals.length
-      ? { title: 'Recién llegados', items: newArrivals.slice(0, 5), demo: false }
-      : { title: 'Recién llegados', items: DEMO_PRODUCTS.slice(2, 7), demo: true }
+      ? { title: 'Recién llegados', items: newArrivals.slice(0, DEMO_SECTION_SIZE), demo: false }
+      : { title: 'Recién llegados', items: DEMO_PRODUCTS.slice(DEMO_SECTION_SIZE, DEMO_SECTION_SIZE * 2), demo: true }
   }, [visibleProducts])
   const showOffersSection = appearance.showOffers || topDeals.demo
   const showNewArrivalsSection = appearance.showNewArrivals || newest.demo
