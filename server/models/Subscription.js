@@ -23,6 +23,8 @@ const schema = new mongoose.Schema({
   status: { type: String, enum: ['unconfigured', 'trial', 'active', 'paused', 'cancelled'], default: 'unconfigured' },
   trialEndedEmailSentAt: { type: Date, default: null },
   paymentFailureEmailSentAt: { type: Date, default: null },
+  graceReminderDueDate: { type: String, default: '' },
+  graceSuspensionDueDate: { type: String, default: '' },
   pausedAt: { type: Date, default: null },
   pauseReason: { type: String, enum: ['', 'trial_expired', 'payment_failed', 'manual'], default: '' },
   revision: { type: Number, default: 0 },

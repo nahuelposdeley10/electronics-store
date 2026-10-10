@@ -1,3 +1,4 @@
+import { paidSubscriptionExpired } from '../lib/subscriptions.js'
 import jwt from 'jsonwebtoken'
 import { env } from '../config/env.js'
 import { User } from '../models/User.js'
@@ -66,10 +67,12 @@ export async function requireSubscriptionAccess(req, res, next) {
   if (!adminId) return res.status(403).json({ error: 'No se pudo resolver el negocio de la cuenta' })
 
   try {
-    const subscription = await Subscription.findOne({ adminId }).select('status pauseReason').lean()
-    if (subscription && ['paused', 'cancelled'].includes(subscription.status)) {
+    const subscription = await Subscription.findOne({ adminId }).select('status pauseReason dueDate').lean()
+    if (subscription && (['paused', 'cancelled'].includes(subscription.status) || paidSubscriptionExpired(subscription))) {
       return res.status(402).json({
-        error: subscription.pauseReason === 'trial_expired'
+        error: paidSubscriptionExpired(subscription)
+          ? 'Tu suscripci?n venci? y termin? el per?odo de gracia de 5 d?as. Regulariz? el pago para continuar.'
+          : subscription.pauseReason === 'trial_expired'
           ? 'La prueba gratuita terminó. Activá la suscripción para continuar.'
           : 'El plan está pausado. Activá la suscripción para continuar.',
         code: 'SUBSCRIPTION_REQUIRED',

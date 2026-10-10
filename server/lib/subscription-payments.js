@@ -1,5 +1,5 @@
 import { Subscription } from '../models/Subscription.js'
-import { subscriptionToday } from './subscriptions.js'
+import { subscriptionToday, nextMonthlyDueDate } from './subscriptions.js'
 
 function providerDate(value) {
   const parsed = value ? new Date(value) : new Date()
@@ -56,7 +56,7 @@ export async function recordSubscriptionPayment({ invoice = null, payment = null
   }
 
   const paidAt = subscriptionToday(lastPaymentAt)
-  const dueDate = nextSubscriptionDueDate(lastPaymentAt)
+  const dueDate = nextMonthlyDueDate(subscription.dueDate && subscription.status === 'active' ? subscription.dueDate : paidAt, paidAt)
   const entry = {
     requestId: `mercadopago-${providerPaymentId}`,
     amount,

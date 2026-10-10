@@ -1,5 +1,35 @@
 import { normalizePlanCode } from './plans.js'
 
+// Cinco dias corridos de gracia para planes pagos; las pruebas no tienen gracia.
+export const PAID_GRACE_DAYS = 5
+export function paidGraceDeadline(dueDate) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(dueDate || ''))) return ''
+  const date = new Date(`${dueDate}T00:00:00Z`)
+  if (!Number.isFinite(date.getTime())) return ''
+  date.setUTCDate(date.getUTCDate() + PAID_GRACE_DAYS)
+  return date.toISOString().slice(0, 10)
+}
+export function paidSubscriptionExpired(subscription, today = subscriptionToday()) {
+  return subscription?.status === 'active' && Boolean(subscription.dueDate) && paidGraceDeadline(subscription.dueDate) < today
+}
+
+// Mantiene el dia de cobro original, incluso al pagar durante la gracia.
+export function nextMonthlyDueDate(previousDueDate, paidAt) {
+  const base = date(previousDueDate || paidAt)
+  const paid = date(paidAt)
+  const anchorDay = Number(base.slice(8, 10))
+  let year = Number(base.slice(0, 4))
+  let month = Number(base.slice(5, 7))
+  for (let i = 0; i < 120; i += 1) {
+    month += 1
+    if (month > 12) { month = 1; year += 1 }
+    const last = new Date(Date.UTC(year, month, 0)).getUTCDate()
+    const next = `${year}-${String(month).padStart(2, '0')}-${String(Math.min(anchorDay, last)).padStart(2, '0')}`
+    if (next > paid) return next
+  }
+  invalid('Fecha de pago fuera de rango')
+}
+
 export const subscriptionDefaults = { planCode: '', plan: '', price: 0, dueDate: '', status: 'unconfigured', revision: 0 }
 
 export function subscriptionToday(now = new Date()) {
@@ -31,6 +61,8 @@ export function subscriptionSummary(raw, today = subscriptionToday()) {
     status,
     revision,
     effectiveStatus,
+    graceDeadline: status === 'active' && dueDate ? paidGraceDeadline(dueDate) : '',
+    graceDays: PAID_GRACE_DAYS,
     currency: 'ARS',
   }
 }
@@ -55,7 +87,8 @@ export function validateSubscriptionPayment(body, current, recordedBy) {
   if (typeof body?.requestId !== 'string' || !/^[a-zA-Z0-9-]{16,80}$/.test(body.requestId)) invalid('Identificador de pago inválido')
   if (!['transferencia', 'efectivo', 'otro'].includes(body.method)) invalid('Medio de pago inválido')
   const paidAt = date(body.paidAt)
-  const dueDate = date(body.dueDate)
+  const dueDate = nextMonthlyDueDate(current.dueDate || paidAt, paidAt)
+  if (body.dueDate && date(body.dueDate) !== dueDate) invalid('El pr?ximo vencimiento se calcula autom?ticamente para conservar el d?a de cobro original')
   if (paidAt > subscriptionToday()) invalid('El pago no puede tener fecha futura')
   if (dueDate < paidAt || (current.dueDate && dueDate < current.dueDate)) invalid('El vencimiento no puede retroceder ni ser anterior al pago')
   if (typeof body.reference !== 'string' || body.reference.length > 200) invalid('Referencia inválida (máximo 200 caracteres)')

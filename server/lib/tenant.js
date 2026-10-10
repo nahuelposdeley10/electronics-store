@@ -1,3 +1,4 @@
+import { paidSubscriptionExpired } from './subscriptions.js'
 import mongoose from 'mongoose'
 import { User } from '../models/User.js'
 import { Subscription } from '../models/Subscription.js'
@@ -57,8 +58,8 @@ export async function slugToAdminId(slug) {
     .lean()
   if (!admin) return null
 
-  const subscription = await Subscription.findOne({ adminId: admin._id }).select('status').lean()
-  if (subscription && ['paused', 'cancelled'].includes(subscription.status)) return null
+  const subscription = await Subscription.findOne({ adminId: admin._id }).select('status dueDate').lean()
+  if (subscription && (['paused', 'cancelled'].includes(subscription.status) || paidSubscriptionExpired(subscription))) return null
   return admin._id
 }
 

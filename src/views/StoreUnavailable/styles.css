@@ -1,3 +1,9 @@
 .store-unavailable { min-height: 70vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; padding: 32px; text-align: center; }
 .store-unavailable h1 { font-size: clamp(28px, 5vw, 48px); }
 .store-unavailable p { color: var(--gal-ink-soft); }
+
+.store-unavailable { max-width:680px; margin:0 auto; }
+.store-unavailable-icon { width:72px; height:72px; display:grid; place-items:center; border-radius:20px; background:var(--gal-panel-2); color:var(--gal-ink); }
+.store-unavailable-icon svg { width:34px; height:34px; }
+.store-unavailable p { max-width:440px; line-height:1.7; }
+.store-unavailable button { display:inline-flex; align-items:center; gap:9px; }

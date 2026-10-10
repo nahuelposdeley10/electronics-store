@@ -2,17 +2,32 @@ import { useEffect, useState } from 'react'
 import { apiGet, apiPost, apiPut } from '@/lib/api'
 import { formatARS } from '@/data/format'
 import { BUSINESS_PLANS } from '@/data/plans'
+import { IconBack, IconRefresh, IconCard, IconReceipt, IconWarning } from '@/components/Icons'
 import { useToast } from '@/context/useToast'
 import './styles.css'
 
 const LABELS = { unconfigured: 'Sin configurar', trial: 'En prueba', active: 'Activa', overdue: 'Vencida', paused: 'Pausada', cancelled: 'Cancelada' }
 const displayDate = (value) => value ? value.split('-').reverse().join('/') : 'Sin fecha'
 const displayDateTime = (value) => value ? new Intl.DateTimeFormat('es-AR', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value)) : 'Sin pagos todavía'
-const today = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Argentina/Buenos_Aires', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
+const nextDue = (due, paid) => {
+  const base = due || paid
+  if (!base || !paid) return ''
+  const day = Number(base.slice(8, 10))
+  let [year, month] = base.slice(0, 7).split('-').map(Number)
+  for (let i = 0; i < 120; i += 1) {
+    month += 1
+    if (month > 12) { month = 1; year += 1 }
+    const last = new Date(Date.UTC(year, month, 0)).getUTCDate()
+    const candidate = `${year}-${String(month).padStart(2, '0')}-${String(Math.min(day, last)).padStart(2, '0')}`
+    if (candidate > paid) return candidate
+  }
+  return ''
+}
+const today = () new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Argentina/Buenos_Aires', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
 
 function SubscriptionForms({ data, business, onChange }) {
   const [form, setForm] = useState({ planCode: data.planCode || '', plan: data.plan, price: data.price, status: data.status === 'unconfigured' ? 'trial' : data.status, dueDate: data.dueDate })
-  const [payment, setPayment] = useState(() => ({ requestId: crypto.randomUUID(), amount: data.price || '', paidAt: today(), dueDate: data.dueDate, method: 'transferencia', reference: '' }))
+  const [payment, setPayment] = useState(() => ({ requestId: crypto.randomUUID(), amount: data.price || '', paidAt: today(), dueDate: nextDue(data.dueDate, today()), method: 'transferencia', reference: '' }))
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const { showToast } = useToast()
@@ -30,7 +45,7 @@ function SubscriptionForms({ data, business, onChange }) {
     setError('')
     try {
       const result = isPayment
-        ? await apiPost(`${path}/payments`, { ...payment, amount: Number(payment.amount), revision: data.revision })
+        ? await apiPost(`${path}/payments`, { ...payment, dueDate: nextDue(data.dueDate, payment.paidAt), amount: Number(payment.amount), revision: data.revision })
         : await apiPut(path, { ...form, price: Number(form.price), revision: data.revision })
       onChange(result)
       showToast(isPayment ? 'Pago registrado y vencimiento actualizado.' : 'Suscripción guardada.', 'success')
@@ -40,7 +55,7 @@ function SubscriptionForms({ data, business, onChange }) {
     {error && <p className="subscription-error" role="alert">{error}</p>}
     <div className="subscription-forms">
       <form onSubmit={(event) => save(event, false)} className="subscription-card">
-        <h2>Plan del negocio</h2>
+        <h2><IconCard /> Plan del negocio</h2>
         <fieldset disabled={busy}>
           <label>Plan<select value={form.planCode} onChange={changePlan} required>
             <option value="">Elegí un plan…</option>
@@ -55,13 +70,13 @@ function SubscriptionForms({ data, business, onChange }) {
         </fieldset>
       </form>
       <form onSubmit={(event) => save(event, true)} className="subscription-card">
-        <h2>Registrar pago manual</h2>
+        <h2><IconReceipt /> Registrar pago manual</h2>
         <p>Registrá un cobro recibido. El pago deja la suscripción activa con el vencimiento que indiques.</p>
         {!data.plan && <p>Primero guardá el plan del negocio.</p>}
         <fieldset disabled={busy || !data.plan}>
           <label>Importe cobrado (ARS)<input type="number" min="0.01" max="100000000" step="0.01" value={payment.amount} onChange={change(setPayment, 'amount')} required /></label>
           <label>Fecha del pago<input type="date" max={today()} value={payment.paidAt} onChange={change(setPayment, 'paidAt')} required /></label>
-          <label>Nuevo vencimiento<input type="date" min={data.dueDate > payment.paidAt ? data.dueDate : payment.paidAt} value={payment.dueDate} onChange={change(setPayment, 'dueDate')} required /></label>
+          <label>Nuevo vencimiento<input type="date" value={nextDue(data.dueDate, payment.paidAt)} readOnly required /></label>
           <label>Medio de pago<select value={payment.method} onChange={change(setPayment, 'method')}>
             <option value="transferencia">Transferencia</option><option value="efectivo">Efectivo</option><option value="otro">Otro</option>
           </select></label>
@@ -77,13 +92,15 @@ export default function Subscription({ business, onBack, onUpdated }) {
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
   const [reload, setReload] = useState(0)
+  const [loading, setLoading] = useState(true)
   const [billingBusy, setBillingBusy] = useState(false)
   const [billingError, setBillingError] = useState('')
   useEffect(() => {
     let alive = true
-    apiGet(`/api/admin/subscriptions/${business.id}`).then((result) => { if (alive) { setData(result); setError('') } }).catch((err) => { if (alive) setError(err.message) })
+    apiGet(`/api/admin/subscriptions/${business.id}`).then((result) => { if (alive) { setData(result); setError(''); setLoading(false) } }).catch((err) => { if (alive) { setError(err.message); setLoading(false) } })
     return () => { alive = false }
   }, [business.id, reload])
+  const refresh = () => { setLoading(true); setReload((n) => n + 1) }
   const update = (result) => { setData(result); onUpdated(result) }
   const createBillingLink = async () => {
     setBillingBusy(true); setBillingError('')
@@ -93,14 +110,14 @@ export default function Subscription({ business, onBack, onUpdated }) {
   }
   return <div className="dash-screen">
     <header className="dash-head"><div><span className="dash-eyebrow">Superadmin · Suscripciones</span><h1>{business.storeName}</h1></div></header>
-    <div className="dash-toolbar"><button type="button" className="ghost-btn" onClick={onBack}>Volver a negocios</button><button type="button" className="ghost-btn" onClick={() => setReload((n) => n + 1)}>Actualizar datos</button></div>
+    <div className="dash-toolbar"><button type="button" className="ghost-btn" onClick={onBack}><IconBack /> Volver a negocios</button><button type="button" className="ghost-btn" onClick={refresh} disabled={loading}><IconRefresh /> {loading ? 'Actualizando?' : 'Actualizar datos'}</button></div>
     <p className="list-note">Administración del abono mensual. El local autoriza el débito desde Mercado Pago y el sistema actualiza el estado y el historial con cada notificación.</p>
     {error && <p role="alert" className="subscription-error">{error}</p>}
     {billingError && <p role="alert" className="subscription-error">{billingError}</p>}
     {!data && !error && <p role="status">Cargando suscripción…</p>}
     {data && <>
       <p className="subscription-summary"><strong>{LABELS[data.effectiveStatus]}</strong> · {data.plan || 'Sin plan'} · {formatARS(data.price)} / mes · Próximo vencimiento: {displayDate(data.dueDate)}</p>
-      {data.effectiveStatus === 'paused' || data.effectiveStatus === 'cancelled' || data.effectiveStatus === 'overdue' ? <div className="subscription-alert"><strong>{LABELS[data.effectiveStatus]}</strong><span>El acceso queda restringido hasta confirmar el pago o reactivar la suscripción.</span></div> : null}
+      {data.effectiveStatus === 'paused' || data.effectiveStatus === 'cancelled' || data.effectiveStatus === 'overdue' ? <div className="subscription-alert" role="status"><strong><IconWarning /> {LABELS[data.effectiveStatus]}</strong><span>El acceso queda restringido hasta confirmar el pago o reactivar la suscripción.</span></div> : null}
       <section className="subscription-metrics" aria-label="Estado del cobro">
         <div><span>Último pago</span><strong>{displayDateTime(data.billing?.lastPaymentAt)}</strong></div>
         <div><span>Estado del último pago</span><strong>{data.billing?.lastPaymentStatus || 'Sin cobros automáticos'}</strong></div>
@@ -108,7 +125,7 @@ export default function Subscription({ business, onBack, onUpdated }) {
       </section>
       <section className="subscription-card subscription-billing"><h2>Cobro automático</h2><p>Generá un enlace de Mercado Pago para que el local autorice o actualice el débito mensual.</p><button type="button" className="primary-btn" disabled={billingBusy || !data.plan || !data.price} onClick={createBillingLink}>{billingBusy ? 'Generando…' : data.billing?.initPoint ? 'Regenerar enlace de suscripción' : 'Generar enlace de suscripción'}</button>{data.billing?.initPoint && <a className="ghost-btn" href={data.billing.initPoint} target="_blank" rel="noreferrer">Abrir enlace de autorización</a>}</section>
       <SubscriptionForms key={`${data.revision}-${reload}`} data={data} business={business} onChange={update} />
-      <section className="subscription-card"><h2>Historial de pagos ({data.payments.length})</h2>
+      <section className="subscription-card"><h2><IconReceipt /> Historial de pagos <span className="subscription-count">{data.payments.length}</span></h2>
         {!data.payments.length ? <p>Todavía no hay pagos registrados.</p> : <div className="subscription-history"><table className="table"><thead><tr><th>Fecha</th><th>Plan</th><th>Importe</th><th>Medio</th><th>Referencia</th><th>Vencimiento</th></tr></thead><tbody>
           {data.payments.map((p) => <tr key={p.requestId}><td>{displayDate(p.paidAt)}</td><td>{p.plan}</td><td>{formatARS(p.amount)}</td><td>{p.method === 'mercadopago' ? 'Mercado Pago' : p.method}</td><td>{p.reference || '—'}</td><td>{displayDate(p.dueDate)}</td></tr>)}
         </tbody></table></div>}
