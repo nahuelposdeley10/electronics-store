@@ -109,6 +109,32 @@ function validatePem(value, type) {
   return text
 }
 
+export function hasValidCuitCheckDigit(value) {
+  const cuit = String(value || '').replace(/\D/g, '')
+  if (cuit.length !== 11) return false
+  const weights = [5, 4, 3, 2, 7, 6, 5, 4, 3, 2]
+  const sum = weights.reduce((total, weight, index) => total + Number(cuit[index]) * weight, 0)
+  let checkDigit = 11 - (sum % 11)
+  if (checkDigit === 11) checkDigit = 0
+  if (checkDigit === 10) checkDigit = 9
+  return checkDigit === Number(cuit[10])
+}
+
+export function extractArcaPointOfSales(xml) {
+  return tags(xml, 'PtoVenta')
+    .map((block) => Number(tag(block, 'Nro')))
+    .filter((number) => Number.isInteger(number) && number > 0)
+}
+
+export function assertArcaPointOfSale(xml, pointOfSale) {
+  const selected = Number(pointOfSale)
+  const available = extractArcaPointOfSales(xml)
+  if (!available.includes(selected)) {
+    throw new ArcaError(`El punto de venta ${String(pointOfSale).padStart(5, '0')} no está habilitado para este CUIT en ARCA`)
+  }
+  return available
+}
+
 export async function getArcaStatus(tenant) {
   const doc = await ArcaCredential.findOne({ adminId: tenant }).lean()
   return credentialSummary(doc)
@@ -123,6 +149,8 @@ export async function saveArcaCredentials({ tenant, input = {} }) {
     : current?.defaultType || 'B'
   const pointOfSale = String(input.pointOfSale || current?.pointOfSale || '').replace(/\D/g, '').slice(0, 5)
   if (cuit.length !== 11) throw new ArcaError('El CUIT ARCA debe tener 11 dígitos')
+  if (!hasValidCuitCheckDigit(cuit)) throw new ArcaError('El dígito verificador del CUIT ARCA no es válido')
+  if (!pointOfSale || Number(pointOfSale) < 1) throw new ArcaError('Configurá un punto de venta ARCA válido')
 
   const certificate = String(input.certificatePem || '').trim()
     ? encryptArcaSecret(validatePem(input.certificatePem, 'El certificado'))
@@ -253,8 +281,12 @@ async function wsfe(credential, action, body, forceAuth = false) {
 
 export async function testArcaConnection(tenant) {
   const credential = await loadCredential(tenant)
+  if (!credential.pointOfSale || Number(credential.pointOfSale) < 1) {
+    throw new ArcaError('Configurá un punto de venta ARCA válido antes de probar la conexión')
+  }
   const xml = await wsfe(credential, 'FEParamGetPtosVenta', '<ar:FEParamGetPtosVentaReq/>')
-  return { ok: true, environment: credential.environment, pointOfSaleCount: tags(xml, 'PtoVenta').length }
+  const pointOfSales = assertArcaPointOfSale(xml, credential.pointOfSale)
+  return { ok: true, environment: credential.environment, pointOfSaleCount: pointOfSales.length }
 }
 
 function invoiceAmounts(order, settings, type) {

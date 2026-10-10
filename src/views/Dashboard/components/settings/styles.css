@@ -245,6 +245,19 @@
 .arca-settings-block h3 { margin: 5px 0 0; color: var(--gal-ink); font-size: 17px; }
 .arca-settings-form { display: grid; gap: 14px; }
 .arca-settings-form textarea { width: 100%; min-height: 92px; resize: vertical; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; line-height: 1.45; }
+.arca-help-card { display: grid; gap: 14px; padding: 16px; border: 1px solid #c9dceb; border-radius: 10px; background: linear-gradient(135deg, #f5faff, #fff); }
+.arca-help-head { display: grid; gap: 5px; }
+.arca-help-head h4 { margin: 4px 0 0; color: var(--gal-ink); font-size: 15px; }
+.arca-help-head p { max-width: 78ch; margin: 4px 0 0; color: var(--gal-ink-soft); font-size: 12px; line-height: 1.5; }
+.arca-resource-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.arca-resource { display: grid; gap: 6px; padding: 12px; border: 1px solid #d8e6f2; border-radius: 8px; background: rgba(255, 255, 255, .78); color: inherit; text-decoration: none; transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease; }
+.arca-resource:hover, .arca-resource:focus-visible { border-color: #73a9d1; box-shadow: 0 7px 18px rgba(30, 91, 135, .1); transform: translateY(-1px); }
+.arca-resource strong { color: var(--gal-ink); font-size: 12.5px; }
+.arca-resource span { color: var(--gal-ink-soft); font-size: 11.5px; line-height: 1.45; }
+.arca-resource small { display: inline-flex; align-items: center; gap: 5px; color: #17689b; font-size: 11px; font-weight: 800; }
+.arca-resource small svg { width: 13px; height: 13px; transform: rotate(-45deg); }
+.arca-help-note { margin: 0; padding-top: 11px; border-top: 1px solid #d8e6f2; color: var(--gal-ink-faint); font-size: 11px; line-height: 1.5; }
+.arca-help-note strong { color: var(--gal-ink-soft); }
 .arca-enable-row { align-items: flex-start; }
 .arca-enable-row small { display: block; margin-top: 4px; color: var(--gal-ink-soft); font-weight: 500; line-height: 1.45; }
 .arca-settings-actions { display: flex; flex-wrap: wrap; gap: 10px; }
@@ -273,6 +286,15 @@
 .theme-dark .mp-credentials-guide-steps small { color: #a9bbce; }
 .theme-dark .mp-credentials-guide-steps code { color: #8fc6ff; }
 .theme-dark .mp-credentials-safety { border-top-color: #2c4a66; color: #91a6bc; }
+.theme-dark .arca-help-card { border-color: #315675; background: linear-gradient(135deg, #142b42, #112237); }
+.theme-dark .arca-help-head h4 { color: #edf6ff; }
+.theme-dark .arca-help-head p, .theme-dark .arca-resource span { color: #aec1d4; }
+.theme-dark .arca-resource { border-color: #2c4a66; background: rgba(24, 48, 72, .82); }
+.theme-dark .arca-resource:hover, .theme-dark .arca-resource:focus-visible { border-color: #6b9dc4; box-shadow: 0 7px 18px rgba(2, 9, 17, .25); }
+.theme-dark .arca-resource strong { color: #e7f1fb; }
+.theme-dark .arca-resource small { color: #8fc6ff; }
+.theme-dark .arca-help-note { border-top-color: #2c4a66; color: #91a6bc; }
+.theme-dark .arca-help-note strong { color: #aec1d4; }
 @media (max-width: 980px) {
   .settings-live-layout { grid-template-columns: 1fr; }
   .set-contact-top-grid { grid-template-columns: 1fr; }
@@ -282,4 +304,5 @@
   .mp-credentials-guide-head { flex-direction: column; }
   .mp-credentials-guide-steps { grid-template-columns: 1fr; }
   .mp-credentials-guide-actions a { width: 100%; justify-content: center; }
+  .arca-resource-grid { grid-template-columns: 1fr; }
 }

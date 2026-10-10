@@ -142,6 +142,38 @@ function ArcaSetup({ tenantSelected = true }) {
       <p className="set-hint">Cada negocio usa su propio CUIT, certificado y clave privada. Las credenciales se cifran en la base y nunca vuelven a mostrarse.</p>
       {status?.lastTestStatus === 'error' && <p className="settings-warn fiscal-settings-note">Última prueba fallida: {status.lastError || 'revisá el certificado, la clave y la delegación WSFEv1.'}</p>}
       {status?.lastTestStatus === 'ok' && <p className="settings-ok fiscal-settings-note">Última prueba correcta contra ARCA.</p>}
+      <div className="arca-help-card">
+        <div className="arca-help-head">
+          <div>
+            <span className="dash-eyebrow">Guía rápida</span>
+            <h4>¿Dónde encuentro estos datos?</h4>
+            <p>Los formularios de ARCA aparecen dentro de tu sesión de Clave Fiscal. Abrí el portal y buscá el servicio indicado.</p>
+          </div>
+        </div>
+        <div className="arca-resource-grid">
+          <a className="arca-resource" href="https://portalcf.cloud.afip.gob.ar/portal/app/mis-servicios" target="_blank" rel="noopener noreferrer">
+            <strong>Mis servicios ARCA</strong>
+            <span>Entrá a Administrador de Certificados, Administrador de Relaciones y Comprobantes en Línea.</span>
+            <small>Abrir portal autenticado <IconArrow /></small>
+          </a>
+          <a className="arca-resource" href="https://www.arca.gob.ar/ws/WSASS/html/introduccion.html" target="_blank" rel="noopener noreferrer">
+            <strong>Homologación · WSASS</strong>
+            <span>Creá el certificado de prueba y autorizá el servicio para probar sin emitir en producción.</span>
+            <small>Ver guía oficial <IconArrow /></small>
+          </a>
+          <a className="arca-resource" href="https://www.arca.gob.ar/ws/documentacion/certificados.asp" target="_blank" rel="noopener noreferrer">
+            <strong>Certificados y delegación</strong>
+            <span>Consultá cómo obtener el certificado productivo y asociarlo a Facturación Electrónica.</span>
+            <small>Ver documentación oficial <IconArrow /></small>
+          </a>
+          <a className="arca-resource" href="https://servicioscf.afip.gob.ar/publico/sitio/contenido/novedad/ver.aspx?id=5178" target="_blank" rel="noopener noreferrer">
+            <strong>Punto de venta</strong>
+            <span>Usá Administración de puntos de venta y domicilios → A/B/M de puntos de venta.</span>
+            <small>Ver instrucciones <IconArrow /></small>
+          </a>
+        </div>
+        <p className="arca-help-note"><strong>Importante:</strong> la clave privada se genera y se conserva de forma segura en tu equipo; ARCA entrega el certificado público. En Tienda BNP se cargan ambos archivos PEM.</p>
+      </div>
       <form className="arca-settings-form" onSubmit={save}>
         <div className="set-row">
           <label className="inv-field"><span>Ambiente</span><select value={form.environment} onChange={set('environment')}><option value="homologation">Homologación / pruebas</option><option value="production">Producción</option></select></label>
