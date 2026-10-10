@@ -1068,6 +1068,41 @@ body:has(.dash.theme-dark),
   color-scheme: dark;
   background: radial-gradient(circle at 78% -10%, rgba(45, 139, 255, .14), transparent 34rem), #0d1826;
 }
+.dash.theme-dark .dash-unlock {
+  color: var(--gal-ink);
+  background: radial-gradient(circle at 50% 24%, rgba(45, 139, 255, .12), transparent 30rem), linear-gradient(135deg, #0d1826 0%, #102437 55%, #0d2c35 100%);
+}
+.dash.theme-dark .dash-unlock::before {
+  opacity: .28;
+  background-image: linear-gradient(rgba(88, 166, 255, .08) 1px, transparent 1px), linear-gradient(90deg, rgba(88, 166, 255, .08) 1px, transparent 1px);
+}
+.dash.theme-dark .unlock-login {
+  border-color: #31506b;
+  background: rgba(21, 38, 58, .94);
+  color: var(--gal-ink);
+  box-shadow: 0 24px 54px rgba(2, 9, 17, .3), 0 3px 8px rgba(2, 9, 17, .2);
+}
+.dash.theme-dark .unlock-login-brand { filter: brightness(0) invert(1); }
+.dash.theme-dark .unlock-login-mark { background: #153e49; color: #8fe8dc; }
+.dash.theme-dark .unlock-login-head h1 { color: #edf6ff; }
+.dash.theme-dark .unlock-login-head p { color: #afc0d4; }
+.dash.theme-dark .unlock-login .dash-eyebrow { color: #7fe1d1; }
+.dash.theme-dark .unlock-login form label { color: #b8c9d9; }
+.dash.theme-dark .unlock-login input {
+  border-color: #35506c;
+  background: #101f31;
+  color: #edf6ff;
+}
+.dash.theme-dark .unlock-login input::placeholder { color: #71869d; }
+.dash.theme-dark .unlock-login input:hover { border-color: #6b9dc4; }
+.dash.theme-dark .unlock-login input:focus {
+  border-color: #58c6b2;
+  background: #13283d;
+  box-shadow: 0 0 0 3px rgba(88, 198, 178, .18);
+}
+.dash.theme-dark .unlock-hint { color: #829ab1; }
+.dash.theme-dark .unlock-footer { border-top-color: rgba(161, 190, 219, .16); color: #91a8bf; }
+.dash.theme-dark .unlock-footer small { color: #829ab1; }
 .dash.theme-dark .dash-side {
   background: linear-gradient(180deg, #142b43 0%, #10253a 55%, #0e2134 100%);
   border-color: #27445f;
