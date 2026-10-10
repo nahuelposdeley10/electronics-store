@@ -23,7 +23,7 @@ const nextDue = (due, paid) => {
   }
   return ''
 }
-const today = () new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Argentina/Buenos_Aires', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
+const today = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Argentina/Buenos_Aires', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())
 
 function SubscriptionForms({ data, business, onChange }) {
   const [form, setForm] = useState({ planCode: data.planCode || '', plan: data.plan, price: data.price, status: data.status === 'unconfigured' ? 'trial' : data.status, dueDate: data.dueDate })
@@ -110,7 +110,7 @@ export default function Subscription({ business, onBack, onUpdated }) {
   }
   return <div className="dash-screen">
     <header className="dash-head"><div><span className="dash-eyebrow">Superadmin · Suscripciones</span><h1>{business.storeName}</h1></div></header>
-    <div className="dash-toolbar"><button type="button" className="ghost-btn" onClick={onBack}><IconBack /> Volver a negocios</button><button type="button" className="ghost-btn" onClick={refresh} disabled={loading}><IconRefresh /> {loading ? 'Actualizando?' : 'Actualizar datos'}</button></div>
+    <div className="dash-toolbar"><button type="button" className="ghost-btn" onClick={onBack}><IconBack /> Volver a negocios</button><button type="button" className="ghost-btn" onClick={refresh} disabled={loading}><IconRefresh /> {loading ? 'Actualizando…' : 'Actualizar datos'}</button></div>
     <p className="list-note">Administración del abono mensual. El local autoriza el débito desde Mercado Pago y el sistema actualiza el estado y el historial con cada notificación.</p>
     {error && <p role="alert" className="subscription-error">{error}</p>}
     {billingError && <p role="alert" className="subscription-error">{billingError}</p>}

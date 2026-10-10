@@ -71,7 +71,7 @@ export async function requireSubscriptionAccess(req, res, next) {
     if (subscription && (['paused', 'cancelled'].includes(subscription.status) || paidSubscriptionExpired(subscription))) {
       return res.status(402).json({
         error: paidSubscriptionExpired(subscription)
-          ? 'Tu suscripci?n venci? y termin? el per?odo de gracia de 5 d?as. Regulariz? el pago para continuar.'
+          ? 'Tu suscripción venció y terminó el período de gracia de 5 días. Regularizá el pago para continuar.'
           : subscription.pauseReason === 'trial_expired'
           ? 'La prueba gratuita terminó. Activá la suscripción para continuar.'
           : 'El plan está pausado. Activá la suscripción para continuar.',

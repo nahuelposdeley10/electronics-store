@@ -18,6 +18,9 @@ function buildMpServices(token) {
 }
 
 export async function getMpConfig(tenantId = null) {
+  if (!env.externalProvidersEnabled) {
+    return { configured: false, accessToken: null, webhookSecret: null, publicKey: null }
+  }
   const envConfigured = Boolean(env.mpAccessToken)
   if (!tenantId) {
     return {
@@ -54,11 +57,13 @@ export async function getMpServices(tenantId = null) {
 }
 
 export function getBillingService() {
+  if (!env.externalProvidersEnabled) return null
   const token = String(env.mpAccessToken || '').trim()
   return token ? new PreApproval(new MercadoPagoConfig({ accessToken: token })) : null
 }
 
 export async function getAuthorizedPayment(id) {
+  if (!env.externalProvidersEnabled) return null
   const token = String(env.mpAccessToken || '').trim()
   if (!token) return null
 

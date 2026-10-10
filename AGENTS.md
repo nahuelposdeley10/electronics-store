@@ -110,3 +110,6 @@ código debe respetarla.
 - Las migraciones/features de negocio en `server/` suelen venir de otra sesión
   de trabajo; antes de asumir que algo está terminado, verificar con `npm test`
   y no sobrescribir archivos ajenos sin confirmar.
+## Skill de experiencia del usuario final
+
+Para cambios en navegación, dashboard, KPIs, iconos, formularios, estados, tienda pública, carrito, checkout, accesibilidad o diseño responsive, consultar y aplicar `.agents/skills/experiencia-usuario-final/SKILL.md` antes de implementar. Su objetivo es priorizar la facilidad de uso para comerciantes, empleados, superadministradores y compradores, sin alterar permisos ni lógica de negocio.

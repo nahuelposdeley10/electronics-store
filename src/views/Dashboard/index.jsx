@@ -7,7 +7,6 @@ import {
   IconBack,
   IconBox,
   IconCard,
-  IconCash,
   IconChart,
   IconChevron,
   IconInventory,
@@ -19,6 +18,27 @@ import {
   IconTicket,
   IconWrench,
   IconEye,
+  IconCart,
+  IconShield,
+  IconTruck,
+  IconReturn,
+  IconPhone,
+  IconStar,
+  IconEdit,
+  IconPlus,
+  IconStorefront,
+  IconUsers,
+  IconTags,
+  IconUpload,
+  IconSliders,
+  IconPalette,
+  IconClipboard,
+  IconHistory,
+  IconReceipt,
+  IconTrendingUp,
+  IconWallet,
+  IconWarning,
+  IconDashboard,
 } from '@/components/Icons'
 import DashboardLoading from '@/components/DashboardLoading'
 import BrandLogo from '@/components/BrandLogo'
@@ -157,7 +177,9 @@ export default function Dashboard({ onExit }) {
     if (saved === 'light' || saved === 'dark') return saved
     return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
   })
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => localStorage.getItem('ts-admin-sidebar') === 'collapsed')
   const [collapsedGroups, setCollapsedGroups] = useState(() => new Set())
+  const [expandedGroups, setExpandedGroups] = useState(() => new Set())
   const [screen, setScreen] = useState(
     () => sessionStorage.getItem('ts-admin-screen') || 'overview',
   )
@@ -165,6 +187,7 @@ export default function Dashboard({ onExit }) {
   const [gateError, setGateError] = useState('')
   const [loginAttempts, setLoginAttempts] = useState(0)
   const [overview, setOverview] = useState(null)
+  const [salesReportInitialDays, setSalesReportInitialDays] = useState(30)
   const [user, setUser] = useState(() => getSession().user)
   const [perms, setPerms] = useState(() => {
     const session = getSession()
@@ -196,12 +219,15 @@ export default function Dashboard({ onExit }) {
     if (userIsSuper || !SCREEN_PLANS[id] || !user?.planCode) return true
     return (PLAN_LEVEL[user.planCode] || 0) >= PLAN_LEVEL[SCREEN_PLANS[id]]
   }
+  const canViewOverview = userIsSuper || user?.role === 'admin' || perms.includes('sales.read') || perms.includes('reports.view')
   const canView = (id) =>
     (id !== 'onboarding' || canOnboard) &&
+    (id !== 'overview' || canViewOverview) &&
     (id !== 'settings-appearance' || userIsSuper || user?.role === 'admin') &&
     planAllows(id) &&
     (userIsSuper || !SCREEN_PERMS[id] || (perms || []).includes(SCREEN_PERMS[id]))
-  const activeScreen = canView(screen) ? screen : 'overview'
+  const fallbackScreen = canView('sales-pos') ? 'sales-pos' : canView('stock-overview') ? 'stock-overview' : 'overview'
+  const activeScreen = canView(screen) ? screen : fallbackScreen
   const tenantScreenKey = userIsSuper ? (superTenant || 'all') : (user?.id || 'own')
   const selectedBusiness = (businessOptions || []).find(
     (business) => String(business.id) === String(superTenant),
@@ -232,22 +258,37 @@ export default function Dashboard({ onExit }) {
     localStorage.setItem('ts-admin-theme', nextTheme)
   }
 
+  const toggleSidebar = () => {
+    setSidebarCollapsed((collapsed) => {
+      const next = !collapsed
+      localStorage.setItem('ts-admin-sidebar', next ? 'collapsed' : 'expanded')
+      setBusinessMenuOpen(false)
+      return next
+    })
+  }
+
   const openNavItem = (item) => {
     if (!item.children) {
       changeScreen(item.id)
       return
     }
-    const active = isNavGroupActive(item, activeScreen)
-    const expanded = active && !collapsedGroups.has(item.id)
-    setCollapsedGroups((current) => {
-      const next = new Set(current)
-      if (expanded) next.add(item.id)
-      else next.delete(item.id)
-      return next
-    })
-    if (!active) changeScreen(item.landing || item.children[0].id)
+    const expanded = !collapsedGroups.has(item.id) && (expandedGroups.has(item.id) || isNavGroupActive(item, activeScreen))
+    if (expanded) {
+      setExpandedGroups((current) => {
+        const next = new Set(current)
+        next.delete(item.id)
+        return next
+      })
+      setCollapsedGroups((current) => new Set(current).add(item.id))
+    } else {
+      setCollapsedGroups((current) => {
+        const next = new Set(current)
+        next.delete(item.id)
+        return next
+      })
+      setExpandedGroups((current) => new Set(current).add(item.id))
+    }
   }
-
   useEffect(() => {
     let alive = true
     if (!getSession().token) return undefined
@@ -392,7 +433,7 @@ export default function Dashboard({ onExit }) {
   )
 
   const NAV = [
-    { id: 'overview', label: 'Panel', icon: IconChart },
+    { id: 'overview', label: 'Panel', icon: IconDashboard },
     ...(canOnboard ? [{ id: 'onboarding', label: userIsSuper ? 'Asistir a negocio' : 'Puesta en marcha', icon: IconWrench }] : []),
     {
       id: 'products',
@@ -419,7 +460,7 @@ export default function Dashboard({ onExit }) {
     {
       id: 'sales',
       label: 'Ventas',
-      icon: IconCard,
+      icon: IconCart,
       prefix: 'sales-',
       landing: 'sales-history',
       children: [
@@ -446,7 +487,7 @@ export default function Dashboard({ onExit }) {
     {
       id: 'cash',
       label: 'Caja',
-      icon: IconCash,
+      icon: IconWallet,
       prefix: 'cash-',
       children: [
         { id: 'cash-current', label: 'Caja actual', require: 'cash.manage' },
@@ -471,7 +512,7 @@ export default function Dashboard({ onExit }) {
     {
       id: 'storefront',
       label: 'Tienda online',
-      icon: IconEye,
+      icon: IconStorefront,
       children: [
         { id: 'settings-hub', label: 'Qué querés cambiar' },
         ...STORE_PAGES,
@@ -480,7 +521,7 @@ export default function Dashboard({ onExit }) {
     {
       id: 'settings',
       label: 'Administración',
-      icon: IconWrench,
+      icon: IconShield,
       prefix: 'settings-',
       children: [
         ...(userIsSuper ? [{ id: 'settings-businesses', label: 'Negocios y administradores', require: 'users.manage' }] : []),
@@ -491,20 +532,76 @@ export default function Dashboard({ onExit }) {
     },
   ].filter((item) => !item.children || item.children.length > 0)
 
+  const navScreenIcons = {
+    products: IconBox,
+    'product-categories': IconTags,
+    'product-brands': IconStar,
+    'product-import': IconUpload,
+    'promo-coupons': IconTicket,
+    'promo-offers': IconTags,
+    'sales-pos': IconPlus,
+    'sales-history': IconHistory,
+    'sales-returns': IconReturn,
+    'sales-quotes': IconReceipt,
+    'stock-overview': IconInventory,
+    'stock-movements': IconHistory,
+    'stock-adjustments': IconSliders,
+    'stock-purchases': IconCart,
+    'stock-min': IconWarning,
+    'stock-physical': IconClipboard,
+    'cash-current': IconWallet,
+    'cash-movements': IconHistory,
+    'cash-openclose': IconLock,
+    'cash-counts': IconClipboard,
+    'report-sales': IconChart,
+    'report-products': IconBox,
+    'report-profit': IconTrendingUp,
+    'report-stock': IconInventory,
+    'report-customers': IconUsers,
+    'settings-hub': IconSliders,
+    'settings-store': IconPhone,
+    'settings-content': IconEdit,
+    'settings-appearance': IconPalette,
+    'settings-general': IconTruck,
+    'settings-businesses': IconStorefront,
+    'settings-users': IconUsers,
+    'settings-roles': IconShield,
+    'settings-payments': IconCard,
+  }
   const visibleNav = NAV.map((item) => ({
     ...item,
     children: item.children ? item.children.filter((child) => canView(child.id)) : undefined,
   })).filter((item) => !item.children || item.children.length > 0)
 
+  const navSections = [
+    { label: 'Inicio', ids: ['overview', 'onboarding'] },
+    { label: 'Operación diaria', ids: ['sales', 'products', 'inventory', 'cash', 'promos'] },
+    { label: 'Análisis y configuración', ids: ['reports', 'storefront', 'settings'] },
+  ].map((section) => ({
+    ...section,
+    items: section.ids.map((id) => visibleNav.find((item) => item.id === id)).filter(Boolean),
+  })).filter((section) => section.items.length > 0)
   if (gate === 'loading' && !needsBusiness) return <DashboardLoading />
 
   return (
-    <div className={`dash theme-${theme}`}>
+    <div className={`dash theme-${theme}${sidebarCollapsed ? ' sidebar-collapsed' : ''}`}>
       {gate !== 'login' && (
         <aside className="dash-side">
         <a className="dash-brand" href="/home" aria-label="Tienda BNP, volver al inicio">
-          <BrandLogo variant="full" />
+          <BrandLogo variant="full" className="dash-brand-full" />
+          <BrandLogo variant="mark" className="dash-brand-mark" alt="Tienda BNP" />
         </a>
+        <button
+          type="button"
+          className="dash-sidebar-toggle"
+          onClick={toggleSidebar}
+          aria-label={sidebarCollapsed ? 'Abrir menú lateral' : 'Cerrar menú lateral'}
+          aria-expanded={!sidebarCollapsed}
+          aria-controls="dashboard-main-navigation"
+          title={sidebarCollapsed ? 'Abrir menú lateral' : 'Cerrar menú lateral'}
+        >
+          <IconChevron className={sidebarCollapsed ? '' : 'is-expanded'} />
+        </button>
         {user && (
           <div className="dash-side-user dash-side-user-top">
             <span className="user-avatar mono" aria-hidden="true">{initials(user.name)}</span>
@@ -524,6 +621,7 @@ export default function Dashboard({ onExit }) {
               className="dash-nav-item dash-business-trigger"
               aria-expanded={businessMenuOpen}
               aria-haspopup="listbox"
+              aria-label={`Negocio actual: ${selectedBusiness?.storeName || selectedBusiness?.name || 'Todos los negocios'}`}
               onClick={() => setBusinessMenuOpen((open) => !open)}
             >
               <BusinessMark business={selectedBusiness} all={!selectedBusiness} />
@@ -577,10 +675,13 @@ export default function Dashboard({ onExit }) {
           </div>
         )}
 
-        <nav className="dash-nav" aria-label="Panel de administración">
-          {visibleNav.map((item) => {
+        <nav id="dashboard-main-navigation" className="dash-nav" aria-label="Panel de administración">
+          {navSections.map((section) => (
+            <div className="dash-nav-section" key={section.label}>
+              <span className="dash-nav-section-title">{section.label}</span>
+              {section.items.map((item) => {
             const active = isNavGroupActive(item, activeScreen)
-            const expanded = Boolean(item.children && active && !collapsedGroups.has(item.id))
+            const expanded = Boolean(item.children && !collapsedGroups.has(item.id) && (active || expandedGroups.has(item.id)))
             return (
               <div key={item.id} className="dash-nav-group">
                   <button
@@ -588,7 +689,7 @@ export default function Dashboard({ onExit }) {
                     className={`dash-nav-item${active ? ' active' : ''}`}
                     aria-current={active ? 'page' : undefined}
                     aria-expanded={item.children ? expanded : undefined}
-                    title={item.children ? 'Abrir o cerrar submenú' : undefined}
+                    title={sidebarCollapsed ? item.label : item.children ? 'Abrir o cerrar submenú' : undefined}
                     onClick={() => openNavItem(item)}
                 >
                   <item.icon />
@@ -605,14 +706,17 @@ export default function Dashboard({ onExit }) {
                         aria-current={activeScreen === child.id ? 'page' : undefined}
                         onClick={() => changeScreen(child.id)}
                       >
-                        {child.label}
+                        {navScreenIcons[child.id] && (() => { const ChildIcon = navScreenIcons[child.id]; return <ChildIcon className="dash-nav-sub-icon" /> })()}
+                        <span>{child.label}</span>
                       </button>
                     ))}
                   </div>
                 )}
               </div>
             )
-          })}
+              })}
+            </div>
+          ))}
         </nav>
 
         {user?.businessSlug && (
@@ -657,16 +761,6 @@ export default function Dashboard({ onExit }) {
         )}
 
         <div className="dash-side-foot">
-          <div className="dash-theme" role="group" aria-label="Tema del panel">
-            <button type="button" className={theme === 'light' ? 'active' : ''} aria-pressed={theme === 'light'} onClick={() => changeTheme('light')}>
-              <IconSun />
-              Claro
-            </button>
-            <button type="button" className={theme === 'dark' ? 'active' : ''} aria-pressed={theme === 'dark'} onClick={() => changeTheme('dark')}>
-              <IconMoon />
-              Oscuro
-            </button>
-          </div>
           {user?.role === 'admin' && user?.businessSlug && (
             <button type="button" className="dash-exit" onClick={onExit}>
               <IconBack />
@@ -684,6 +778,11 @@ export default function Dashboard({ onExit }) {
       )}
 
       <main className="dash-main">
+        <div className="dash-top-tools" aria-label="Herramientas del panel">
+          <button type="button" className="dash-theme-icon" onClick={() => changeTheme(theme === 'dark' ? 'light' : 'dark')} aria-label={theme === 'dark' ? 'Activar modo claro' : 'Activar modo oscuro'} title={theme === 'dark' ? 'Activar modo claro' : 'Activar modo oscuro'} aria-pressed={theme === 'dark'}>
+            {theme === 'dark' ? <IconSun /> : <IconMoon />}
+          </button>
+        </div>
         {gate === 'ready' && !businessBlock && STORE_PAGES.some((page) => page.id === activeScreen) && (
           <div className="dash-store-shortcuts" aria-label="Accesos de tienda online">
             <button type="button" className="ghost-btn" onClick={() => changeScreen('settings-hub')}><IconBack />Qué querés cambiar</button>
@@ -743,7 +842,7 @@ export default function Dashboard({ onExit }) {
         )}
 
         {gate === 'ready' && !needsBusiness && overview && activeScreen === 'overview' && (
-          <OverviewScreen data={overview} onView={changeScreen} businesses={businessOptions || []} />
+          <OverviewScreen data={overview} onView={(id, options) => { if (id === 'report-sales' && (options?.days === 7 || options?.days === 30)) setSalesReportInitialDays(options.days); changeScreen(id) }} businesses={businessOptions || []} canViewReports={canView('report-sales')} />
         )}
         {gate === 'ready' && activeScreen === 'products' && (
           <ProductsScreen
@@ -820,7 +919,7 @@ export default function Dashboard({ onExit }) {
         {gate === 'ready' && activeScreen === 'cash-counts' && (
           <CashCountScreen canManage={can('cash.manage')} isAdmin={userIsSuper || user?.role === 'admin'} businesses={businessOptions || []} />
         )}
-        {gate === 'ready' && activeScreen === 'report-sales' && <SalesReportScreen />}
+        {gate === 'ready' && activeScreen === 'report-sales' && <SalesReportScreen initialDays={salesReportInitialDays} />}
         {gate === 'ready' && activeScreen === 'report-products' && <ProductsReportScreen businesses={businessOptions || []} />}
         {gate === 'ready' && activeScreen === 'report-profit' && <ProfitReportScreen businesses={businessOptions || []} />}
         {gate === 'ready' && activeScreen === 'report-stock' && <StockReportScreen businesses={businessOptions || []} />}

@@ -1,57 +1,62 @@
+import mongoose from 'mongoose'
 import { Order } from '../models/Order.js'
 import { Product } from '../models/Product.js'
 import { StockMovement } from '../models/StockMovement.js'
 
+/**
+ * Atomically claim and deduct stock for an approved web order.
+ * Requires a MongoDB replica set or sharded cluster (transactions enabled).
+ * Never fall back to partial deductions when transactions are unavailable.
+ */
 export async function deductApprovedStock(order) {
   if (!order || order.status !== 'approved' || order.source === 'pos' || order.stockDeducted) {
     return null
   }
 
-  const claimed = await Order.updateOne(
-    { _id: order._id, stockDeducted: false },
-    { $set: { stockDeducted: true } },
-  )
-  if (claimed.modifiedCount !== 1) return null
-
-  const done = []
+  const session = await mongoose.startSession()
+  let deductedCount = 0
+  let claimedOrder = false
   try {
-    for (const line of order.items) {
-      const product = await Product.findOneAndUpdate(
-        { id: line.productId, adminId: order.adminId, stock: { $gte: line.quantity } },
-        { $inc: { stock: -line.quantity } },
-        { returnDocument: 'after' },
+    await session.withTransaction(async () => {
+      const claim = await Order.updateOne(
+        { _id: order._id, status: 'approved', stockDeducted: false },
+        { $set: { stockDeducted: true } },
+        { session },
       )
-      if (!product) {
-        const error = new Error(`Stock insuficiente de "${line.name}" (id ${line.productId})`)
-        error.code = 'OUT_OF_STOCK'
-        throw error
+      if (claim.modifiedCount !== 1) return
+      claimedOrder = true
+
+      for (const line of order.items) {
+        const product = await Product.findOneAndUpdate(
+          { id: line.productId, adminId: order.adminId, stock: { $gte: line.quantity } },
+          { $inc: { stock: -line.quantity } },
+          { returnDocument: 'after', session },
+        )
+        if (!product) {
+          const error = new Error(`Stock insuficiente de "${line.name}" (id ${line.productId})`)
+          error.code = 'OUT_OF_STOCK'
+          throw error
+        }
+
+        await StockMovement.create([{
+          adminId: order.adminId,
+          productId: product.id,
+          productName: product.name,
+          delta: -line.quantity,
+          type: 'venta',
+          reason: 'Venta web',
+          ref: String(order._id),
+          stockBefore: product.stock + line.quantity,
+          stockAfter: product.stock,
+        }], { session })
+        deductedCount += 1
       }
-      const delta = -line.quantity
-      await StockMovement.create({
-        adminId: order.adminId,
-        productId: product.id,
-        productName: product.name,
-        delta,
-        type: 'venta',
-        reason: 'Venta web',
-        ref: String(order._id),
-        stockBefore: product.stock - delta,
-        stockAfter: product.stock,
-      })
-      done.push({ productId: product.id, quantity: line.quantity })
-    }
-  } catch (error) {
-    for (const item of done) {
-      await Product.updateOne(
-        { id: item.productId, adminId: order.adminId },
-        { $inc: { stock: item.quantity } },
-      )
-    }
-    await StockMovement.deleteMany({ ref: String(order._id), type: 'venta' })
-    await Order.updateOne({ _id: order._id }, { $set: { stockDeducted: false } })
-    throw error
+    })
+  } finally {
+    await session.endSession()
   }
 
+  if (!claimedOrder) return null
   order.stockDeducted = true
-  return { order, count: done.length }
+  return { order, count: deductedCount }
 }

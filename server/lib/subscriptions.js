@@ -88,7 +88,7 @@ export function validateSubscriptionPayment(body, current, recordedBy) {
   if (!['transferencia', 'efectivo', 'otro'].includes(body.method)) invalid('Medio de pago inválido')
   const paidAt = date(body.paidAt)
   const dueDate = nextMonthlyDueDate(current.dueDate || paidAt, paidAt)
-  if (body.dueDate && date(body.dueDate) !== dueDate) invalid('El pr?ximo vencimiento se calcula autom?ticamente para conservar el d?a de cobro original')
+  if (body.dueDate && date(body.dueDate) !== dueDate) invalid('El próximo vencimiento se calcula automáticamente para conservar el día de cobro original')
   if (paidAt > subscriptionToday()) invalid('El pago no puede tener fecha futura')
   if (dueDate < paidAt || (current.dueDate && dueDate < current.dueDate)) invalid('El vencimiento no puede retroceder ni ser anterior al pago')
   if (typeof body.reference !== 'string' || body.reference.length > 200) invalid('Referencia inválida (máximo 200 caracteres)')

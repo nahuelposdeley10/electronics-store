@@ -3,6 +3,7 @@ import multer from 'multer'
 import { Order } from '../models/Order.js'
 import { Product } from '../models/Product.js'
 import { Quote } from '../models/Quote.js'
+import { User } from '../models/User.js'
 import { requireAuth, requirePermission } from '../middleware/auth.js'
 import { uploadImage } from '../services/images.js'
 import { parsePagination, buildProductSearchFilter, escapeRegex, parseMetaFilter, buildAdminSort } from '../lib/catalog-query.js'
@@ -16,12 +17,26 @@ import { requireTenantIdOf } from '../lib/tenant.js'
 import { allowedImageFilter } from '../lib/image-guard.js'
 import { nextSequence, sequenceKey } from '../lib/counter.js'
 import { emitQuoteUpdate } from '../socketio.js'
+import { permissionsForUser } from '../lib/settings.js'
+import { canAccessOverview } from '../lib/dashboard-access.js'
+import { aggregateSoldUnits, productMetricKey } from '../lib/tenant-product-metrics.js'
 
 import { productImages, retainedProductImages } from '../lib/product-images.js'
 
 const router = express.Router()
 
 router.use(requireAuth)
+
+async function requireOverviewAccess(req, res, next) {
+  try {
+    const user = await User.findById(req.user.sub).lean()
+    const permissions = await permissionsForUser(user, req.user.adminId)
+    if (canAccessOverview(user?.role, permissions)) return next()
+    return res.status(403).json({ error: 'No tenés permiso para ver el panel' })
+  } catch {
+    return res.status(500).json({ error: 'No se pudo validar el permiso del panel' })
+  }
+}
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -42,7 +57,7 @@ function requireTenantScope(req, res) {
   }
 }
 
-router.get('/overview', async (req, res) => {
+router.get('/overview', requireOverviewAccess, async (req, res) => {
   try {
     const scope = requireTenantScope(req, res)
     if (!scope) return
@@ -132,7 +147,7 @@ const VALID_ORDER_STATUSES = new Set([
   'charged_back',
 ])
 
-router.get('/orders', async (req, res) => {
+router.get('/orders', requirePermission('sales.read'), async (req, res) => {
   try {
     const { page, limit } = parsePagination(req.query)
     const scope = requireTenantScope(req, res)
@@ -235,7 +250,7 @@ router.get('/orders', async (req, res) => {
   }
 })
 
-router.get('/products', async (req, res) => {
+router.get('/products', requirePermission('catalog.manage'), async (req, res) => {
   try {
     const { page, limit } = parsePagination(req.query)
     const scope = requireTenantScope(req, res)
@@ -257,12 +272,7 @@ router.get('/products', async (req, res) => {
         .limit(limit)
         .lean(),
     ])
-    const sold = new Map()
-    for (const order of approved) {
-      for (const item of order.items) {
-        sold.set(item.productId, (sold.get(item.productId) || 0) + item.quantity)
-      }
-    }
+    const sold = aggregateSoldUnits(approved)
 
     return res.json({
       items: dbProducts.map((p) => ({
@@ -283,8 +293,8 @@ router.get('/products', async (req, res) => {
         images: productImages(p),
         description: p.description,
         specs: p.specs,
-        soldUnits: sold.get(p.id) || 0,
-        revenue: (sold.get(p.id) || 0) * p.price,
+        soldUnits: sold.get(productMetricKey(p.adminId, p.id)) || 0,
+        revenue: (sold.get(productMetricKey(p.adminId, p.id)) || 0) * p.price,
       })),
       page,
       limit,
@@ -745,7 +755,7 @@ router.post('/orders/:id/return', requirePermission('sales.return'), async (req,
 
 const QUOTE_STATUSES = new Set(['draft', 'confirmed', 'cancelled'])
 
-router.get('/quotes', async (req, res) => {
+router.get('/quotes', requirePermission('quotes.delete'), async (req, res) => {
   try {
     const scope = requireTenantScope(req, res)
     if (!scope) return
@@ -786,7 +796,7 @@ router.get('/quotes', async (req, res) => {
   }
 })
 
-router.post('/quotes', async (req, res) => {
+router.post('/quotes', requirePermission('quotes.delete'), async (req, res) => {
   const { items, customer, discount = 0, note } = req.body || {}
 
   const rows = (items || [])
@@ -855,7 +865,7 @@ router.post('/quotes', async (req, res) => {
   }
 })
 
-router.put('/quotes/:id', async (req, res) => {
+router.put('/quotes/:id', requirePermission('quotes.delete'), async (req, res) => {
   const { status, customer, discount, note } = req.body || {}
   let tenant
   try {

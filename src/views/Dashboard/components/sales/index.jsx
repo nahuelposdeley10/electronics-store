@@ -3,7 +3,7 @@ import { formatARS } from '@/data/format'
 import { apiConfirmOrder, apiDelete, apiGet, apiPost, apiPut } from '@/lib/api'
 import { useOrderEvents } from '@/lib/useOrderEvents'
 import { useQuoteEvents } from '@/lib/useQuoteEvents.js'
-import { IconCross, IconEye, IconPlus, IconRefresh, IconReturn, IconSearch, IconTrash } from '@/components/Icons'
+import { IconCheck, IconCross, IconEye, IconPlus, IconRefresh, IconReturn, IconSearch, IconTrash } from '@/components/Icons'
 import { PENDING_GROUP, PAYMENT_LABELS, PAYMENT_OPTIONS, QUOTE_STATUS_LABELS, fullDate, idDoc, itemsSummary, salePaymentLabel, shortDate, shortId } from '../../consts.js'
 import { BusinessCell, EmptyNote, FilterReset, OperatorSelect, ProductPicker, ScreenBlocked, ScreenLoading, SortSelect, StatusTag } from '../common'
 import { useToast } from '@/context/useToast'
@@ -1029,7 +1029,7 @@ function QuoteForm({ onClose, onSaved }) {
             <button type="button" className="secondary-btn" onClick={onClose}>
               Cancelar
             </button>
-            <button type="submit" className="primary-btn" disabled={saving || lines.length === 0}>
+            <button type="submit" className="primary-btn" disabled={saving || lines.length === 0}><IconCheck />
               {saving ? 'Guardando…' : 'Guardar presupuesto'}
             </button>
           </footer>

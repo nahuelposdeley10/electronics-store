@@ -66,6 +66,14 @@ function PreviewStorefront({ data = {}, appearance, settings, items = [], highli
   const cover = String(source.coverUrl || '').trim()
   const gaming = data.gaming || settings?.gaming || {}
   const headerCounters = normalizeHeaderCounters(data.counters || settings?.general?.headerCounters)
+  const installmentSteps = Array.isArray(settings?.general?.installments) && settings.general.installments.length
+    ? settings.general.installments
+    : [{ months: 12 }]
+  const maxInstallmentMonths = Math.max(...installmentSteps.map((step) => Number(step.months) || 1))
+  const heroLead = String(hero.heroLead || hero.lead || 'Escribí una presentación breve para tu tienda.')
+    .replace(/\{cuotas\}/g, String(maxInstallmentMonths))
+    .replace(/\{ciudad\}/g, String(source.addressShort || 'tu ciudad'))
+    .trim()
   const marquee = items.length ? items : (settings?.general?.marquee?.length ? settings.general.marquee : ['Novedades de tu tienda', 'Compra segura', 'Envíos a todo el país'])
   const heroStyle = cover
     ? { backgroundImage: `linear-gradient(90deg, rgba(10,12,8,.9), rgba(10,12,8,.3)), url("${cover.replaceAll('"', '%22')}")` }
@@ -107,7 +115,7 @@ function PreviewStorefront({ data = {}, appearance, settings, items = [], highli
     </header>
 
     {appearance.showHero ? <section data-preview-target="hero-image" data-appearance-target="appearance-showHero" className={`preview-hero preview-focus-zone${zoneFocus('hero', 'hero-image')}${appearanceFocus('appearance-showHero')}`} style={heroStyle}>
-      <div><span>BIENVENIDA</span><h3 data-appearance-target="appearance-headingFont" className={`${highlightTarget === 'hero-title' ? 'is-preview-text-focus' : ''}${appearanceFocus('appearance-headingFont', 'is-preview-text-focus')}`}><span data-preview-target="hero-title">{hero.heroTitle || hero.title || 'Tecnología de galería.'}</span><em className={`${highlightTarget === 'hero-accent' ? 'is-preview-text-focus' : ''}${appearanceFocus('appearance-accent', 'is-preview-text-focus')}`} data-preview-target="hero-accent" data-appearance-target="appearance-accent">{hero.heroAccent || hero.titleAccent || 'Precio de mostrador.'}</em></h3><p className={highlightTarget === 'hero-lead' ? 'is-preview-text-focus' : ''} data-preview-target="hero-lead">{hero.heroLead || hero.lead || 'Escribí una presentación breve para tu tienda.'}</p><button type="button" tabIndex={-1} data-appearance-target="appearance-heroButton" className={appearanceFocus('appearance-heroButton', 'is-preview-text-focus')}>{appearance.heroButton}</button></div>
+      <div><span>BIENVENIDA</span><h3 data-appearance-target="appearance-headingFont" className={`${highlightTarget === 'hero-title' ? 'is-preview-text-focus' : ''}${appearanceFocus('appearance-headingFont', 'is-preview-text-focus')}`}><span data-preview-target="hero-title">{hero.heroTitle || hero.title || 'Tecnología de galería.'}</span><em className={`${highlightTarget === 'hero-accent' ? 'is-preview-text-focus' : ''}${appearanceFocus('appearance-accent', 'is-preview-text-focus')}`} data-preview-target="hero-accent" data-appearance-target="appearance-accent">{hero.heroAccent || hero.titleAccent || 'Precio de mostrador.'}</em></h3><p className={highlightTarget === 'hero-lead' ? 'is-preview-text-focus' : ''} data-preview-target="hero-lead">{heroLead}</p><button type="button" tabIndex={-1} data-appearance-target="appearance-heroButton" className={appearanceFocus('appearance-heroButton', 'is-preview-text-focus')}>{appearance.heroButton}</button></div>
     </section> : <div data-appearance-target="appearance-showHero" className={`live-preview-empty${appearanceFocus('appearance-showHero')}`}>La portada está oculta desde Colores y diseño.</div>}
 
     {appearance.showOffers ? <PreviewProductSection title="Ofertas de la semana" products={DEMO_PRODUCTS.slice(0, DEMO_SECTION_SIZE)} appearance={appearance} highlight={highlight} appearanceTarget="appearance-showOffers" highlightTarget={highlightTarget} /> : <div data-appearance-target="appearance-showOffers" className={`live-preview-empty${appearanceFocus('appearance-showOffers')}`}>Ofertas de la semana está oculta desde Colores y diseño.</div>}

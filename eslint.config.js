@@ -5,7 +5,7 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist', '.agents', '.r2-migration']),
+  globalIgnores(['dist', 'dist-check', '.agents', '.r2-migration']),
   {
     files: ['server/**/*.js', 'api/**/*.js', 'scripts/**/*.js'],
     languageOptions: { globals: globals.node },

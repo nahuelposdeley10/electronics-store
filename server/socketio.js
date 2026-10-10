@@ -80,7 +80,11 @@ async function authenticate(socket, next) {
       if (!user || user.active !== true) {
         return next(new Error('Sesión inválida o vencida'))
       }
-      const adminId = user.adminId ? String(user.adminId) : null
+      const adminId = user.role === 'admin'
+        ? String(user._id)
+        : user.adminId
+          ? String(user.adminId)
+          : null
       const perms = await permissionsForUser(user, adminId)
       socket.data.user = {
         ...payload,

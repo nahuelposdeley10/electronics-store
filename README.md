@@ -320,6 +320,7 @@ Las capturas del panel, tienda y pagos se pueden agregar por separado.
 | `MP_PUBLIC_KEY`           | Clave pública MP (checkout)                                      | —                           |
 | `MP_WEBHOOK_SECRET`       | Firma de webhooks MP; sin ella, los webhooks se rechazan (503)   | —                           |
 | `EMAIL_PROVIDER`          | Proveedor de emails de activación (`none` o `resend`)            | `none`                      |
+| `ALLOW_EXTERNAL_PROVIDERS_IN_DEV` | Habilita Resend, R2, Cloudinary y Mercado Pago fuera de producción | `false` |
 | `RESEND_API_KEY`          | API key del proveedor de emails (solo backend)                   | —                           |
 | `EMAIL_FROM`              | Remitente verificado de los emails comerciales                   | —                           |
 | `EMAIL_REPLY_TO`          | Dirección opcional de respuesta                                  | —                           |
@@ -331,6 +332,7 @@ Las capturas del panel, tienda y pagos se pueden agregar por separado.
 | `CORS_ORIGINS`            | Orígenes extra permitidos (coma separada)                        | `CLIENT_URL`                |
 | `BODY_LIMIT`              | Límite del body JSON/uploads                                     | `100kb`                     |
 | `JWT_SECRET`              | Firma del JWT del panel; **obligatorio en producción**           | fallback dev (no usar en prod) |
+| `IMAGE_STORAGE_PROVIDER`  | Imágenes (`local`, `cloudinary` o `r2`); en dev se fuerza `local` salvo autorización explícita | `local` en dev |
 | `CLOUDINARY_*`            | Cloudinary (subida de imágenes)                                  | —                           |
 | `SUPERADMIN_*`            | Usuario dueño (rol `superadmin`) para `seed:users`               | —                           |
 | `ADMIN_*`                 | Encargado y slug de la tienda principal (`ADMIN_BUSINESS_SLUG`)  | —                           |

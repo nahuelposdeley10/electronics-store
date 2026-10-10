@@ -372,3 +372,40 @@ export function IconMoon(props) {
     </svg>
   )
 }
+
+export function IconStorefront(props) {
+  return <svg {...S} {...props}><path d="M3 10h18l-1.5-6h-15L3 10Z"/><path d="M4 10v10h16V10M9 20v-7h6v7M3 10c0 3 4 3 4 0 0 3 5 3 5 0 0 3 5 3 5 0 0 3 4 3 4 0"/></svg>
+}
+export function IconUsers(props) {
+  return <svg {...S} {...props}><circle cx="9" cy="8" r="3"/><path d="M3 20v-2a6 6 0 0 1 12 0v2M17 5a3 3 0 0 1 0 6M18 14a5 5 0 0 1 3 5v1"/></svg>
+}
+export function IconTags(props) {
+  return <svg {...S} {...props}><path d="M3 4h9l9 9-8 8-10-10V4Z"/><circle cx="7.5" cy="8" r="1"/><path d="m13 3 8 8"/></svg>
+}
+export function IconUpload(props) {
+  return <svg {...S} {...props}><path d="M12 16V3m-5 5 5-5 5 5M4 16v4h16v-4"/></svg>
+}
+export function IconSliders(props) {
+  return <svg {...S} {...props}><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3" fill="var(--gal-white, #fff)"/><circle cx="16" cy="17" r="3" fill="var(--gal-white, #fff)"/></svg>
+}
+export function IconPalette(props) {
+  return <svg {...S} {...props}><path d="M12 3a9 9 0 1 0 0 18h2a2 2 0 0 0 1.5-3.3 2 2 0 0 1 1.5-3.2h1A4 4 0 0 0 22 10a9 9 0 0 0-10-7Z"/><circle cx="7" cy="11" r="1"/><circle cx="10" cy="7" r="1"/><circle cx="16" cy="8" r="1"/></svg>
+}
+export function IconClipboard(props) {
+  return <svg {...S} {...props}><rect x="5" y="5" width="14" height="17" rx="2"/><path d="M9 5V3h6v2M9 12h6M9 16h6"/></svg>
+}
+export function IconHistory(props) {
+  return <svg {...S} {...props}><path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5M12 7v5l4 2"/></svg>
+}
+export function IconReceipt(props) {
+  return <svg {...S} {...props}><path d="M5 3h14v18l-3-2-4 2-4-2-3 2V3ZM8 8h8M8 12h8M8 16h5"/></svg>
+}
+export function IconTrendingUp(props) {
+  return <svg {...S} {...props}><path d="m3 17 7-7 4 4 7-8M15 6h6v6"/></svg>
+}
+export function IconWallet(props) {
+  return <svg {...S} {...props}><rect x="3" y="6" width="18" height="15" rx="2"/><path d="M3 9V5a2 2 0 0 1 2-2h13M15 14h6M17 14h.01"/></svg>
+}
+export function IconDashboard(props) {
+  return <svg {...S} {...props}><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="11" width="7" height="10" rx="1.5"/><rect x="3" y="14" width="8" height="7" rx="1.5"/></svg>
+}

@@ -11,13 +11,17 @@ function splitOrigins(raw) {
 
 export const nodeEnv = process.env.NODE_ENV || 'development'
 export const isProd = nodeEnv === 'production'
+const externalProvidersEnabled = isProd || process.env.ALLOW_EXTERNAL_PROVIDERS_IN_DEV === 'true'
 
 const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173'
 const configuredOrigins = splitOrigins(process.env.CORS_ORIGINS)
+const configuredEmailProvider = String(process.env.EMAIL_PROVIDER || 'none').trim().toLowerCase()
+const configuredImageStorageProvider = String(process.env.IMAGE_STORAGE_PROVIDER || 'cloudinary').trim().toLowerCase()
 
 export const env = {
   nodeEnv,
   isProd,
+  externalProvidersEnabled,
   mpAccessToken: process.env.MP_ACCESS_TOKEN,
   mpPublicKey: process.env.MP_PUBLIC_KEY,
   mpWebhookSecret: process.env.MP_WEBHOOK_SECRET,
@@ -29,7 +33,8 @@ export const env = {
   cloudinaryCloudName: process.env.CLOUDINARY_CLOUD_NAME,
   cloudinaryApiKey: process.env.CLOUDINARY_API_KEY,
   cloudinaryApiSecret: process.env.CLOUDINARY_API_SECRET,
-  emailProvider: String(process.env.EMAIL_PROVIDER || 'none').trim().toLowerCase(),
+  emailProvider: externalProvidersEnabled ? configuredEmailProvider : 'none',
+  imageStorageProvider: externalProvidersEnabled ? configuredImageStorageProvider : 'local',
   resendApiKey: process.env.RESEND_API_KEY,
   emailFrom: process.env.EMAIL_FROM,
   emailReplyTo: process.env.EMAIL_REPLY_TO,

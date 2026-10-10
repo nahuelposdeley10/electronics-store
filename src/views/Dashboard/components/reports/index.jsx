@@ -2,17 +2,40 @@ import { useEffect, useState } from 'react'
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Label, LabelList, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { formatARS } from '@/data/format'
 import { apiGet } from '@/lib/api'
+import { IconReport } from '@/components/Icons'
 import { CHART_COLORS, CHART_GRID, CHART_TICK, chartDayShort, compactARS, reportPaymentLabel, shortDate, shortId, stockStatusOf } from '../../consts.js'
 import { BusinessCell, ChartLegend, ChartTip, EmptyNote, KpiTicket, ReportPeriodBar, ScreenBlocked, ScreenLoading, StatusTag, StockBadge, StockValue } from '../common'
 
 import './styles.css'
 
-function OverviewScreen({ data, onView, businesses = [] }) {
+function OverviewScreen({ data, onView, businesses = [], canViewReports = false }) {
+  const [trendDays, setTrendDays] = useState(7)
+  const [trend, setTrend] = useState(null)
+  const [trendError, setTrendError] = useState(false)
+  useEffect(() => {
+    let active = true
+    apiGet(`/api/admin/reports/sales?days=${trendDays * 2}`)
+      .then((result) => { if (active) { setTrend(result.series || []); setTrendError(false) } })
+      .catch(() => { if (active) setTrendError(true) })
+    return () => { active = false }
+  }, [trendDays])
+  const trendCurrent = trend?.slice(-trendDays) || []
+  const trendPrevious = trend?.slice(-trendDays * 2, -trendDays) || []
+  const currentTotal = trendCurrent.reduce((sum, day) => sum + (Number(day.total) || 0), 0)
+  const previousTotal = trendPrevious.reduce((sum, day) => sum + (Number(day.total) || 0), 0)
+  const trendChange = previousTotal > 0 ? ((currentTotal - previousTotal) / previousTotal) * 100 : null
+  const trendChart = trendCurrent.map((day, index) => ({
+    label: chartDayShort(day.date),
+    currentDate: day.date,
+    previousDate: trendPrevious[index]?.date,
+    current: Number(day.total) || 0,
+    previous: Number(trendPrevious[index]?.total) || 0,
+  }))
   const showBusiness = businesses.length > 0
   const kpis = [
-    { label: 'Ingresos', value: formatARS(data.revenue), note: 'iniciales' },
+    { label: 'Ingresos', value: formatARS(data.revenue), note: 'total acumulado' },
     { label: 'Ventas aprobadas', value: data.counts.salesCount, note: 'pagadas' },
-    { label: 'Pendientes', value: data.counts.pendingCount, note: 'se cobran' },
+    { label: 'Pendientes', value: data.counts.pendingCount, note: 'requieren seguimiento' },
     { label: 'Ticket promedio', value: formatARS(data.avgTicket), note: 'por venta' },
   ]
 
@@ -31,16 +54,62 @@ function OverviewScreen({ data, onView, businesses = [] }) {
         </div>
       </header>
 
-      <div className="kpi-rack">
+      <div className="kpi-rack overview-kpis">
         {kpis.map((kpi) => (
           <KpiTicket key={kpi.label} {...kpi} />
         ))}
       </div>
 
+      <section className="dash-card overview-trend">
+        <div className="dash-card-head overview-trend-head">
+          <div><h2>Evolución de ventas</h2><p>Ingresos aprobados · comparación con el período anterior</p></div>
+          <div className="overview-trend-actions" role="group" aria-label="Período de ventas">
+            <button type="button" className={trendDays === 7 ? 'is-active' : ''} aria-pressed={trendDays === 7} onClick={() => setTrendDays(7)}>7 días</button>
+            <button type="button" className={trendDays === 30 ? 'is-active' : ''} aria-pressed={trendDays === 30} onClick={() => setTrendDays(30)}>30 días</button>
+          </div>
+          {canViewReports && <button type="button" className="overview-report-link" onClick={() => onView('report-sales', { days: trendDays })}><IconReport /> Ver reporte detallado →</button>}
+        </div>
+        {trendError ? (
+          <div className="overview-trend-message">No se pudo cargar la evolución de ventas.</div>
+        ) : !trend ? (
+          <div className="overview-trend-message" role="status">Cargando evolución de ventas…</div>
+        ) : (
+          <>
+            <div className="overview-trend-summary">
+              <div><span>Período actual</span><strong>{formatARS(currentTotal)}</strong></div>
+              <div><span>Período anterior</span><strong>{formatARS(previousTotal)}</strong></div>
+              <div><span>Variación</span><strong className={trendChange === null ? '' : trendChange >= 0 ? 'is-positive' : 'is-negative'}>{trendChange === null ? (currentTotal > 0 ? 'Sin base comparable' : 'Sin variación') : `${trendChange > 0 ? '+' : ''}${trendChange.toFixed(1)}%`}</strong></div>
+            </div>
+            {trendCurrent.every((day) => !Number(day.total)) && trendPrevious.every((day) => !Number(day.total)) ? (
+              <div className="overview-trend-message">Todavía no hay ventas aprobadas en estos períodos.</div>
+            ) : (
+              <div className="overview-trend-chart">
+                <ResponsiveContainer width="100%" height={250}>
+                  <AreaChart data={trendChart} margin={{ top: 12, right: 10, bottom: 0, left: 0 }}>
+                    <defs><linearGradient id="overviewSalesFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#438be8" stopOpacity={0.24}/><stop offset="100%" stopColor="#438be8" stopOpacity={0.01}/></linearGradient></defs>
+                    <CartesianGrid vertical={false} stroke="var(--gal-line)" strokeDasharray="3 5"/>
+                    <XAxis dataKey="label" tick={{ fill: 'var(--gal-ink-soft)', fontSize: 11 }} tickLine={false} axisLine={false} minTickGap={20}/>
+                    <YAxis tickFormatter={compactARS} tick={{ fill: 'var(--gal-ink-soft)', fontSize: 11 }} tickLine={false} axisLine={false} width={62}/>
+                    <Tooltip content={({ active, payload }) => {
+                      if (!active || !payload?.length) return null
+                      const row = payload[0]?.payload
+                      return <div className="overview-trend-tooltip"><strong>{row?.currentDate || ''}</strong><span>Actual: {formatARS(row?.current || 0)}</span><span>Anterior ({row?.previousDate || '—'}): {formatARS(row?.previous || 0)}</span></div>
+                    }}/>
+                    <Area type="monotone" name="Período anterior" dataKey="previous" stroke="#92a6bd" strokeWidth={2} strokeDasharray="5 5" fill="none" dot={false}/>
+                    <Area type="monotone" name="Período actual" dataKey="current" stroke="#438be8" strokeWidth={2.8} fill="url(#overviewSalesFill)" dot={false} activeDot={{ r: 5 }}/>
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+            <div className="overview-trend-legend"><span><i className="is-current"/> Período actual</span><span><i className="is-previous"/> Período anterior (alineado por día)</span></div>
+          </>
+        )}
+      </section>
+      <div className="overview-section-label"><div><strong>Actividad comercial</strong><span>Productos destacados y operaciones recientes</span></div></div>
       <div className="dash-cols">
         <section className="dash-card">
           <div className="dash-card-head">
-            <h2>Más vendido</h2>
+            <h2>Productos más vendidos</h2>
             <button type="button" onClick={() => onView('products')}>
               Ver productos
             </button>
@@ -55,6 +124,7 @@ function OverviewScreen({ data, onView, businesses = [] }) {
                   <span className="best-name">
                     {product.name}
                     <em>{product.brand}</em>
+                    <span className="overview-product-track" aria-hidden="true"><span style={{ width: `${Math.max(0, Math.min(100, (Number(product.units) / Math.max(1, ...data.bestSellers.map((item) => Number(item.units) || 0))) * 100))}%` }} /></span>
                   </span>
                   {showBusiness && <BusinessCell adminId={product.adminId} businesses={businesses} />}
                   <span className="best-units mono">
@@ -103,10 +173,10 @@ function OverviewScreen({ data, onView, businesses = [] }) {
 }
 
 
-function SalesReportScreen() {
+function SalesReportScreen({ initialDays = 30 }) {
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
-  const [days, setDays] = useState(30)
+  const [days, setDays] = useState(initialDays)
 
   useEffect(() => {
     let alive = true
@@ -144,7 +214,7 @@ function SalesReportScreen() {
 
       <ReportPeriodBar days={days} onChange={setDays} />
 
-      <div className="kpi-rack">
+      <div className="kpi-rack overview-kpis">
         <KpiTicket label="Facturado" value={formatARS(data.totals.total)} note="en el período" />
         <KpiTicket label="Ventas" value={data.totals.count} note={`${data.totals.units} unidades`} />
         <KpiTicket label="Ticket promedio" value={formatARS(data.totals.avgTicket)} note="por venta" />
@@ -288,7 +358,7 @@ function ProductsReportScreen({ businesses = [] }) {
 
       <ReportPeriodBar days={days} onChange={setDays} />
 
-      <div className="kpi-rack">
+      <div className="kpi-rack overview-kpis">
         <KpiTicket label="Unidades" value={data.totals.units} note="vendidas" />
         <KpiTicket label="Productos" value={data.totals.uniqueProducts} note="con movimiento" />
         <KpiTicket label="Facturado" value={formatARS(data.totals.revenue)} note="en el período" />
@@ -406,7 +476,7 @@ function ProfitReportScreen({ businesses = [] }) {
 
       <ReportPeriodBar days={days} onChange={setDays} />
 
-      <div className="kpi-rack">
+      <div className="kpi-rack overview-kpis">
         <KpiTicket label="Facturado" value={formatARS(data.totals.revenue)} note="ventas" />
         <KpiTicket label="Costo" value={formatARS(data.totals.cogs)} note={`${data.totals.units} uds`} />
         <KpiTicket label="Ganancia bruta" value={formatARS(data.totals.profit)} note={`${data.totals.marginPct.toFixed(1)}%`} />
@@ -546,7 +616,7 @@ function StockReportScreen({ businesses = [] }) {
         </div>
       </header>
 
-      <div className="kpi-rack">
+      <div className="kpi-rack overview-kpis">
         <KpiTicket label="Productos" value={data.totals.products} note="en catálogo" />
         <KpiTicket label="Unidades" value={data.totals.units} note="en depósito" />
         <KpiTicket label="Valor del stock" value={formatARS(data.totals.value)} note="a precio venta" />
@@ -718,7 +788,7 @@ function CustomersReportScreen({ businesses = [] }) {
 
       <ReportPeriodBar days={days} onChange={setDays} />
 
-      <div className="kpi-rack">
+      <div className="kpi-rack overview-kpis">
         <KpiTicket label="Clientes" value={data.totals.customers} note="identificados" />
         <KpiTicket label="Compras totales" value={data.items.reduce((s, c) => s + c.count, 0)} note="en el período" />
         <KpiTicket label="Facturado" value={formatARS(data.totals.total)} note="en el período" />

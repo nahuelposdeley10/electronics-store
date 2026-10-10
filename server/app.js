@@ -120,6 +120,11 @@ export function createApp() {
   app.use('/api/admin/cash', cashRouter)
   app.use('/api/admin/reports', reportsRouter)
 
+  app.use('/uploads', express.static(path.resolve('public/uploads'), {
+    fallthrough: true,
+    maxAge: env.isProd ? '1y' : 0,
+  }))
+
   if (fs.existsSync(DIST_DIR)) {
     app.get(['/home', '/planes'], (req, res) => {
       res.sendFile(path.join(DIST_DIR, 'home.html'))

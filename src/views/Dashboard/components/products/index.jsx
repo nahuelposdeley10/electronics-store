@@ -3,7 +3,7 @@ import { formatARS } from '@/data/format'
 import SearchSelect from '@/components/SearchSelect'
 import { apiDelete, apiGet, apiPost, apiPut, apiUpdate, apiUpload } from '@/lib/api'
 import { productImage } from '@/lib/productImage'
-import { IconCheck, IconClock, IconCross, IconEdit, IconEye, IconInventory, IconLock, IconPlus, IconSearch, IconTrash } from '@/components/Icons'
+import { IconCheck, IconClock, IconCross, IconEdit, IconEye, IconInventory, IconLock, IconPlus, IconRefresh, IconSearch, IconTrash, IconUpload } from '@/components/Icons'
 import { CATEGORY_LABELS, IMPORT_EXAMPLE, PAYMENT_LABELS, stockStatusOf } from '../../consts.js'
 import { BusinessCell, EmptyNote, FilterReset, ProductPicker, ScreenBlocked, ScreenLoading, SortSelect, StockValue } from '../common'
 import { loadCatalogOptions } from '../common/catalogOptions.js'
@@ -317,7 +317,7 @@ function ProductsScreen({ canManage, canInventory, canCash, businesses = [] }) {
             type="submit"
             className="primary-btn"
             disabled={bulkSaving || bulk.value === '' || Number(bulk.value) === 0}
-          >
+          ><IconCheck />
             {bulkSaving ? 'Aplicando…' : 'Aplicar ajuste'}
           </button>
         </form>
@@ -598,7 +598,7 @@ function ProductDetails({ product, onClose, onEdit }) {
 
         <div className="pf-actions">
           <button type="button" className="ghost-btn" onClick={onClose}>Cerrar</button>
-          {onEdit && <button type="button" className="primary-btn" onClick={onEdit}>Editar producto</button>}
+          {onEdit && <button type="button" className="primary-btn" onClick={onEdit}><IconEdit /> Editar producto</button>}
         </div>
       </div>
     </div>
@@ -634,6 +634,7 @@ function ProductForm({ product, onClose, onSaved, canInventory }) {
   const [retainedImages, setRetainedImages] = useState(originalImages)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [touched, setTouched] = useState({})
   const [brandOptions, setBrandOptions] = useState([])
   const [categoryOptions, setCategoryOptions] = useState([])
 
@@ -664,6 +665,7 @@ function ProductForm({ product, onClose, onSaved, canInventory }) {
       Number(initialStock.cost) >= 0)
   const canSave = formDirty && valid && (product || !initialStock.enabled || stockValid)
 
+  const touch = (key) => () => setTouched((current) => ({ ...current, [key]: true }))
   const set = (key) => (e) =>
     setForm((f) => ({ ...f, [key]: e.target.value }))
 
@@ -695,7 +697,10 @@ function ProductForm({ product, onClose, onSaved, canInventory }) {
 
   const submit = async (e) => {
     e.preventDefault()
-    if (!canSave) return
+    if (!canSave) {
+      setTouched({ name: true, brand: true, price: true, supplier: true, quantity: true, cost: true })
+      return
+    }
     setSaving(true)
     setError('')
 
@@ -772,6 +777,9 @@ function ProductForm({ product, onClose, onSaved, canInventory }) {
                 value={form.name}
                 onChange={set('name')}
                 placeholder="Ej. Teclado Gamer RGB"
+                minLength={2}
+                onBlur={touch("name")}
+                aria-invalid={touched.name && form.name.trim().length < 2}
                 required
               />
             </label>
@@ -782,7 +790,7 @@ function ProductForm({ product, onClose, onSaved, canInventory }) {
                 id="pf-brand"
                 allLabel="Seleccioná una marca…"
                 value={form.brand}
-                onChange={(v) => setForm((f) => ({ ...f, brand: v }))}
+                onChange={(v) => { setForm((f) => ({ ...f, brand: v })); setTouched((current) => ({ ...current, brand: true })) }}
                 options={brandList.map((b) => ({ value: b, label: b }))}
                 createLabel="Crear marca nueva"
                 onCreate={createBrand}
@@ -811,6 +819,8 @@ function ProductForm({ product, onClose, onSaved, canInventory }) {
                 value={form.price}
                 onChange={set('price')}
                 placeholder="Ej. 109990"
+                onBlur={touch("price")}
+                aria-invalid={touched.price && !(Number(form.price) > 0)}
                 required
               />
             </label>
@@ -1009,9 +1019,10 @@ function ProductForm({ product, onClose, onSaved, canInventory }) {
             </label>
           </div>
 
-          {error && <em className="unlock-error">{error}</em>}
+          {error && <p className="pf-save-error" role="alert">{error}</p>}
 
           <div className="pf-actions">
+            <span className="pf-save-hint" role="status">{saving ? 'Guardando producto…' : !formDirty ? 'Sin cambios pendientes' : !valid ? 'Completá nombre, marca y precio para guardar' : !canSave ? 'Revisá los datos del stock inicial' : 'Listo para guardar'}</span>
             <button
               type="button"
               className="ghost-btn"
@@ -1024,6 +1035,7 @@ function ProductForm({ product, onClose, onSaved, canInventory }) {
               type="submit"
               className="primary-btn"
               disabled={saving || !canSave}
+              aria-busy={saving}
             >
               {saving
                 ? 'Guardando…'
@@ -2174,16 +2186,16 @@ function ImportScreen({ canManage }) {
               Cargar CSV
               <input type="file" accept=".csv,text/csv" onChange={loadCsv} />
             </label>
-            <button type="button" className="ghost-btn" onClick={downloadTemplate}>
+            <button type="button" className="ghost-btn" onClick={downloadTemplate}><IconRefresh />
               Descargar plantilla CSV
             </button>
           </div>
 
           <div className="pf-actions">
-            <button type="button" className="ghost-btn" onClick={loadExample}>
+            <button type="button" className="ghost-btn" onClick={loadExample}><IconPlus />
               Cargar ejemplo
             </button>
-            <button type="submit" className="primary-btn" disabled={busy || !text.trim()}>
+            <button type="submit" className="primary-btn" disabled={busy || !text.trim()}><IconUpload />
               {busy ? 'Importando…' : 'Importar productos'}
             </button>
           </div>

@@ -3,7 +3,7 @@ import { formatARS } from '@/data/format'
 import { BUSINESS_PLANS } from '@/data/plans'
 import { apiDelete, apiGet, apiPost, apiPut, getSession } from '@/lib/api'
 import { getSuperTenant } from '@/lib/tenant'
-import { IconCheck, IconChevron, IconCross, IconEdit, IconPlus, IconSearch, IconTrash } from '@/components/Icons'
+import { IconCheck, IconChevron, IconCross, IconEdit, IconPlus, IconSearch, IconTrash, IconStorefront, IconUsers, IconCard } from '@/components/Icons'
 import { useToast } from '@/context/useToast'
 import { useConfirm } from '@/context/useConfirm'
 import { PERM_CODES, PERM_LABELS, ROLE_LABELS, initials, shortDate } from '../../consts.js'
@@ -186,10 +186,12 @@ function BusinessAdminEditor({ business, onClose, onUpdated }) {
 function BusinessesScreen({ current, onPick, onCreateAdmin, onBusinessUpdated }) {
   const [billingBusiness, setBillingBusiness] = useState(null)
   const [editingBusiness, setEditingBusiness] = useState(null)
+  const [viewingBusiness, setViewingBusiness] = useState(null)
   const [items, setItems] = useState(null)
   const [error, setError] = useState('')
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
+  const [viewMode, setViewMode] = useState('cards')
   const [statusMenuOpen, setStatusMenuOpen] = useState(false)
 
   useEffect(() => {
@@ -262,6 +264,28 @@ function BusinessesScreen({ current, onPick, onCreateAdmin, onBusinessUpdated })
         </div>
       </section>
 
+      {viewingBusiness && (
+        <div className="user-detail-overlay" onMouseDown={(event) => { if (event.target === event.currentTarget) setViewingBusiness(null) }}>
+          <section className="dash-card user-detail-card" role="dialog" aria-modal="true" aria-label={`Detalles de ${viewingBusiness.storeName}`}>
+            <div className="dash-card-head"><h2>{viewingBusiness.storeName}</h2><button type="button" className="ghost-btn" onClick={() => setViewingBusiness(null)}><IconCross /> Cerrar</button></div>
+            <div className="user-detail-grid">
+              <p><strong>Administrador</strong><span>{viewingBusiness.name}</span></p>
+              <p><strong>Email</strong><span>{viewingBusiness.email}</span></p>
+              <p><strong>Dirección pública</strong><span>{viewingBusiness.businessSlug ? `/u/${viewingBusiness.businessSlug}` : 'Sin configurar'}</span></p>
+              <p><strong>Estado</strong><span>{viewingBusiness.active ? 'Activo' : 'Pausado'}</span></p>
+              <p><strong>Plan</strong><span>{viewingBusiness.subscription?.plan || 'Sin plan'}</span></p>
+              <p><strong>Suscripción</strong><span>{SUBSCRIPTION_LABELS[viewingBusiness.subscription?.effectiveStatus] || 'Sin configurar'}</span></p>
+              <p><strong>Vencimiento</strong><span>{viewingBusiness.subscription?.dueDate || 'Sin fecha'}</span></p>
+              <p><strong>Pagos online</strong><span>{viewingBusiness.online ? 'Activos' : 'Pausados'}</span></p>
+              <p><strong>Productos</strong><span>{viewingBusiness.productCount}</span></p>
+              <p><strong>Ventas</strong><span>{viewingBusiness.orderCount}</span></p>
+              <p><strong>Operadores</strong><span>{viewingBusiness.operatorCount}</span></p>
+              <p><strong>Facturación</strong><span>{formatARS(viewingBusiness.revenue)}</span></p>
+            </div>
+            <div className="set-actions"><button type="button" className="ghost-btn" onClick={() => { setEditingBusiness(viewingBusiness); setViewingBusiness(null) }}><IconEdit /> Administrar negocio</button><button type="button" className="ghost-btn" onClick={() => { setBillingBusiness(viewingBusiness); setViewingBusiness(null) }}><IconCard /> Gestionar suscripción</button></div>
+          </section>
+        </div>
+      )}
       {editingBusiness && (
         <BusinessAdminEditor
           business={editingBusiness}
@@ -331,6 +355,10 @@ function BusinessesScreen({ current, onPick, onCreateAdmin, onBusinessUpdated })
             </div>
           </div>
           <span className="business-results">{visibleItems.length} de {items.length}</span>
+          <div className="business-view-switch" role="group" aria-label="Vista de negocios">
+            <button type="button" className={viewMode === 'cards' ? 'is-active' : ''} aria-pressed={viewMode === 'cards'} onClick={() => setViewMode('cards')}><IconStorefront /> Tarjetas</button>
+            <button type="button" className={viewMode === 'table' ? 'is-active' : ''} aria-pressed={viewMode === 'table'} onClick={() => setViewMode('table')}><IconUsers /> Tabla</button>
+          </div>
         </div>
       )}
 
@@ -338,7 +366,26 @@ function BusinessesScreen({ current, onPick, onCreateAdmin, onBusinessUpdated })
         <EmptyNote text="No encontramos negocios con esos filtros." />
       )}
 
-      <div className="biz-grid">
+      {viewMode === 'table' && <div className="table-wrap business-table-wrap">
+        <table className="dash-table business-list-table">
+          <thead><tr><th>Negocio</th><th>Administrador</th><th>Estado</th><th>Plan</th><th>Productos</th><th>Ventas</th><th>Acciones</th></tr></thead>
+          <tbody>{visibleItems.map((b) => (
+            <tr key={b.id} className="user-table-row" tabIndex={0} aria-label={`Ver información completa de ${b.storeName}`} onClick={() => setViewingBusiness(b)} onKeyDown={(event) => { if (event.target === event.currentTarget && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); setViewingBusiness(b) } }}>
+              <td><strong>{b.storeName}</strong>{b.businessSlug && <small className="business-table-slug">/u/{b.businessSlug}</small>}</td>
+              <td><strong>{b.name}</strong><small className="business-table-slug">{b.email}</small></td>
+              <td><span className={`status-tag${b.active ? '' : ' status-muted'}`}>{b.active ? 'Activo' : 'Pausado'}</span></td>
+              <td>{b.subscription?.plan || 'Sin plan'}</td>
+              <td>{b.productCount}</td><td>{b.orderCount}</td>
+              <td><div className="business-table-actions" onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()}>
+                <button type="button" className="ghost-btn" title="Abrir panel" aria-label={`Abrir panel de ${b.storeName}`} onClick={() => onPick(b.id)}><IconStorefront /><span className="business-action-label">Abrir</span></button>
+                <button type="button" className="ghost-btn" title="Administrar negocio" aria-label={`Administrar ${b.storeName}`} onClick={() => setEditingBusiness(b)}><IconEdit /><span className="business-action-label">Editar</span></button>
+                <button type="button" className="ghost-btn" title="Gestionar suscripción" aria-label={`Gestionar suscripción de ${b.storeName}`} onClick={() => setBillingBusiness(b)}><IconCard /><span className="business-action-label">Plan</span></button>
+              </div></td>
+            </tr>
+          ))}</tbody>
+        </table>
+      </div>}
+      {viewMode === 'cards' && <div className="biz-grid">
         {visibleItems.map((b) => {
           const selected = current && String(current) === String(b.id)
           return (
@@ -346,8 +393,8 @@ function BusinessesScreen({ current, onPick, onCreateAdmin, onBusinessUpdated })
               <button
                 type="button"
                 className={`biz-card${selected ? ' biz-card-active' : ''}`}
-                onClick={() => onPick(b.id)}
-                aria-label={`Abrir panel de ${b.storeName}`}
+                onClick={() => setViewingBusiness(b)}
+                aria-label={`Ver detalles de ${b.storeName}`}
               >
                 <span className="user-avatar mono" aria-hidden="true">
                   {initials(b.storeName)}
@@ -371,12 +418,6 @@ function BusinessesScreen({ current, onPick, onCreateAdmin, onBusinessUpdated })
                 )}
               </button>
               <div className="biz-card-body">
-                <div className="biz-card-metrics">
-                  <span><strong>{b.productCount}</strong><small>Productos</small></span>
-                  <span><strong>{b.orderCount}</strong><small>Ventas</small></span>
-                  <span><strong>{b.operatorCount}</strong><small>Operadores</small></span>
-                  <span><strong>{formatARS(b.revenue)}</strong><small>Facturación</small></span>
-                </div>
                 <div className="biz-card-summary">
                   <span className="biz-subscription-state">
                     <span className="biz-summary-dot" />
@@ -388,18 +429,24 @@ function BusinessesScreen({ current, onPick, onCreateAdmin, onBusinessUpdated })
                   </span>
                   {b.subscription?.dueDate && <small>Vence {b.subscription.dueDate.split('-').reverse().join('/')}</small>}
                 </div>
+                <div className="biz-card-metrics">
+                  <span><strong>{b.productCount}</strong><small>Productos</small></span>
+                  <span><strong>{b.orderCount}</strong><small>Ventas</small></span>
+                  <span><strong>{b.operatorCount}</strong><small>Operadores</small></span>
+                  <span><strong>{formatARS(b.revenue)}</strong><small>Facturación</small></span>
+                </div>
                 <div className="biz-card-actions">
                   <button type="button" className="ghost-btn" onClick={() => setEditingBusiness(b)}>
                     <IconEdit />
-                    Editar admin
+                    Administrar negocio
                   </button>
-                  <button type="button" className="ghost-btn" onClick={() => setBillingBusiness(b)}>Suscripción</button>
+                  <button type="button" className="ghost-btn" onClick={() => setBillingBusiness(b)}><IconCard /> Gestionar suscripción</button>
                 </div>
               </div>
             </div>
           )
         })}
-      </div>
+      </div>}
     </div>
   )
 }
@@ -412,6 +459,7 @@ function UsersScreen({ allowBusinessCreate = false }) {
   const [error, setError] = useState('')
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState(null)
+  const [viewing, setViewing] = useState(null)
   const [form, setForm] = useState(null)
   const [formInitial, setFormInitial] = useState(null)
   const [saving, setSaving] = useState(false)
@@ -461,6 +509,7 @@ function UsersScreen({ allowBusinessCreate = false }) {
   }
 
   const openEdit = (u) => {
+    setViewing(null)
     setEditing(u.id)
     setGeneratedPassword('')
     const base = {
@@ -497,7 +546,7 @@ function UsersScreen({ allowBusinessCreate = false }) {
         if (form.password) payload.password = form.password
         if (form.role === 'operator' && form.adminId) payload.adminId = form.adminId
         if (form.role === 'admin') payload.businessSlug = String(form.businessSlug || '').trim()
-        if (form.role === 'admin') payload.planCode = form.planCode
+
         await apiPut(`/api/admin/users/${editing}`, payload)
         showToast('Usuario actualizado.', 'success')
       } else {
@@ -566,6 +615,7 @@ function UsersScreen({ allowBusinessCreate = false }) {
   if (error) return <ScreenBlocked message={error} />
 
   const activeCount = users.filter((u) => u.active).length
+  const canManage = (u) => isSuper || u.role === 'operator' || u.isSelf
 
   return (
     <div className="dash-screen">
@@ -590,6 +640,25 @@ function UsersScreen({ allowBusinessCreate = false }) {
         </button>}
       </div>
 
+      {viewing && (
+        <div className="user-detail-overlay" onMouseDown={(event) => { if (event.target === event.currentTarget) setViewing(null) }}>
+          <section className="dash-card user-detail-card" role="dialog" aria-modal="true" aria-label={`Detalles de ${viewing.name}`}>
+          <div className="dash-card-head">
+            <h2>Detalles del usuario</h2>
+            <button type="button" className="ghost-btn" onClick={() => setViewing(null)}><IconCross /> Cerrar</button>
+          </div>
+          <div className="user-detail-grid">
+            <p><strong>Nombre</strong><span>{viewing.name}</span></p>
+            <p><strong>Email</strong><span>{viewing.email}</span></p>
+            <p><strong>Rol</strong><span>{ROLE_LABELS[viewing.role] || viewing.role}</span></p>
+            <p><strong>Estado</strong><span>{viewing.active ? 'Activo' : 'Desactivado'}</span></p>
+            <p><strong>Fecha de alta</strong><span>{shortDate(viewing.createdAt)}</span></p>
+            {viewing.businessSlug && <p><strong>Tienda</strong><span>/u/{viewing.businessSlug}</span></p>}
+          </div>
+          {canManage(viewing) && <div className="set-actions"><button type="button" className="ghost-btn" onClick={() => openEdit(viewing)}><IconEdit /> Editar usuario</button></div>}
+          </section>
+        </div>
+      )}
       {generatedPassword && (
         <div className="set-password-box">
           <span>Contraseña generada (mostrala una sola vez):</span>
@@ -730,7 +799,7 @@ function UsersScreen({ allowBusinessCreate = false }) {
           </thead>
           <tbody>
             {users.map((u) => (
-              <tr key={u.id}>
+              <tr key={u.id} className="user-table-row" tabIndex={0} aria-label={`Ver información completa de ${u.name}`} onClick={() => { setViewing(u); setFormOpen(false) }} onKeyDown={(event) => { if (event.target === event.currentTarget && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); setViewing(u); setFormOpen(false) } }}>
                 {showBusiness && <td><BusinessCell adminId={u.role === 'admin' ? u.id : u.adminId} businesses={businesses} /></td>}
                 <td>
                   <span className="t-cell-product">
@@ -754,16 +823,17 @@ function UsersScreen({ allowBusinessCreate = false }) {
                 </td>
                 <td className="t-date">{shortDate(u.createdAt)}</td>
                 <td>
-                  <span className="row-actions">
-                    {!isSuper && <button type="button" className="row-btn" aria-label={`Editar ${u.name}`} onClick={() => openEdit(u)}>
+                  <span className="row-actions" onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()}>
+                    <button type="button" className="row-btn" aria-label={`Ver detalles de ${u.name}`} onClick={() => { setViewing(u); setFormOpen(false) }}>Ver</button>
+                    {canManage(u) && <button type="button" className="row-btn" aria-label={`Editar ${u.name}`} onClick={() => openEdit(u)}>
                       <IconEdit />
                     </button>}
-                    {!isSuper && <ToggleSwitch
+                    {canManage(u) && !u.isSelf && <ToggleSwitch
                       checked={u.active}
                       label={u.active ? `Desactivar ${u.name}` : `Activar ${u.name}`}
                       onChange={() => toggleActive(u)}
                     />}
-                    {!isSuper && !u.isSelf && (
+                    {canManage(u) && !u.isSelf && (
                       <button
                         type="button"
                         className="row-btn row-btn-danger"

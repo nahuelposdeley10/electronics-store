@@ -246,15 +246,20 @@ function StatusTag({ status }) {
 }
 
 
-function EmptyNote({ text }) {
+function EmptyNote({ text, title = 'Todavía no hay resultados', actionLabel, onAction }) {
   return (
     <div className="empty-note" role="status">
-      <IconSearchOff />
-      <p>{text}</p>
+      <IconSearchOff aria-hidden="true" />
+      <strong className="empty-note-title">{title}</strong>
+      <p>{text || 'Cuando haya información disponible, aparecerá acá.'}</p>
+      {actionLabel && typeof onAction === 'function' && (
+        <button type="button" className="ghost-btn empty-note-action" onClick={onAction}>
+          {actionLabel}
+        </button>
+      )}
     </div>
   )
 }
-
 
 function ScreenLoading({ label = 'Leyendo la caja…' }) {
   return (
@@ -363,7 +368,7 @@ function ReportPeriodBar({ days, onChange }) {
 }
 
 
-function ScreenBlocked({ message }) {
+function ScreenBlocked({ message, onRetry }) {
   return (
     <div className="dash-screen dash-unlock" role="alert">
       <div className="unlock-card">
@@ -373,6 +378,10 @@ function ScreenBlocked({ message }) {
         <span className="dash-eyebrow">Algo se trabó</span>
         <h1>No pudimos leer el panel</h1>
         <p>{message ? `${String(message).replace(/[.。]+$/, '')}.` : 'No hay información disponible.'}</p>
+        <div className="screen-recovery-actions">
+          <button type="button" className="primary-btn" onClick={onRetry || (() => window.location.reload())}>Volver a intentar</button>
+          <p className="screen-recovery-hint">Si sigue fallando, revisá tu conexión y probá nuevamente.</p>
+        </div>
       </div>
     </div>
   )

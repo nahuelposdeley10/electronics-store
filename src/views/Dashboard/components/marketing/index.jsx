@@ -26,6 +26,8 @@ function CouponsScreen({ canManage, businesses = [] }) {
   const [form, setForm] = useState(null)
   const [formInitial, setFormInitial] = useState(null)
   const [saving, setSaving] = useState(false)
+  const [touched, setTouched] = useState({})
+  const [saveError, setSaveError] = useState('')
   const [refresh, setRefresh] = useState(0)
 
   useEffect(() => {
@@ -43,6 +45,8 @@ function CouponsScreen({ canManage, businesses = [] }) {
   }, [refresh])
 
   const openNew = () => {
+    setTouched({})
+    setSaveError('')
     setEditing(null)
     const base = { code: '', percent: 10, active: true, description: '' }
     setForm({ ...base })
@@ -51,6 +55,8 @@ function CouponsScreen({ canManage, businesses = [] }) {
   }
 
   const openEdit = (c) => {
+    setTouched({})
+    setSaveError('')
     setEditing(c.id)
     const base = { code: c.code, percent: c.percent, active: c.active, description: c.description }
     setForm({ ...base })
@@ -77,7 +83,11 @@ function CouponsScreen({ canManage, businesses = [] }) {
 
   const submit = async (e) => {
     e.preventDefault()
-    if (!canSave) return
+    if (!canSave) {
+      setTouched({ code: true, percent: true })
+      return
+    }
+    setSaveError('')
     setSaving(true)
     try {
       const payload = { ...form, percent: Number(form.percent) }
@@ -219,11 +229,15 @@ function CouponsScreen({ canManage, businesses = [] }) {
                 </label>
               </div>
 
+              {touched.code && !form.code.trim() && <p className="pf-field-error">Ingresá un código para el cupón.</p>}
+              {touched.percent && !(Number(form.percent) >= 1 && Number(form.percent) <= 100) && <p className="pf-field-error">El descuento debe estar entre 1% y 100%.</p>}
+              {saveError && <p className="pf-save-error" role="alert">{saveError}</p>}
               <div className="pf-actions">
+                <span className="pf-save-hint" role="status">{saving ? 'Guardando cupón…' : !formDirty ? 'Sin cambios pendientes' : !canSave ? 'Revisá el código y el descuento' : 'Listo para guardar'}</span>
                 <button type="button" className="ghost-btn" onClick={closeForm} disabled={saving}>
                   Cancelar
                 </button>
-                <button type="submit" className="primary-btn" disabled={saving || !canSave}>
+                <button type="submit" className="primary-btn" disabled={saving || !canSave} aria-busy={saving}>
                   {saving ? 'Guardando…' : editing ? 'Guardar cambios' : 'Crear cupón'}
                 </button>
               </div>

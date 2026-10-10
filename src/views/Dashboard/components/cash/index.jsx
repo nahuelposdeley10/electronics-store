@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { formatARS } from '@/data/format'
 import { apiGet, apiPost } from '@/lib/api'
-import { IconCross, IconPlus } from '@/components/Icons'
+import { IconCheck, IconCross, IconEdit, IconLock, IconPlus } from '@/components/Icons'
 import { CASH_KIND_CHIPS, CASH_KIND_LABELS, fullDate, shortDate } from '../../consts.js'
 import { BusinessCell, EmptyNote, KpiTicket, OperatorSelect, ScreenBlocked, ScreenLoading } from '../common'
 import SearchSelect from '@/components/SearchSelect'
@@ -54,7 +54,7 @@ function CashOpenShifts({ shifts, onSelect, businesses = [] }) {
                 {onSelect && (
                   <td>
                     <button type="button" className="filter-reset-btn" onClick={() => onSelect(String(shift._id))}>
-                      Administrar
+                      <IconEdit /> Administrar
                     </button>
                   </td>
                 )}
@@ -138,11 +138,11 @@ function CashCurrentScreen({ canManage, isAdmin, onView, businesses = [] }) {
             </div>
             <div className="cash-hero-actions">
               <button type="button" className="btn cta" onClick={() => onView('cash-openclose')}>
-                Cerrar caja
+                <IconLock /> Cerrar caja
               </button>
               {canManage && (
                 <button type="button" className="btn" onClick={() => onView('cash-movements')}>
-                  Registrar ingreso/egreso
+                  <IconPlus /> Registrar ingreso/egreso
                 </button>
               )}
             </div>
@@ -160,7 +160,7 @@ function CashCurrentScreen({ canManage, isAdmin, onView, businesses = [] }) {
             </div>
             <div className="cash-hero-actions">
               <button type="button" className="btn cta" onClick={() => onView('cash-openclose')}>
-                Abrir caja
+                <IconPlus /> Abrir caja
               </button>
             </div>
           </>
@@ -270,7 +270,7 @@ function CashMovementsScreen({ canManage, businesses = [] }) {
             className="btn"
             onClick={() => setFormOpen(true)}
           >
-            <IconPlus /> Registrar ingreso/egreso
+            <IconPlus /> <IconPlus /> Registrar ingreso/egreso
           </button>
         )}
       </div>
@@ -328,7 +328,7 @@ function CashMovementsScreen({ canManage, businesses = [] }) {
                 </label>
               </div>
               <div className="cash-form-foot">
-                <button type="submit" className="btn cta" disabled={saving || !movementValid}>
+                <button type="submit" className="btn cta" disabled={saving || !movementValid}><IconCheck />
                   {saving ? 'Guardando…' : 'Guardar ingreso/egreso'}
                 </button>
                 <button type="button" className="btn" onClick={closeForm} disabled={saving}>
@@ -542,7 +542,7 @@ function CashShiftScreen({ canManage, isAdmin, businesses = [] }) {
                     placeholder="Ej: apertura de caja, lunes"
                   />
                 </label>
-                <button type="submit" className="btn cta" disabled={busy}>
+                <button type="submit" className="btn cta" disabled={busy}><IconPlus />
                   {busy ? 'Abriendo…' : 'Abrir caja'}
                 </button>
               </form>
@@ -596,7 +596,7 @@ function CashShiftScreen({ canManage, isAdmin, businesses = [] }) {
                     placeholder="Ej: cierre de jornada"
                   />
                 </label>
-                <button type="submit" className="btn cta" disabled={busy}>
+                <button type="submit" className="btn cta" disabled={busy}><IconLock />
                   {busy ? 'Cerrando…' : 'Cerrar caja'}
                 </button>
               </form>
@@ -916,7 +916,7 @@ function CashCountScreen({ canManage, isAdmin, businesses = [] }) {
                   placeholder="Ej: arqueo de mitad de día"
                 />
               </label>
-              <button type="submit" className="btn cta" disabled={busy}>
+              <button type="submit" className="btn cta" disabled={busy}><IconCheck />
                 {busy ? 'Registrando…' : 'Registrar arqueo'}
               </button>
             </form>

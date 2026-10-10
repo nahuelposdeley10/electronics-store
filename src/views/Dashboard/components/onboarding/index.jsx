@@ -55,15 +55,17 @@ export default function Onboarding({ screen, role, userId, assistance = false, o
     </section>
   }
 
-  return <section className="onboard dash-screen" aria-label="Puesta en marcha" aria-busy={busy}>
+  return <section className={`onboard dash-screen${assistance ? ' onboard-assistance' : ''}`} aria-label="Puesta en marcha" aria-busy={busy}>
     <header className="onboard-heading"><div><span className="dash-eyebrow">{assistance ? 'Asistencia al comercio' : 'Configuración inicial'} · {data.contact.name || 'Tu negocio'}</span><h1>{assistance ? 'Ayudá a configurar este negocio.' : 'Empezá con todo en orden.'}</h1><p>{assistance ? 'Estás trabajando sobre el comercio seleccionado. Sus datos y su progreso son independientes de tu cuenta de dueño general.' : 'Un paso a la vez. Tu avance se guarda en este negocio, incluso si cerrás sesión.'}</p></div><button type="button" className="ghost-btn" disabled={busy} onClick={async () => { if (assistance || await save('pause')) onView('overview') }}>{assistance ? 'Volver al panel' : 'Seguir después'}</button></header>
     <div className="onboard-progress"><div><strong>{data.completed} de {data.total} pasos completos</strong><span>{percent}%</span></div><progress aria-label="Avance de puesta en marcha" value={data.completed} max={data.total} /></div>
     {error && <div className="onboard-error" role="alert"><span>{error}</span><button type="button" className="ghost-btn" disabled={busy} onClick={refresh}>Volver a comprobar</button></div>}
     <div className="onboard-layout">
-      <nav className="onboard-steps" aria-label="Pasos de puesta en marcha"><ol>{STEPS.map((item, index) => {
+      <nav className="onboard-steps" aria-label="Pasos de puesta en marcha">
+        <header className="onboard-steps-head"><div><span className="dash-eyebrow">Ruta de configuración</span><strong>Prepará tu negocio</strong></div><span className="onboard-steps-count">{data.completed}/{data.total}</span></header>
+        <ol>{STEPS.map((item, index) => {
         const complete = data.steps[index].complete
         return <li key={item.id}><button type="button" aria-current={current === item.id ? 'step' : undefined} disabled={busy} onClick={() => goStep(item.id)}><span className={`onboard-step-number${complete ? ' is-complete' : ''}`}>{complete ? <IconCheck /> : String(index + 1).padStart(2, '0')}</span><span><strong>{item.title}</strong><small>{complete ? 'Completo' : item.hint}</small></span></button></li>
-      })}</ol><p>Los pasos se verifican con los datos guardados. No hace falta completarlos en orden.</p></nav>
+        })}</ol><p>Los pasos se verifican con los datos guardados. No hace falta completarlos en orden.</p></nav>
       <article className="onboard-detail">
         <div className="onboard-step-heading"><span className="dash-eyebrow">Paso {String(stepIndex + 1).padStart(2, '0')} / 06{done ? ' · Completo' : ''}</span><h2 ref={title} tabIndex={-1}>{step.title}</h2><p>{step.description}</p></div>
         {current === 'business' && <BusinessStep key={current} data={data} busy={busy} onSave={save} onView={onView} />}

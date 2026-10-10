@@ -97,17 +97,17 @@ export default function Home({ onView }) {
     )
     return onSale.length > 0
       ? { title: 'Ofertas de la semana', items: onSale.slice(0, DEMO_SECTION_SIZE), demo: false }
-      : { title: 'Ofertas de la semana', items: DEMO_PRODUCTS.slice(0, DEMO_SECTION_SIZE), demo: true }
-  }, [visibleProducts])
+      : { title: 'Ofertas de la semana', items: showingDemoCatalog ? DEMO_PRODUCTS.slice(0, DEMO_SECTION_SIZE) : [], demo: showingDemoCatalog }
+  }, [visibleProducts, showingDemoCatalog])
 
   const newest = useMemo(() => {
     const newArrivals = visibleProducts.filter((p) => p.badge === 'Nuevo')
     return newArrivals.length
       ? { title: 'Recién llegados', items: newArrivals.slice(0, DEMO_SECTION_SIZE), demo: false }
-      : { title: 'Recién llegados', items: DEMO_PRODUCTS.slice(DEMO_SECTION_SIZE, DEMO_SECTION_SIZE * 2), demo: true }
-  }, [visibleProducts])
-  const showOffersSection = appearance.showOffers || topDeals.demo
-  const showNewArrivalsSection = appearance.showNewArrivals || newest.demo
+      : { title: 'Recién llegados', items: showingDemoCatalog ? DEMO_PRODUCTS.slice(DEMO_SECTION_SIZE, DEMO_SECTION_SIZE * 2) : [], demo: showingDemoCatalog }
+  }, [visibleProducts, showingDemoCatalog])
+  const showOffersSection = topDeals.items.length > 0 && (appearance.showOffers || topDeals.demo)
+  const showNewArrivalsSection = newest.items.length > 0 && (appearance.showNewArrivals || newest.demo)
 
   return (
     <main className="home">

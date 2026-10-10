@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { apiPut } from '@/lib/api'
+import { IconCheck, IconCross, IconRefresh } from '@/components/Icons'
 import { APPEARANCE_DEFAULTS, normalizeAppearance, appearanceVariables } from '@/lib/appearance'
 import { notifySiteSettingsChanged } from '@/lib/siteSettings'
 import { useToast } from '@/context/useToast'
@@ -127,9 +128,9 @@ function AppearanceEditor({ settings }) {
           </fieldset>
           <div className="appearance-actions">
             <p role="status">{saving ? 'Publicando…' : dirty ? 'Tenés cambios sin publicar.' : 'El diseño está guardado.'}</p>
-            <button className="primary-btn" disabled={!dirty || saving} type="submit">{saving ? 'Publicando…' : 'Publicar diseño'}</button>
-            <button className="ghost-btn" disabled={!dirty || saving} type="button" onClick={() => setForm(saved)}>Descartar cambios</button>
-            <button className="ghost-btn" disabled={saving} type="button" onClick={() => setForm({ ...APPEARANCE_DEFAULTS })}>Restaurar diseño original</button>
+            <button className="primary-btn" disabled={!dirty || saving} type="submit"><IconCheck /> {saving ? 'Publicando…' : 'Publicar diseño'}</button>
+            <button className="ghost-btn" disabled={!dirty || saving} type="button" onClick={() => setForm(saved)}><IconCross /> Descartar cambios</button>
+            <button className="ghost-btn" disabled={saving} type="button" onClick={() => setForm({ ...APPEARANCE_DEFAULTS })}><IconRefresh /> Restaurar diseño original</button>
           </div>
           <p className="list-note">El diseño original también requiere publicar. Para cambiar el logo, entrá en Tienda online → Datos y contacto. La imagen de bienvenida y los anuncios están en Portada y mensajes.</p>
         </form>

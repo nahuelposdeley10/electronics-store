@@ -532,7 +532,7 @@ function AdjustmentsScreen({ canManage }) {
               required
             />
           </label>
-          <button type="submit" className="primary-btn" disabled={saving || !canManage || !adjustmentValid}>
+          <button type="submit" className="primary-btn" disabled={saving || !canManage || !adjustmentValid}><IconCheck />
             {saving ? 'Aplicando…' : 'Aplicar ajuste'}
           </button>
         </form>
@@ -1098,7 +1098,7 @@ function PurchasesScreen({ canManage }) {
             </div>
           )}
 
-          <button type="submit" className="primary-btn" disabled={saving || !canManage || !canSubmitPurchase}>
+          <button type="submit" className="primary-btn" disabled={saving || !canManage || !canSubmitPurchase}><IconCheck />
             {saving ? 'Guardando…' : 'Registrar compra'}
           </button>
         </form>
