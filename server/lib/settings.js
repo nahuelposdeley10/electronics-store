@@ -6,6 +6,7 @@ import { APPEARANCE_DEFAULTS, normalizeAppearance } from '../../src/lib/appearan
 import { Subscription } from '../models/Subscription.js'
 import { permissionsForPlan, inferPlanCode } from './plans.js'
 import { normalizeInstagramUrl } from '../../src/lib/social.js'
+import { FISCAL_DEFAULTS, FISCAL_MODES, normalizeFiscalSettings } from './fiscal.js'
 
 export const ALL_PERMISSIONS = [
   'settings.manage',
@@ -118,6 +119,7 @@ export function defaults() {
         webhookSecret: null,
       },
     },
+    fiscal: { ...FISCAL_DEFAULTS },
     roles: {
       admin: [...ALL_PERMISSIONS],
       operator: [...OPERATOR_DEFAULT_PERMISSIONS],
@@ -224,6 +226,13 @@ function sanitizeValue(fallback, value) {
 // objetos gigantes/arbitrarios nunca lleguen al público ni queden en DB.
 function sanitizeSection(section, input) {
   if (section === 'appearance') return normalizeAppearance(input)
+  if (section === 'fiscal') {
+    const normalized = normalizeFiscalSettings(input)
+    return {
+      ...normalized,
+      mode: FISCAL_MODES.includes(normalized.mode) ? normalized.mode : FISCAL_DEFAULTS.mode,
+    }
+  }
   const fallback = defaults()[section]
   if (section === 'roles') return sanitizeRoles(input)
   if (!fallback || typeof fallback !== 'object' || Array.isArray(fallback)) return {}

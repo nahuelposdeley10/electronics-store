@@ -17,9 +17,11 @@ import { requireTenantIdOf } from '../lib/tenant.js'
 import { allowedImageFilter } from '../lib/image-guard.js'
 import { nextSequence, sequenceKey } from '../lib/counter.js'
 import { emitQuoteUpdate } from '../socketio.js'
-import { permissionsForUser } from '../lib/settings.js'
+import { getSettings, permissionsForUser } from '../lib/settings.js'
 import { canAccessOverview } from '../lib/dashboard-access.js'
 import { aggregateSoldUnits, productMetricKey } from '../lib/tenant-product-metrics.js'
+import { fiscalSnapshot } from '../lib/fiscal.js'
+import { issueArcaOrder, publicArcaError } from '../services/arca.js'
 
 import { productImages, retainedProductImages } from '../lib/product-images.js'
 
@@ -229,6 +231,7 @@ router.get('/orders', requirePermission('sales.read'), async (req, res) => {
         change: o.change,
         soldBy: o.soldBy,
         returnedAt: o.returnedAt,
+        fiscal: o.fiscal || fiscalSnapshot({ mode: 'internal' }),
         payer: {
           email: o.payerEmail,
           name: o.payerName,
@@ -575,6 +578,7 @@ router.post('/pos', requirePermission('pos.manage'), async (req, res) => {
   }
 
   try {
+    const settings = await getSettings({ fresh: true, tenant })
     const ids = [...new Set(rows.map((row) => row.id))]
     const dbProducts = await Product.find({ id: { $in: ids }, adminId: tenant }).lean()
     const byId = new Map(dbProducts.map((p) => [p.id, p]))
@@ -637,8 +641,23 @@ router.post('/pos', requirePermission('pos.manage'), async (req, res) => {
     payerName: customer?.name || null,
     cashReceived: isCash ? receivedCash : null,
     change: isCash ? change : null,
-    soldBy: req.user?.email || req.user?.name || null,
+      soldBy: req.user?.email || req.user?.name || null,
+      fiscal: fiscalSnapshot(settings.fiscal),
   })
+
+    if (order.fiscal?.mode === 'arca') {
+      try {
+        order.fiscal = await issueArcaOrder({ tenant, order })
+        await order.save()
+      } catch (error) {
+        order.fiscal = {
+          ...order.fiscal.toObject(),
+          status: 'error',
+          error: publicArcaError(error).error.slice(0, 500),
+        }
+        await order.save()
+      }
+    }
 
     for (const line of lines) {
       await changeStock({
@@ -682,11 +701,81 @@ router.post('/pos', requirePermission('pos.manage'), async (req, res) => {
       cashReceived: order.cashReceived,
       change: order.change,
       soldBy: order.soldBy,
+      fiscal: order.fiscal,
       createdAt: order.createdAt,
     })
   } catch (error) {
     console.error('POS error:', error)
     return res.status(500).json({ error: 'No se pudo registrar la venta' })
+  }
+})
+
+const FISCAL_TYPES = new Set(['A', 'B', 'C', 'E'])
+
+router.put('/orders/:id/fiscal', requirePermission('sales.read'), async (req, res) => {
+  let tenant
+  try {
+    tenant = requireTenantIdOf(req)
+  } catch (error) {
+    return res.status(error.status || 400).json({ error: error.message })
+  }
+
+  const type = String(req.body?.type || '').trim().toUpperCase()
+  const pointOfSale = String(req.body?.pointOfSale || '').replace(/\D/g, '').slice(0, 5)
+  const number = String(req.body?.number || '').replace(/\D/g, '').slice(0, 20)
+  const providerName = String(req.body?.providerName || '').trim().slice(0, 120)
+  const cae = String(req.body?.cae || '').replace(/\D/g, '').slice(0, 20)
+  const caeDueDate = String(req.body?.caeDueDate || '').trim().slice(0, 10)
+
+  if (!FISCAL_TYPES.has(type)) return res.status(400).json({ error: 'Tipo de comprobante inválido' })
+  if (!pointOfSale || !number) return res.status(400).json({ error: 'Punto de venta y número son requeridos' })
+
+  try {
+    const order = await Order.findOne({ _id: req.params.id, adminId: tenant })
+    if (!order) return res.status(404).json({ error: 'Venta no encontrada' })
+    if (order.status !== 'approved') return res.status(400).json({ error: 'Solo podés registrar comprobantes de ventas aprobadas' })
+    if (order.fiscal?.status === 'issued') return res.status(409).json({ error: 'Esta venta ya tiene un comprobante registrado' })
+
+    order.fiscal = {
+      ...(order.fiscal?.toObject?.() || order.fiscal || {}),
+      mode: 'external',
+      status: 'issued',
+      providerName: providerName || order.fiscal?.providerName || null,
+      pointOfSale,
+      type,
+      number,
+      cae: cae || null,
+      caeDueDate: caeDueDate || null,
+      issuedAt: new Date(),
+      error: null,
+    }
+    await order.save()
+    return res.json({ id: order._id, fiscal: order.fiscal })
+  } catch (error) {
+    console.error('Fiscal record error:', error)
+    return res.status(500).json({ error: 'No se pudo registrar el comprobante' })
+  }
+})
+
+router.post('/orders/:id/fiscal/issue', requirePermission('sales.read'), async (req, res) => {
+  let tenant
+  try {
+    tenant = requireTenantIdOf(req)
+  } catch (error) {
+    return res.status(error.status || 400).json({ error: error.message })
+  }
+  try {
+    const order = await Order.findOne({ _id: req.params.id, adminId: tenant })
+    if (!order) return res.status(404).json({ error: 'Venta no encontrada' })
+    if (order.status !== 'approved') return res.status(400).json({ error: 'Solo podés emitir ARCA para ventas aprobadas' })
+    if (order.fiscal?.status === 'issued') return res.status(409).json({ error: 'Esta venta ya tiene un comprobante registrado' })
+    const fiscal = await issueArcaOrder({ tenant, order })
+    order.fiscal = fiscal
+    await order.save()
+    return res.json({ id: order._id, fiscal: order.fiscal })
+  } catch (error) {
+    console.error('ARCA issue error:', error)
+    return res.status(error.status || 502).json(publicArcaError(error))
   }
 })
 

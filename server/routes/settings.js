@@ -7,6 +7,8 @@ import { publicTenantId, requirePublicTenant, requireTenantIdOf } from '../lib/t
 import { allowedImageFilter } from '../lib/image-guard.js'
 import { User } from '../models/User.js'
 import { getTenantPlan } from '../lib/plans.js'
+import { getArcaStatus, publicArcaError, saveArcaCredentials, testArcaConnection } from '../services/arca.js'
+import { ArcaCredential } from '../models/ArcaCredential.js'
 
 const router = express.Router()
 
@@ -75,6 +77,7 @@ router.put('/admin/settings', requireAuth, requirePermission('settings.manage'),
   }
   try {
     const value = requestedValue
+    const tenant = requireTenantIdOf(req)
     if (section === 'appearance') {
       const currentUser = await User.findById(req.user.sub).lean()
       if (!currentUser?.active || !['admin', 'superadmin'].includes(currentUser.role) || currentUser.role !== req.user.role) {
@@ -85,12 +88,18 @@ router.put('/admin/settings', requireAuth, requirePermission('settings.manage'),
       return res.status(403).json({ error: 'Los permisos ahora se editan por usuario' })
     }
     if (section === 'payments' && req.user.role !== 'superadmin') {
-      const plan = await getTenantPlan(requireTenantIdOf(req))
+      const plan = await getTenantPlan(tenant)
       if (!plan.includes('onlinePayments')) {
         return res.status(403).json({ error: 'Mercado Pago está disponible desde el plan Profesional' })
       }
     }
-    const saved = await saveSettings({ section, value, tenant: requireTenantIdOf(req) })
+    if (section === 'fiscal' && value?.mode === 'arca') {
+      const arca = await getArcaStatus(tenant)
+      if (!arca.configured || !arca.enabled) {
+        return res.status(400).json({ error: 'Primero guardá y activá la conexión ARCA de este negocio' })
+      }
+    }
+    const saved = await saveSettings({ section, value, tenant })
     return res.json(saved[section] || {})
   } catch (error) {
     console.error('Settings save error:', error)
@@ -98,6 +107,38 @@ router.put('/admin/settings', requireAuth, requirePermission('settings.manage'),
       return res.status(error.status || 400).json({ error: error.message })
     }
     return res.status(500).json({ error: 'No se pudieron guardar los ajustes' })
+  }
+})
+
+router.get('/admin/fiscal/arca', requireAuth, requirePermission('settings.manage'), requireTenant, async (req, res) => {
+  try {
+    return res.json(await getArcaStatus(requireTenantIdOf(req)))
+  } catch (error) {
+    const response = publicArcaError(error)
+    return res.status(error.status || 500).json(response)
+  }
+})
+
+router.put('/admin/fiscal/arca', requireAuth, requirePermission('settings.manage'), requireTenant, async (req, res) => {
+  try {
+    const saved = await saveArcaCredentials({ tenant: requireTenantIdOf(req), input: req.body || {} })
+    return res.json(saved)
+  } catch (error) {
+    const response = publicArcaError(error)
+    return res.status(error.status || 400).json(response)
+  }
+})
+
+router.post('/admin/fiscal/arca/test', requireAuth, requirePermission('settings.manage'), requireTenant, async (req, res) => {
+  const tenant = requireTenantIdOf(req)
+  try {
+    const result = await testArcaConnection(tenant)
+    await ArcaCredential.updateOne({ adminId: tenant }, { $set: { lastTestAt: new Date(), lastTestStatus: 'ok', lastError: null } })
+    return res.json(result)
+  } catch (error) {
+    await ArcaCredential.updateOne({ adminId: tenant }, { $set: { lastTestAt: new Date(), lastTestStatus: 'error', lastError: String(error.message || 'Error de conexión').slice(0, 500) } }).catch(() => {})
+    const response = publicArcaError(error)
+    return res.status(error.status || 502).json(response)
   }
 })
 

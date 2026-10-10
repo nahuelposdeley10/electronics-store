@@ -25,6 +25,7 @@ export const env = {
   mpAccessToken: process.env.MP_ACCESS_TOKEN,
   mpPublicKey: process.env.MP_PUBLIC_KEY,
   mpWebhookSecret: process.env.MP_WEBHOOK_SECRET,
+  arcaEncryptionKey: process.env.ARCA_ENCRYPTION_KEY,
   mongodbUri: process.env.MONGODB_URI,
   clientUrl,
   serverUrl: process.env.SERVER_URL || 'http://localhost:4000',

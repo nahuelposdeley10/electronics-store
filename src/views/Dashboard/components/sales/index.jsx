@@ -11,7 +11,90 @@ import { useConfirm } from '@/context/useConfirm'
 
 import './styles.css'
 
-function SaleDetail({ order, onClose }) {
+function FiscalArcaError({ order, fiscal, saving, setSaving, onSaved }) {
+  const { showToast } = useToast()
+  const retry = async () => {
+    if (saving) return
+    setSaving(true)
+    try {
+      const result = await apiPost(`/api/admin/orders/${order.id}/fiscal/issue`, {})
+      onSaved?.(result.fiscal)
+      showToast('Comprobante ARCA emitido correctamente.', 'success')
+    } catch (error) {
+      showToast(error.message, 'error')
+    } finally {
+      setSaving(false)
+    }
+  }
+  return <div className="fiscal-error-state"><p className="settings-warn">ARCA no pudo autorizar este comprobante: {fiscal.error || 'error no informado'}.</p><button type="button" className="primary-btn" onClick={retry} disabled={saving}>{saving ? 'Reintentando…' : 'Reintentar emisión ARCA'}</button></div>
+}
+
+function FiscalRecord({ order, onSaved }) {
+  const { showToast } = useToast()
+  const fiscal = order.fiscal || { mode: 'internal', status: 'not_applicable' }
+  const [saving, setSaving] = useState(false)
+  const [form, setForm] = useState({
+    type: fiscal.type || 'B',
+    pointOfSale: fiscal.pointOfSale || '',
+    number: fiscal.number || '',
+    providerName: fiscal.providerName || '',
+    cae: fiscal.cae || '',
+    caeDueDate: fiscal.caeDueDate || '',
+  })
+
+  if (fiscal.status === 'not_applicable') {
+    return <p className="set-hint">Modo de gestión interna: esta venta no genera comprobante fiscal desde Tienda BNP.</p>
+  }
+  if (fiscal.status === 'arca_pending') {
+    return <p className="set-hint">Esta venta está esperando la autorización ARCA después de confirmar el pago.</p>
+  }
+  if (fiscal.mode === 'arca' && fiscal.status === 'error') {
+    return <FiscalArcaError order={order} fiscal={fiscal} saving={saving} setSaving={setSaving} onSaved={onSaved} />
+  }
+  if (fiscal.status === 'issued') {
+    return (
+      <div className="detail-grid fiscal-recorded-grid">
+        <div><span className="detail-k">Comprobante</span><strong>{fiscal.type || '—'} {fiscal.pointOfSale || '—'}-{fiscal.number || '—'}</strong></div>
+        <div><span className="detail-k">Sistema</span><strong>{fiscal.providerName || 'Externo'}</strong></div>
+        <div><span className="detail-k">CAE</span><strong className="mono">{fiscal.cae || 'No informado'}</strong></div>
+        {fiscal.caeDueDate && <div><span className="detail-k">Vencimiento CAE</span><strong>{fiscal.caeDueDate}</strong></div>}
+      </div>
+    )
+  }
+
+  const set = (key) => (event) => setForm((current) => ({ ...current, [key]: event.target.value }))
+  const submit = async (event) => {
+    event.preventDefault()
+    if (saving) return
+    setSaving(true)
+    try {
+      const result = await apiPut(`/api/admin/orders/${order.id}/fiscal`, form)
+      onSaved?.(result.fiscal)
+      showToast('Comprobante externo registrado.', 'success')
+    } catch (error) {
+      showToast(error.message, 'error')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <form className="fiscal-record-form" onSubmit={submit}>
+      <p className="set-hint">Registrá acá el comprobante emitido en ARCA, tu sistema externo o controlador fiscal. Tienda BNP no lo autoriza ni lo reemplaza.</p>
+      <div className="detail-grid">
+        <label className="inv-field"><span>Tipo</span><select value={form.type} onChange={set('type')}><option>A</option><option>B</option><option>C</option><option>E</option></select></label>
+        <label className="inv-field"><span>Punto de venta</span><input value={form.pointOfSale} onChange={set('pointOfSale')} inputMode="numeric" maxLength={5} required /></label>
+        <label className="inv-field"><span>Número</span><input value={form.number} onChange={set('number')} inputMode="numeric" maxLength={20} required /></label>
+        <label className="inv-field"><span>Sistema</span><input value={form.providerName} onChange={set('providerName')} placeholder="ARCA / otro" maxLength={120} /></label>
+        <label className="inv-field"><span>CAE (opcional)</span><input value={form.cae} onChange={set('cae')} inputMode="numeric" maxLength={20} /></label>
+        <label className="inv-field"><span>Vencimiento CAE</span><input type="date" value={form.caeDueDate} onChange={set('caeDueDate')} /></label>
+      </div>
+      <button type="submit" className="primary-btn" disabled={saving}>{saving ? 'Guardando…' : 'Registrar comprobante externo'}</button>
+    </form>
+  )
+}
+
+function SaleDetail({ order, onClose, onFiscalSaved }) {
   return (
     <div className="product-overlay" role="dialog" aria-modal="true">
       <div className="product-panel c-light sale-detail-panel">
@@ -111,6 +194,11 @@ function SaleDetail({ order, onClose }) {
               </div>
             )}
           </div>
+        </div>
+
+        <div className="detail-block">
+          <h3 className="detail-title">Comprobante fiscal</h3>
+          <FiscalRecord order={order} onSaved={onFiscalSaved} />
         </div>
 
         <div className="ticket-totals detail-totals">
@@ -417,7 +505,10 @@ function SalesScreen({ businesses = [] }) {
         </div>
       )}
 
-      {detail && <SaleDetail order={detail} onClose={() => setDetail(null)} />}
+      {detail && <SaleDetail order={detail} onClose={() => setDetail(null)} onFiscalSaved={(fiscal) => {
+        setDetail((current) => current ? { ...current, fiscal } : current)
+        setData((current) => current ? { ...current, items: current.items.map((item) => item.id === detail.id ? { ...item, fiscal } : item) } : current)
+      }} />}
     </div>
   )
 }
@@ -614,7 +705,11 @@ function ReturnsScreen({ canManage, businesses = [] }) {
         </div>
       )}
 
-      {detail && <SaleDetail order={detail} onClose={() => setDetail(null)} />}
+      {detail && <SaleDetail
+        order={detail}
+        onClose={() => setDetail(null)}
+        onFiscalSaved={(fiscal) => setDetail((current) => current ? { ...current, fiscal } : current)}
+      />}
     </div>
   )
 }

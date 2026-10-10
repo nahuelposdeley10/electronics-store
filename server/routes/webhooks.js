@@ -14,6 +14,7 @@ import { deliverActivation } from './commercial-subscriptions.js'
 import { recordSubscriptionPayment } from '../lib/subscription-payments.js'
 import { getSettings } from '../lib/settings.js'
 import { sendSubscriptionPaymentIssueEmail } from '../services/email.js'
+import { issueArcaOrder, publicArcaError } from '../services/arca.js'
 
 const router = express.Router()
 
@@ -257,6 +258,18 @@ router.post('/webhooks/mercadopago', async (req, res) => {
       await deductApprovedStock(updated).catch((error) =>
         console.error(`Stock decrement error (order ${String(updated._id)}):`, error),
       )
+      if (updated.fiscal?.mode === 'arca' && updated.adminId) {
+        try {
+          const fiscal = await issueArcaOrder({ tenant: String(updated.adminId), order: updated })
+          await Order.updateOne({ _id: updated._id, adminId: updated.adminId }, { $set: { fiscal } })
+        } catch (error) {
+          await Order.updateOne(
+            { _id: updated._id, adminId: updated.adminId },
+            { $set: { 'fiscal.status': 'error', 'fiscal.error': publicArcaError(error).error.slice(0, 500) } },
+          )
+          console.error(`ARCA issue error (order ${String(updated._id)}):`, error)
+        }
+      }
     }
   } catch (error) {
     console.error('Webhook error:', error)

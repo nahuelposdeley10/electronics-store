@@ -9,6 +9,7 @@ import { env, isAllowedOrigin } from '../config/env.js'
 import { publicTenantId, requirePublicTenant } from '../lib/tenant.js'
 import { createRefreshToken, verifyRefreshToken } from '../lib/order-token.js'
 import { getTenantPlan } from '../lib/plans.js'
+import { fiscalSnapshot } from '../lib/fiscal.js'
 
 const router = express.Router()
 
@@ -115,6 +116,7 @@ router.post('/checkout', requirePublicTenant, async (req, res) => {
       payerEmail: String(buyer.email || '').trim() || null,
       payerName: fullName ? fullName.slice(0, lastNameIdx - 1) || fullName : null,
       payerSurname: fullName && lastNameIdx > 0 ? fullName.slice(lastNameIdx) : null,
+      fiscal: fiscalSnapshot(settings.fiscal),
     })
 
     const items = cart.lineItems.map((line) => ({

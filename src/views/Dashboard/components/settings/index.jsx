@@ -1,5 +1,5 @@
-﻿import { useState } from 'react'
-import { apiPut, apiUpload, getSession } from '@/lib/api'
+import { useEffect, useState } from 'react'
+import { apiGet, apiPost, apiPut, apiUpload, getSession } from '@/lib/api'
 import { getSuperTenant } from '@/lib/tenant'
 import {
   IconArrow,
@@ -48,6 +48,116 @@ function PasswordInput({ label, value, onChange, ...rest }) {
   )
 }
 
+function ArcaSetup({ tenantSelected = true }) {
+  const { showToast } = useToast()
+  const [status, setStatus] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [testing, setTesting] = useState(false)
+  const [form, setForm] = useState({
+    environment: 'homologation',
+    cuit: '',
+    pointOfSale: '',
+    defaultType: 'B',
+    enabled: false,
+    certificatePem: '',
+    privateKeyPem: '',
+  })
+
+  useEffect(() => {
+    if (!tenantSelected) {
+      setLoading(false)
+      return undefined
+    }
+    let alive = true
+    apiGet('/api/admin/fiscal/arca')
+      .then((data) => {
+        if (!alive) return
+        setStatus(data)
+        setForm((current) => ({
+          ...current,
+          environment: data.environment || current.environment,
+          cuit: data.cuit || current.cuit,
+          pointOfSale: data.pointOfSale || current.pointOfSale,
+          defaultType: data.defaultType || current.defaultType,
+          enabled: data.enabled === true,
+        }))
+      })
+      .catch((error) => alive && showToast(error.message, 'error'))
+      .finally(() => alive && setLoading(false))
+    return () => { alive = false }
+  }, [showToast, tenantSelected])
+
+  if (!tenantSelected) return <p className="settings-warn fiscal-settings-note">Seleccioná un negocio concreto para configurar ARCA. Las credenciales nunca se guardan en “Todos los negocios”.</p>
+
+  const set = (key) => (event) => setForm((current) => ({ ...current, [key]: event.target.value }))
+  const save = async (event) => {
+    event.preventDefault()
+    if (saving) return
+    setSaving(true)
+    try {
+      const data = await apiPut('/api/admin/fiscal/arca', {
+        ...form,
+        cuit: form.cuit.replace(/\D/g, ''),
+        pointOfSale: form.pointOfSale.replace(/\D/g, ''),
+      })
+      setStatus(data)
+      setForm((current) => ({ ...current, certificatePem: '', privateKeyPem: '' }))
+      showToast('Credenciales ARCA guardadas de forma cifrada.', 'success')
+    } catch (error) {
+      showToast(error.message, 'error')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const test = async () => {
+    if (testing) return
+    setTesting(true)
+    try {
+      const data = await apiPost('/api/admin/fiscal/arca/test', {})
+      setStatus((current) => ({ ...current, lastTestAt: new Date().toISOString(), lastTestStatus: 'ok' }))
+      showToast(`Conexión ARCA correcta (${data.environment === 'production' ? 'producción' : 'homologación'}).`, 'success')
+    } catch (error) {
+      setStatus((current) => ({ ...current, lastTestAt: new Date().toISOString(), lastTestStatus: 'error', lastError: error.message }))
+      showToast(error.message, 'error')
+    } finally {
+      setTesting(false)
+    }
+  }
+
+  if (loading) return <p className="set-hint">Leyendo conexión ARCA…</p>
+
+  return (
+    <section className="arca-settings-block" aria-labelledby="arca-settings-title">
+      <div className="fiscal-settings-head">
+        <div>
+          <span className="dash-eyebrow">Conexión por negocio</span>
+          <h3 id="arca-settings-title">ARCA · WSAA + WSFEv1</h3>
+        </div>
+        <span className={`fiscal-mode-badge ${status?.enabled ? 'fiscal-mode-external' : 'fiscal-mode-internal'}`}>
+          {status?.enabled ? 'Conexión activa' : 'No conectada'}
+        </span>
+      </div>
+      <p className="set-hint">Cada negocio usa su propio CUIT, certificado y clave privada. Las credenciales se cifran en la base y nunca vuelven a mostrarse.</p>
+      {status?.lastTestStatus === 'error' && <p className="settings-warn fiscal-settings-note">Última prueba fallida: {status.lastError || 'revisá el certificado, la clave y la delegación WSFEv1.'}</p>}
+      {status?.lastTestStatus === 'ok' && <p className="settings-ok fiscal-settings-note">Última prueba correcta contra ARCA.</p>}
+      <form className="arca-settings-form" onSubmit={save}>
+        <div className="set-row">
+          <label className="inv-field"><span>Ambiente</span><select value={form.environment} onChange={set('environment')}><option value="homologation">Homologación / pruebas</option><option value="production">Producción</option></select></label>
+          <label className="inv-field"><span>CUIT representada</span><input value={form.cuit} onChange={set('cuit')} inputMode="numeric" maxLength={11} placeholder="20123456789" required /></label>
+          <label className="inv-field"><span>Punto de venta ARCA</span><input value={form.pointOfSale} onChange={set('pointOfSale')} inputMode="numeric" maxLength={5} placeholder="0001" required /></label>
+          <label className="inv-field"><span>Comprobante automático</span><select value={form.defaultType} onChange={set('defaultType')}><option value="A">Factura A</option><option value="B">Factura B</option><option value="C">Factura C</option></select></label>
+        </div>
+        <label className="inv-field"><span>Certificado X.509 (.pem)</span><textarea value={form.certificatePem} onChange={set('certificatePem')} rows="4" placeholder={status?.certificateConfigured ? 'Ya hay un certificado guardado. Pegá uno nuevo solo si querés reemplazarlo.' : '-----BEGIN CERTIFICATE-----'} /></label>
+        <label className="inv-field"><span>Clave privada (.pem)</span><textarea value={form.privateKeyPem} onChange={set('privateKeyPem')} rows="4" placeholder={status?.privateKeyConfigured ? 'Ya hay una clave guardada. Pegá una nueva solo si querés reemplazarla.' : '-----BEGIN PRIVATE KEY-----'} /></label>
+        <label className="toggle-row arca-enable-row"><input type="checkbox" checked={form.enabled} onChange={(event) => setForm((current) => ({ ...current, enabled: event.target.checked }))} /><span><strong>Usar ARCA automáticamente para las nuevas ventas</strong><small>La venta queda aprobada y el comprobante se solicita a ARCA; si ARCA rechaza, queda marcada con error para reintentar.</small></span></label>
+        <div className="arca-settings-actions"><button type="submit" className="primary-btn" disabled={saving}>{saving ? 'Guardando…' : 'Guardar conexión ARCA'}</button><button type="button" className="ghost-btn" onClick={test} disabled={testing || !status?.configured}>{testing ? 'Probando…' : 'Probar conexión'}</button></div>
+      </form>
+    </section>
+  )
+}
+
 const HEADER_COUNTER_ICONS = {
   card: IconCard,
   truck: IconTruck,
@@ -65,11 +175,12 @@ function PaymentsScreen() {
   const { showToast } = useToast()
   const [saving, setSaving] = useState(false)
 
-  const saveAll = async (methods, mercadopago, checkout, online) => {
+  const saveAll = async (methods, mercadopago, checkout, online, fiscal) => {
     setSaving(true)
     try {
       await apiPut('/api/admin/settings', { section: 'payments', value: { methods, mercadopago, online } })
       await apiPut('/api/admin/settings', { section: 'checkout', value: checkout })
+      await apiPut('/api/admin/settings', { section: 'fiscal', value: fiscal })
       notifySiteSettingsChanged()
       showToast('Medios de pago guardados.', 'success')
     } catch (err) {
@@ -96,6 +207,7 @@ function PaymentsScreenBody({ settings, saving, onSave }) {
   const mpConfigured = Boolean(mp.accessToken && mp.webhookSecret)
   const online = settings.payments?.online !== false
   const checkout = settings.checkout || {}
+  const fiscal = settings.fiscal || {}
   const session = typeof getSession === 'function' ? getSession() : { user: {} }
   const user = session?.user || {}
   const adminId =
@@ -112,6 +224,13 @@ function PaymentsScreenBody({ settings, saving, onSave }) {
     accessToken: mp.accessToken || '',
     publicKey: mp.publicKey || '',
     webhookSecret: mp.webhookSecret || '',
+    fiscalMode: fiscal.mode || 'external',
+    fiscalProviderName: fiscal.providerName || '',
+    fiscalCuit: fiscal.cuit || '',
+    fiscalIvaCondition: fiscal.ivaCondition || '',
+    fiscalPointOfSale: fiscal.pointOfSale || '',
+    fiscalDefaultType: fiscal.defaultType || 'B',
+    fiscalVatRate: String(fiscal.vatRate || 21),
   })
 
   const [loadedForm] = useState(form)
@@ -123,6 +242,15 @@ function PaymentsScreenBody({ settings, saving, onSave }) {
     accessToken: f.accessToken.trim() || null,
     publicKey: f.publicKey.trim() || null,
     webhookSecret: f.webhookSecret.trim() || null,
+    fiscal: {
+      mode: f.fiscalMode,
+      providerName: f.fiscalProviderName.trim(),
+      cuit: f.fiscalCuit.replace(/\D/g, ''),
+      ivaCondition: f.fiscalIvaCondition.trim(),
+      pointOfSale: f.fiscalPointOfSale.replace(/\D/g, ''),
+      defaultType: f.fiscalDefaultType,
+      vatRate: Number(f.fiscalVatRate) || 21,
+    },
     online: f.online,
   })
   const dirty = JSON.stringify(toPayload(form)) !== JSON.stringify(toPayload(loadedForm))
@@ -152,6 +280,7 @@ function PaymentsScreenBody({ settings, saving, onSave }) {
       },
       { statementDescriptor: form.statementDescriptor.trim() || 'TechStore' },
       form.online,
+      toPayload(form).fiscal,
     )
   }
 
@@ -273,6 +402,56 @@ function PaymentsScreenBody({ settings, saving, onSave }) {
           secreto no coincide con el del webhook de esa tienda. Se guarda solo en la base de
           datos de esta tienda.
         </p>
+
+        <section className="fiscal-settings-block" aria-labelledby="fiscal-settings-title">
+          <div className="fiscal-settings-head">
+            <div>
+              <span className="dash-eyebrow">Ventas y comprobantes</span>
+              <h2 id="fiscal-settings-title">Cómo vas a gestionar la facturación</h2>
+            </div>
+            <span className={`fiscal-mode-badge fiscal-mode-${form.fiscalMode}`}>
+              {form.fiscalMode === 'internal' ? 'Gestión interna' : form.fiscalMode === 'arca' ? 'ARCA pendiente' : 'Comprobante externo'}
+            </span>
+          </div>
+          <label className="inv-field">
+            <span>Modo de comprobantes</span>
+            <select value={form.fiscalMode} onChange={(e) => setForm((f) => ({ ...f, fiscalMode: e.target.value }))}>
+              <option value="external">Facturo fuera de Tienda BNP</option>
+              <option value="internal">Solo gestión interna · no fiscal</option>
+              <option value="arca">ARCA integrada · emitir automáticamente</option>
+            </select>
+          </label>
+          {form.fiscalMode === 'external' && <>
+            <p className="set-hint fiscal-settings-note">Las ventas quedan registradas como «comprobante externo pendiente» hasta que cargues el comprobante emitido en tu sistema fiscal.</p>
+            <div className="set-row">
+              <label className="inv-field">
+                <span>Sistema o proveedor externo</span>
+                <input value={form.fiscalProviderName} onChange={set('fiscalProviderName')} placeholder="Ej.: ARCA o controlador fiscal" maxLength={120} />
+              </label>
+              <label className="inv-field">
+                <span>CUIT del negocio</span>
+                <input value={form.fiscalCuit} onChange={set('fiscalCuit')} inputMode="numeric" placeholder="20123456789" maxLength={11} />
+              </label>
+              <label className="inv-field">
+                <span>Condición frente al IVA</span>
+                <input value={form.fiscalIvaCondition} onChange={set('fiscalIvaCondition')} placeholder="Monotributo / Responsable inscripto" maxLength={80} />
+              </label>
+              <label className="inv-field">
+                <span>Punto de venta habitual</span>
+                <input value={form.fiscalPointOfSale} onChange={set('fiscalPointOfSale')} inputMode="numeric" placeholder="0001" maxLength={5} />
+              </label>
+            </div>
+          </>}
+          {form.fiscalMode === 'internal' && <p className="settings-warn fiscal-settings-note"><strong>Este modo no genera facturas.</strong> Los tickets internos deben identificarse como no fiscales. Si el comercio está obligado a emitir comprobantes, deberá hacerlo por ARCA, controlador fiscal u otro sistema.</p>}
+          {form.fiscalMode === 'arca' && <>
+            <p className="set-hint fiscal-settings-note">Las ventas aprobadas intentan obtener el CAE automáticamente mediante WSFEv1. Configurá y probá la conexión de este negocio antes de activarlo.</p>
+            <div className="set-row">
+              <label className="inv-field"><span>Tipo de comprobante ARCA</span><select value={form.fiscalDefaultType} onChange={set('fiscalDefaultType')}><option value="A">Factura A</option><option value="B">Factura B</option><option value="C">Factura C</option></select></label>
+              <label className="inv-field"><span>IVA incluido (%)</span><input value={form.fiscalVatRate} onChange={set('fiscalVatRate')} inputMode="decimal" maxLength={5} /></label>
+            </div>
+          </>}
+          <ArcaSetup tenantSelected={Boolean(adminId)} />
+        </section>
 
         <div className="set-actions">
           <button type="submit" className="primary-btn" disabled={saving || !dirty}>

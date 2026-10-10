@@ -233,6 +233,21 @@
 .mp-credentials-guide-actions svg { width: 15px; height: 15px; transform: rotate(-45deg); }
 .mp-credentials-guide-actions .primary-btn img { width: 70px; height: auto; padding: 3px 6px; border-radius: 5px; background: #fff; }
 .mp-credentials-safety { padding-top: 12px; border-top: 1px solid #d8e6f5; color: var(--gal-ink-faint); font-size: 11.5px; line-height: 1.45; }
+.fiscal-settings-block { display: grid; gap: 14px; margin-top: 26px; padding-top: 22px; border-top: 1px solid var(--gal-line); }
+.fiscal-settings-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.fiscal-settings-head h2 { margin: 5px 0 0; color: var(--gal-ink); font-size: 18px; }
+.fiscal-mode-badge { flex: 0 0 auto; padding: 6px 9px; border: 1px solid var(--gal-line); border-radius: 999px; color: var(--gal-ink-soft); font-size: 11px; font-weight: 800; }
+.fiscal-mode-external { border-color: #b9d4f0; background: #f1f7ff; color: #175cd3; }
+.fiscal-mode-internal { border-color: #e6d39c; background: #fff9e8; color: #88630d; }
+.fiscal-mode-arca { border-color: #eeb5b1; background: #fff3f2; color: #a33a35; }
+.fiscal-settings-note { margin: 0; }
+.arca-settings-block { display: grid; gap: 14px; margin-top: 8px; padding: 18px; border: 1px solid var(--gal-line); border-radius: 12px; background: rgba(255,255,255,.5); }
+.arca-settings-block h3 { margin: 5px 0 0; color: var(--gal-ink); font-size: 17px; }
+.arca-settings-form { display: grid; gap: 14px; }
+.arca-settings-form textarea { width: 100%; min-height: 92px; resize: vertical; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; line-height: 1.45; }
+.arca-enable-row { align-items: flex-start; }
+.arca-enable-row small { display: block; margin-top: 4px; color: var(--gal-ink-soft); font-weight: 500; line-height: 1.45; }
+.arca-settings-actions { display: flex; flex-wrap: wrap; gap: 10px; }
 .theme-dark .mp-credentials-guide {
   border-color: #315675;
   background: linear-gradient(135deg, #142b42, #112237);
@@ -263,6 +278,7 @@
   .set-contact-top-grid { grid-template-columns: 1fr; }
 }
 @media (max-width: 620px) {
+  .fiscal-settings-head { flex-direction: column; }
   .mp-credentials-guide-head { flex-direction: column; }
   .mp-credentials-guide-steps { grid-template-columns: 1fr; }
   .mp-credentials-guide-actions a { width: 100%; justify-content: center; }
