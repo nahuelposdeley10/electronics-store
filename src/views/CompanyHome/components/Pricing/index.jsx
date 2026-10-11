@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { IconArrow, IconCheck, IconMail, IconWrench } from '@/components/Icons'
 import { apiPost } from '@/lib/api'
 import { formatPrice, plans, setupPrice } from '../../content.js'
@@ -8,6 +8,13 @@ export default function Pricing() {
   const [selected, setSelected] = useState(null)
   const [form, setForm] = useState({ name: '', email: '', storeName: '', businessSlug: '' })
   const [state, setState] = useState({ loading: false, error: '', delivery: null })
+  useEffect(() => {
+    if (!state.delivery) return undefined
+    const timeoutId = window.setTimeout(() => {
+      setState((current) => current.delivery ? { ...current, delivery: null } : current)
+    }, 6500)
+    return () => window.clearTimeout(timeoutId)
+  }, [state.delivery])
   const submit = async (event) => {
     event.preventDefault()
     setState({ loading: true, error: '', delivery: null })
