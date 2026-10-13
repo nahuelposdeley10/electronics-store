@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { apiGet, apiPost, apiPut, apiUpload, getSession } from '@/lib/api'
 import { getSuperTenant } from '@/lib/tenant'
+import PasswordInput from '@/components/PasswordInput'
 import {
   IconArrow,
   IconBox,
@@ -32,21 +33,6 @@ import {
 } from '@/lib/siteSettings'
 
 import './styles.css'
-
-function PasswordInput({ label, value, onChange, ...rest }) {
-  const [show, setShow] = useState(false)
-  return (
-    <label className="inv-field">
-      <span>{label}</span>
-      <div style={{ display: 'flex', gap: 4 }}>
-        <input type={show ? 'text' : 'password'} value={value} onChange={onChange} {...rest} />
-        <button type="button" className="nav-link" onClick={() => setShow(!show)} title={show ? 'Ocultar' : 'Mostrar'}>
-          {show ? 'Ocultar' : 'Mostrar'}
-        </button>
-      </div>
-    </label>
-  )
-}
 
 function ArcaSetup({ tenantSelected = true }) {
   const { showToast } = useToast()
@@ -411,12 +397,14 @@ function PaymentsScreenBody({ settings, saving, onSave }) {
         <div className="set-row">
           <PasswordInput
             label="Access Token (APP_USR-...)"
+            labelClassName="inv-field"
             value={form.accessToken}
             onChange={set('accessToken')}
             maxLength={300}
           />
           <PasswordInput
             label="Webhook Secret (desde el panel de MP)"
+            labelClassName="inv-field"
             value={form.webhookSecret}
             onChange={set('webhookSecret')}
             maxLength={300}

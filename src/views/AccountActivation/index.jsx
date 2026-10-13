@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { apiPost } from '@/lib/api'
 import { applySEO, seoMeta } from '@/lib/seo'
 import BrandLogo from '@/components/BrandLogo'
+import PasswordInput from '@/components/PasswordInput'
 import './styles.css'
 
 export default function AccountActivation({ token }) {
@@ -37,8 +38,8 @@ export default function AccountActivation({ token }) {
         <h1 id="activation-title">Creá la contraseña de tu cuenta.</h1>
         <p>Elegí una contraseña segura para acceder al panel de Tienda BNP. El link es de un solo uso.</p>
         <form onSubmit={submit}>
-          <label><span>Contraseña</span><input type="password" value={password} onChange={(event) => setPassword(event.target.value)} minLength={6} autoComplete="new-password" required /></label>
-          <label><span>Repetir contraseña</span><input type="password" value={confirmation} onChange={(event) => setConfirmation(event.target.value)} minLength={6} autoComplete="new-password" required /></label>
+          <PasswordInput label="Contraseña" value={password} onChange={(event) => setPassword(event.target.value)} minLength={6} autoComplete="new-password" required />
+          <PasswordInput label="Repetir contraseña" value={confirmation} onChange={(event) => setConfirmation(event.target.value)} minLength={6} autoComplete="new-password" required />
           {state.error && <p className="activation-error" role="alert">{state.error}</p>}
           <button className="activation-button" type="submit" disabled={state.loading}>{state.loading ? 'Activando…' : 'Activar mi cuenta'}</button>
         </form>

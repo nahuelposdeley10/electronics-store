@@ -3,6 +3,7 @@ import { apiGet, clearSession, getSession, login as apiLogin } from '@/lib/api'
 import { useOrderEvents } from '@/lib/useOrderEvents'
 import { clearSuperTenant, getSuperTenant, setSuperTenant } from '@/lib/tenant'
 import { onboardingMode } from '@/lib/onboardingEntry'
+import PasswordInput from '@/components/PasswordInput'
 import {
   IconBack,
   IconBox,
@@ -992,19 +993,16 @@ function LoginPanel({ attempts, error, onLogin }) {
                   required
                 />
               </label>
-              <label>
-                <span>Contraseña</span>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Ingresá tu contraseña"
-                  aria-label="Contraseña"
-                  autoComplete="current-password"
-                  required
-                  autoFocus
-                />
-              </label>
+              <PasswordInput
+                label="Contraseña"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Ingresá tu contraseña"
+                aria-label="Contraseña"
+                autoComplete="current-password"
+                required
+                autoFocus
+              />
               {error ? (
                 <em className="unlock-error">{error}</em>
               ) : attempts > 1 ? (
@@ -1014,6 +1012,7 @@ function LoginPanel({ attempts, error, onLogin }) {
                 Ingresar
               </button>
             </form>
+            <a className="unlock-home-link" href="/home"><IconBack /> Volver a la home</a>
             <p className="unlock-hint">Ventas · Caja · Stock · Reportes</p>
           </section>
         </main>

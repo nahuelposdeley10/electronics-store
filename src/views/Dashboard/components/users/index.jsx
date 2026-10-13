@@ -4,6 +4,7 @@ import { BUSINESS_PLANS } from '@/data/plans'
 import { apiDelete, apiGet, apiPost, apiPut, getSession } from '@/lib/api'
 import { getSuperTenant } from '@/lib/tenant'
 import { IconCheck, IconChevron, IconCross, IconEdit, IconPlus, IconSearch, IconTrash, IconStorefront, IconUsers, IconCard } from '@/components/Icons'
+import PasswordInput from '@/components/PasswordInput'
 import { useToast } from '@/context/useToast'
 import { useConfirm } from '@/context/useConfirm'
 import { PERM_CODES, PERM_LABELS, ROLE_LABELS, initials, shortDate } from '../../consts.js'
@@ -162,10 +163,15 @@ function BusinessAdminEditor({ business, onClose, onUpdated }) {
           </div>
           <span className="set-hint">Minúsculas, números y guiones. Cambiarlo modifica la URL pública.</span>
         </label>
-        <label className="inv-field">
-          <span>Nueva contraseña <small>(opcional)</small></span>
-          <input type="password" value={form.password} onChange={set('password')} autoComplete="new-password" minLength={6} placeholder="Dejar vacía para no cambiarla" />
-        </label>
+        <PasswordInput
+          label="Nueva contraseña (opcional)"
+          labelClassName="inv-field"
+          value={form.password}
+          onChange={set('password')}
+          autoComplete="new-password"
+          minLength={6}
+          placeholder="Dejar vacía para no cambiarla"
+        />
         <div className="business-editor-actions">
           <button type="submit" className="primary-btn" disabled={saving || !canSave}>
             {saving ? 'Guardando…' : 'Guardar cambios'}
@@ -752,29 +758,26 @@ function UsersScreen({ allowBusinessCreate = false }) {
               </label>
             )}
             {!editing && (
-              <label className="inv-field">
-                <span>Contraseña inicial {form.role === 'admin' ? '(requerida)' : '(opcional)'}</span>
-                <input
-                  type="password"
-                  value={form.password || ''}
-                  onChange={set('password')}
-                  autoComplete="new-password"
-                  minLength={6}
-                  required={form.role === 'admin'}
-                />
-                <span className="set-hint">Se enviará al email de acceso. El administrador podrá cambiarla después desde Usuarios.</span>
-              </label>
+              <PasswordInput
+                label={`Contraseña inicial ${form.role === 'admin' ? '(requerida)' : '(opcional)'}`}
+                labelClassName="inv-field"
+                value={form.password || ''}
+                onChange={set('password')}
+                autoComplete="new-password"
+                minLength={6}
+                required={form.role === 'admin'}
+                hint="Se enviará al email de acceso. El administrador podrá cambiarla después desde Usuarios."
+                hintClassName="set-hint"
+              />
             )}
             {editing && (
-              <label className="inv-field">
-                <span>Nueva contraseña (opcional)</span>
-                <input
-                  type="password"
-                  value={form.password || ''}
-                  onChange={set('password')}
-                  autoComplete="new-password"
-                />
-              </label>
+              <PasswordInput
+                label="Nueva contraseña (opcional)"
+                labelClassName="inv-field"
+                value={form.password || ''}
+                onChange={set('password')}
+                autoComplete="new-password"
+              />
             )}
             <div className="set-actions">
               <button type="submit" className="primary-btn" disabled={saving || !canSave}>
