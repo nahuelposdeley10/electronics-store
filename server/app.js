@@ -44,7 +44,7 @@ function requestLogger(req, res, next) {
 const HELMET_CSP = {
   directives: {
     defaultSrc: ["'self'"],
-    scriptSrc: ["'self'"],
+    scriptSrc: ["'self'", 'https://static.cloudflareinsights.com'],
     styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
     fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
     imgSrc: ["'self'", 'data:', 'https:'],
