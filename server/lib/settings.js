@@ -182,6 +182,14 @@ function toNum(value, fallback = 0) {
   return Number.isFinite(n) ? n : fallback
 }
 
+export function normalizePermissions(list) {
+  const permissions = new Set(
+    (Array.isArray(list) ? list : []).filter((permission) => ALL_PERMISSIONS.includes(permission)),
+  )
+  if (permissions.has('inventory.write')) permissions.add('inventory.read')
+  return [...permissions]
+}
+
 function sanitizeRoles(roles) {
   if (!roles || typeof roles !== 'object' || Array.isArray(roles)) {
     return { admin: [...ALL_PERMISSIONS], operator: [...OPERATOR_DEFAULT_PERMISSIONS] }
@@ -193,7 +201,7 @@ function sanitizeRoles(roles) {
       : role === 'operator'
         ? OPERATOR_DEFAULT_PERMISSIONS
         : ALL_PERMISSIONS
-    out[role] = [...new Set(list.filter((p) => ALL_PERMISSIONS.includes(p)))]
+    out[role] = normalizePermissions(list)
   }
   return out
 }
@@ -356,7 +364,7 @@ export async function permissionsForRole(role, tenant) {
   if (role === 'superadmin') return [...ALL_PERMISSIONS]
   const settings = await getSettings({ tenant })
   const list = settings.roles?.[role]
-  return Array.isArray(list) ? list : []
+  return normalizePermissions(list)
 }
 
 export async function permissionsForUser(user, tenant) {
@@ -368,8 +376,9 @@ export async function permissionsForUser(user, tenant) {
   const planCode = inferPlanCode(subscription)
   const planPermissions = planCode ? permissionsForPlan(planCode) : null
   if (Array.isArray(user.permissions) && user.permissions.length) {
-    return user.permissions.filter((p) => ALL_PERMISSIONS.includes(p) && (!planPermissions || planPermissions.has(p)))
+    const effective = normalizePermissions(user.permissions)
+    return effective.filter((permission) => !planPermissions || planPermissions.has(permission))
   }
   const rolePermissions = await permissionsForRole(user.role, tenant)
-  return planPermissions ? rolePermissions.filter((p) => planPermissions.has(p)) : rolePermissions
+  return rolePermissions.filter((permission) => !planPermissions || planPermissions.has(permission))
 }
