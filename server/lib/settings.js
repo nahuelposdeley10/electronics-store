@@ -375,6 +375,9 @@ export async function permissionsForUser(user, tenant) {
     : null
   const planCode = inferPlanCode(subscription)
   const planPermissions = planCode ? permissionsForPlan(planCode) : null
+  if (user.role === 'admin') {
+    return planPermissions ? [...planPermissions] : [...ALL_PERMISSIONS]
+  }
   if (Array.isArray(user.permissions) && user.permissions.length) {
     const effective = normalizePermissions(user.permissions)
     return effective.filter((permission) => !planPermissions || planPermissions.has(permission))

@@ -13,12 +13,13 @@ function OverviewScreen({ data, onView, businesses = [], canViewReports = false 
   const [trend, setTrend] = useState(null)
   const [trendError, setTrendError] = useState(false)
   useEffect(() => {
+    if (!canViewReports) return undefined
     let active = true
     apiGet(`/api/admin/reports/sales?days=${trendDays * 2}`)
       .then((result) => { if (active) { setTrend(result.series || []); setTrendError(false) } })
       .catch(() => { if (active) setTrendError(true) })
     return () => { active = false }
-  }, [trendDays])
+  }, [trendDays, canViewReports])
   const trendCurrent = trend?.slice(-trendDays) || []
   const trendPrevious = trend?.slice(-trendDays * 2, -trendDays) || []
   const currentTotal = trendCurrent.reduce((sum, day) => sum + (Number(day.total) || 0), 0)
@@ -60,7 +61,7 @@ function OverviewScreen({ data, onView, businesses = [], canViewReports = false 
         ))}
       </div>
 
-      <section className="dash-card overview-trend">
+      {canViewReports && <section className="dash-card overview-trend">
         <div className="dash-card-head overview-trend-head">
           <div><h2>Evolución de ventas</h2><p>Ingresos aprobados · comparación con el período anterior</p></div>
           <div className="overview-trend-actions" role="group" aria-label="Período de ventas">
@@ -104,7 +105,7 @@ function OverviewScreen({ data, onView, businesses = [], canViewReports = false 
             <div className="overview-trend-legend"><span><i className="is-current"/> Período actual</span><span><i className="is-previous"/> Período anterior (alineado por día)</span></div>
           </>
         )}
-      </section>
+      </section>}
       <div className="overview-section-label"><div><strong>Actividad comercial</strong><span>Productos destacados y operaciones recientes</span></div></div>
       <div className="dash-cols">
         <section className="dash-card">
