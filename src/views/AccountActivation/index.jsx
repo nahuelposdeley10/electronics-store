@@ -27,7 +27,7 @@ export default function AccountActivation({ token }) {
 
   return <main className="activation-page">
     <section className="activation-card" aria-labelledby="activation-title">
-      <a className="activation-brand" href="/home" aria-label="Tienda BNP, inicio"><BrandLogo /></a>
+      <a className="activation-brand" href="/" aria-label="Tienda BNP, inicio"><BrandLogo /></a>
       {state.done ? <>
         <span className="activation-kicker">Cuenta activada</span>
         <h1 id="activation-title">Ya podés entrar a tu panel.</h1>

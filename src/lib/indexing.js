@@ -10,8 +10,7 @@ export const PAYMENT_QUERY_KEYS = [
 export function shouldNoIndex(url) {
   const parsed = new URL(url, 'http://localhost')
   const path = parsed.pathname
-  // The root currently opens the admin panel, not the commercial landing.
-  if (path === '/' || path === '/index.html') return true
+  // The root is the public commercial landing page.
   if (/^\/(?:admin|activar-cuenta|cart|order-status|api)(?:\/|$)/i.test(path)) return true
   if (/^\/u\/[^/]+\/(?:cart|order-status)(?:\/|$)/i.test(path)) return true
   if (PAYMENT_QUERY_KEYS.some((key) => parsed.searchParams.has(key))) return true

@@ -57,7 +57,7 @@ async function ensureBillingLink(subscription, owner, today) {
     reason: `${subscription.plan} · ${owner.name || 'Suscripción del local'}`.slice(0, 255),
     external_reference: String(subscription.adminId),
     payer_email: owner.email,
-    back_url: `${env.clientUrl}/home?subscription=return`,
+    back_url: `${env.clientUrl}/?subscription=return`,
     auto_recurring: {
       frequency: 1,
       frequency_type: 'months',
@@ -198,7 +198,7 @@ export async function processPaidSubscriptionGrace(now = new Date()) {
         storeName: settings.store?.name || owner.name,
         planName: subscription.plan,
         planPrice: displayPrice(subscription.price),
-        subscriptionUrl: subscription.billing?.initPoint || `${env.clientUrl}/home`,
+        subscriptionUrl: subscription.billing?.initPoint || `${env.clientUrl}/`,
         reason,
       })
       if (!delivery.sent) continue

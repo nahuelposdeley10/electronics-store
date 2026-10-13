@@ -126,7 +126,7 @@ export function createApp() {
   }))
 
   if (fs.existsSync(DIST_DIR)) {
-    app.get(['/home', '/planes'], (req, res) => {
+    app.get(['/', '/home', '/planes'], (req, res) => {
       res.sendFile(path.join(DIST_DIR, 'home.html'))
     })
     app.use(express.static(DIST_DIR))

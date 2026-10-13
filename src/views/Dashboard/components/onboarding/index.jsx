@@ -9,7 +9,7 @@ import useOnboarding from './useOnboarding.js'
 import { STEPS } from './content.js'
 import './styles.css'
 
-export default function Onboarding({ screen, role, userId, assistance = false, onView, canView, onBusinessSaved }) {
+export default function Onboarding({ screen, role, userId, assistance = false, onView, canView, onBusinessSaved, onStatusChange }) {
   const { data, error, busy, refresh, save } = useOnboarding(screen, onBusinessSaved)
   const title = useRef(null)
   const previousStep = useRef(null)
@@ -17,6 +17,7 @@ export default function Onboarding({ screen, role, userId, assistance = false, o
   const entryScreen = useRef(screen)
   const isOpen = screen === 'onboarding'
   const current = data?.lastStep || 'business'
+  const isComplete = Boolean(data?.finished || (data?.total > 0 && data.completed >= data.total))
 
   useEffect(() => {
     if (!data || entryChecked.current) return
@@ -31,7 +32,17 @@ export default function Onboarding({ screen, role, userId, assistance = false, o
     previousStep.current = isOpen && data ? current : null
   }, [isOpen, current, data])
 
+  useEffect(() => {
+    if (data) onStatusChange?.(isComplete)
+  }, [data, isComplete, onStatusChange])
+
+  useEffect(() => {
+    if (isOpen && isComplete) onView('overview')
+  }, [isOpen, isComplete, onView])
+
   if (!data) return <section className="onboard-banner" aria-label="Puesta en marcha"><p role={error ? 'alert' : 'status'}>{error || 'Comprobando la puesta en marcha de tu negocio…'}</p>{error && <button className="ghost-btn" type="button" onClick={refresh}>Reintentar</button>}</section>
+
+  if (isComplete) return null
 
   const stepIndex = STEPS.findIndex((step) => step.id === current)
   const step = STEPS[stepIndex]
@@ -43,7 +54,7 @@ export default function Onboarding({ screen, role, userId, assistance = false, o
     .map((item) => ({ ...item, content: STEPS.find((stepItem) => stepItem.id === item.id) }))
 
   if (!isOpen) {
-    if (assistance || data.finished) return null
+    if (assistance) return null
     return <section className="onboard-banner" aria-label="Puesta en marcha">
       <div><span className="dash-eyebrow">Tu negocio, paso a paso</span><strong>{data.completedAt ? 'Tu configuración necesita una revisión' : 'Prepará tu tienda para comenzar'}</strong><span>{data.completed} de {data.total} pasos completos. Guardá los cambios en cada pantalla y volvé a la guía.</span></div>
       {missingSteps.length > 0 && <div className="onboard-missing" aria-label="Secciones pendientes">

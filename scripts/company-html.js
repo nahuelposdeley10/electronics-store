@@ -1,7 +1,7 @@
 import { companyMeta, companyUrl, companyImage, companyStructuredData } from '../src/views/CompanyHome/content.js'
 
 export function isCompanyPath(url) {
-  return /^\/(home|planes)\/?$/.test(new URL(url, 'http://localhost').pathname)
+  return /^\/(?:home|planes)?\/?$/.test(new URL(url, 'http://localhost').pathname)
 }
 
 function escapeAttribute(value) {
@@ -10,8 +10,8 @@ function escapeAttribute(value) {
 
 export function companyHtml(template, { body, year }, styles = []) {
   const root = '<div id="root"></div>'
-  if (!template.includes(root)) throw new Error('No se encontró la raíz vacía para prerenderizar /home.')
-  // Only /home receives this canonical and JSON-LD; the SPA shell serves other routes.
+  if (!template.includes(root)) throw new Error('No se encontró la raíz vacía para prerenderizar la home.')
+  // Only the commercial landing receives this canonical and JSON-LD; the SPA shell serves other routes.
   const metadata = [
     ['name', 'description', companyMeta.description],
     ['name', 'robots', 'index, follow'],

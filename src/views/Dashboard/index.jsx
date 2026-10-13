@@ -1,4 +1,4 @@
-import { Fragment, lazy, Suspense, useEffect, useState } from 'react'
+import { Fragment, lazy, Suspense, useCallback, useEffect, useState } from 'react'
 import { apiGet, clearSession, getSession, login as apiLogin } from '@/lib/api'
 import { useOrderEvents } from '@/lib/useOrderEvents'
 import { clearSuperTenant, getSuperTenant, setSuperTenant } from '@/lib/tenant'
@@ -210,6 +210,7 @@ export default function Dashboard({ onExit }) {
       : []
   })
   const [attempt, setAttempt] = useState(0)
+  const [onboardingStatus, setOnboardingStatus] = useState({ key: null, finished: false })
   const [superTenant, setSuperTenantState] = useState(() => getSuperTenant())
   const [businessOptions, setBusinessOptions] = useState(null)
   const [businessMenuOpen, setBusinessMenuOpen] = useState(false)
@@ -230,10 +231,14 @@ export default function Dashboard({ onExit }) {
   const fallbackScreen = canView('sales-pos') ? 'sales-pos' : canView('stock-overview') ? 'stock-overview' : 'overview'
   const activeScreen = canView(screen) ? screen : fallbackScreen
   const tenantScreenKey = userIsSuper ? (superTenant || 'all') : (user?.id || 'own')
+  const onboardingFinished = onboardingStatus.key === tenantScreenKey && onboardingStatus.finished
   const selectedBusiness = (businessOptions || []).find(
     (business) => String(business.id) === String(superTenant),
   ) || null
   const setupMode = onboardingMode({ role: user?.role, canConfigure: canOnboard, screen: activeScreen, tenantId: superTenant })
+  const handleOnboardingStatus = useCallback((finished) => {
+    setOnboardingStatus({ key: tenantScreenKey, finished })
+  }, [tenantScreenKey])
   // El superadmin trabaja en modo agregado por defecto. La selección de un local
   // queda disponible desde el menú lateral, pero nunca bloquea el panel.
   const needsBusiness = false
@@ -435,7 +440,7 @@ export default function Dashboard({ onExit }) {
 
   const NAV = [
     { id: 'overview', label: 'Panel', icon: IconDashboard },
-    ...(canOnboard ? [{ id: 'onboarding', label: userIsSuper ? 'Asistir a negocio' : 'Puesta en marcha', icon: IconWrench }] : []),
+    ...(canOnboard && (userIsSuper || !onboardingFinished) ? [{ id: 'onboarding', label: userIsSuper ? 'Asistir a negocio' : 'Puesta en marcha', icon: IconWrench }] : []),
     {
       id: 'products',
       label: 'Productos',
@@ -588,7 +593,7 @@ export default function Dashboard({ onExit }) {
     <div className={`dash theme-${theme}${sidebarCollapsed ? ' sidebar-collapsed' : ''}`}>
       {gate !== 'login' && (
         <aside className="dash-side">
-        <a className="dash-brand" href="/home" aria-label="Tienda BNP, volver al inicio">
+        <a className="dash-brand" href="/" aria-label="Tienda BNP, volver al inicio">
           <BrandLogo variant="full" className="dash-brand-full" />
           <BrandLogo variant="mark" className="dash-brand-mark" alt="Tienda BNP" />
         </a>
@@ -796,7 +801,7 @@ export default function Dashboard({ onExit }) {
         )}
         <Suspense fallback={<DashboardLoading />}>
         <Fragment key={tenantScreenKey}>
-        {gate === 'ready' && setupMode && <Onboarding key={`${user?.id}:${superTenant || 'own'}`} screen={activeScreen} role={user?.role} userId={user?.id} assistance={setupMode === 'assistance'} onView={changeScreen} canView={canView} onBusinessSaved={() => setAttempt((n) => n + 1)} />}
+        {gate === 'ready' && setupMode && <Onboarding key={`${user?.id}:${superTenant || 'own'}`} screen={activeScreen} role={user?.role} userId={user?.id} assistance={setupMode === 'assistance'} onView={changeScreen} canView={canView} onBusinessSaved={() => setAttempt((n) => n + 1)} onStatusChange={handleOnboardingStatus} />}
         {gate === 'ready' && activeScreen === 'onboarding' && userIsSuper && !superTenant && <section className="dash-screen"><h1>Asistir a un negocio</h1><p>Elegí el comercio al que querés ayudar. Esta guía configura su tienda, no tu cuenta de dueño general.</p><button className="primary-btn" type="button" onClick={() => changeScreen('settings-businesses')}>Elegir negocio</button></section>}
         {userIsSuper && (activeScreen === 'settings-businesses' || businessBlock) && (
           <BusinessesScreen
@@ -1012,7 +1017,7 @@ function LoginPanel({ attempts, error, onLogin }) {
                 Ingresar
               </button>
             </form>
-            <a className="unlock-home-link" href="/home"><IconBack /> Volver a la home</a>
+            <a className="unlock-home-link" href="/"><IconBack /> Volver a la home</a>
             <p className="unlock-hint">Ventas · Caja · Stock · Reportes</p>
           </section>
         </main>

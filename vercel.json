@@ -2,7 +2,7 @@
   "buildCommand": "yarn build",
   "outputDirectory": "dist",
   "headers": [
-    { "source": "/", "headers": [{ "key": "X-Robots-Tag", "value": "noindex, follow" }] },
+    { "source": "/", "headers": [{ "key": "X-Robots-Tag", "value": "index, follow" }] },
     { "source": "/index.html", "headers": [{ "key": "X-Robots-Tag", "value": "noindex, follow" }] },
     { "source": "/admin/:path*", "headers": [{ "key": "X-Robots-Tag", "value": "noindex, follow" }] },
     { "source": "/activar-cuenta/:path*", "headers": [{ "key": "X-Robots-Tag", "value": "noindex, follow" }] },
@@ -23,6 +23,7 @@
   ],
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/index" },
+    { "source": "/", "destination": "/home.html" },
     { "source": "/home", "destination": "/home.html" },
     { "source": "/home/", "destination": "/home.html" },
     { "source": "/planes", "destination": "/home.html" },

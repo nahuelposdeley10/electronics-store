@@ -25,7 +25,7 @@ function buildStyles(manifest) {
     if (visited.has(key)) return
     visited.add(key)
     const chunk = manifest[key]
-    if (!chunk) throw new Error(`Falta el recurso de /home en el manifest: ${key}`)
+    if (!chunk) throw new Error(`Falta el recurso de la home en el manifest: ${key}`)
     for (const imported of chunk.imports || []) visit(imported)
     for (const css of chunk.css || []) styles.add(`/${css}`)
   }
@@ -67,7 +67,7 @@ export default function companyPrerender() {
         ])
         const html = companyHtml(template, renderCompanyPage(), buildStyles(JSON.parse(rawManifest)))
         await writeFile(path.join(output, 'home.html'), html)
-        config.logger.info(`Prerender /home: ${(Buffer.byteLength(html) / 1024).toFixed(1)} kB de HTML con contenido.`)
+        config.logger.info(`Prerender de la home: ${(Buffer.byteLength(html) / 1024).toFixed(1)} kB de HTML con contenido.`)
       } finally {
         await server.close()
       }

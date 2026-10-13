@@ -3,7 +3,7 @@ import { homeUrl, productUrl, cartUrl, infoUrl, orderStatusUrl } from './urls.js
 
 export function parseLocation() {
   const path = window.location.pathname.replace(/\/$/, '') || '/'
-  if (path === '/home') return { name: 'company-home' }
+  if (path === '/' || path === '/home') return { name: 'company-home' }
   if (path === '/planes') return { name: 'plans' }
   if (path === '/activar-cuenta') return { name: 'account-activation', payload: { token: new URLSearchParams(window.location.search).get('token') || '' } }
   const params = new URLSearchParams(window.location.search)
@@ -40,9 +40,9 @@ export function urlForView(name, payload) {
     case 'dashboard':
       return '/admin'
     case 'company-home':
-      return '/home'
+      return '/'
     case 'plans':
-      return '/home#planes'
+      return '/#planes'
     case 'product':
       return payload && payload.id !== undefined
         ? productUrl(payload.id)

@@ -29,7 +29,7 @@ export default function Navigation() {
   return (
     <header className="bnp-header" ref={header}>
       <div className="bnp-nav bnp-wrap">
-        <a className="bnp-brand" href="/home" aria-label="Tienda BNP, inicio"><BrandLogo /></a>
+        <a className="bnp-brand" href="/" aria-label="Tienda BNP, inicio"><BrandLogo /></a>
         <button ref={toggle} type="button" className="bnp-menu-toggle" aria-expanded={open} aria-controls="bnp-navigation" aria-label={open ? 'Cerrar menú' : 'Abrir menú'} onClick={() => setOpen(!open)}>
           {open ? <IconClose /> : <span className="bnp-menu-lines" aria-hidden="true" />}
         </button>

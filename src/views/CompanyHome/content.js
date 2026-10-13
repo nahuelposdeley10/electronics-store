@@ -1,6 +1,6 @@
 import { BUSINESS_PLANS } from '../../data/plans.js'
 
-export const companyUrl = 'https://www.tiendabnp.com/home'
+export const companyUrl = 'https://www.tiendabnp.com/'
 export const companyImage = 'https://www.tiendabnp.com/images/company/storefront-social.jpg'
 
 export const companyMeta = {

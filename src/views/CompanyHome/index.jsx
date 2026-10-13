@@ -27,7 +27,7 @@ export default function CompanyHome({ legacyPlans = false, initialYear = current
       image: companyImage,
       structuredData: companyStructuredData(),
     })
-    if (legacyPlans) window.history.replaceState({}, '', '/home#planes')
+    if (legacyPlans) window.history.replaceState({}, '', '/#planes')
     const target = document.getElementById(window.location.hash.slice(1))
     if (target) target.scrollIntoView({ behavior: 'instant' })
   }, [legacyPlans])
@@ -46,7 +46,7 @@ export default function CompanyHome({ legacyPlans = false, initialYear = current
         <Closing />
       </main>
       <footer className="bnp-footer bnp-wrap">
-        <a className="bnp-brand" href="/home" aria-label="Tienda BNP, inicio"><BrandLogo /></a>
+        <a className="bnp-brand" href="/" aria-label="Tienda BNP, inicio"><BrandLogo /></a>
         <p>Software para comercios.<br />Hecho para tu día a día.</p>
         <nav aria-label="Enlaces del pie"><a href="#planes">Planes</a><a href="/admin">Acceso al panel</a></nav>
         <small>© {year} Tienda BNP · Argentina</small>
