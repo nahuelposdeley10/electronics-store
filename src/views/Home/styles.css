@@ -336,9 +336,12 @@
     gap: 16px;
   }
 
-.product-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
+  .product-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .storefront .product-grid {
+    gap: 8px;
   }
 
 .bay-stats {
@@ -359,11 +362,6 @@
   }
 }
 @media (max-width: 480px) {
-
-.product-grid {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 12px;
-  }
 
   .band-shipping {
     flex-direction: column;
