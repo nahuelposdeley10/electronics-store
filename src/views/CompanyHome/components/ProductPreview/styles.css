@@ -11,9 +11,12 @@
 .bnp-preview-browser > span { display: flex; gap: 4px; }
 .bnp-preview-browser i { width: 6px; height: 6px; border-radius: 50%; background: #a4b1c9; }
 .bnp-preview-browser small { color: #52627c; font-size: 10px; }
+.bnp-screenshot-scroll { position: relative; height: clamp(290px, 36vw, 430px); overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; scrollbar-color: #9db7e4 #edf1f8; scrollbar-width: thin; }
+.bnp-screenshot-scroll:focus-visible { outline: 3px solid var(--bnp-blue); outline-offset: -3px; }
 .bnp-real-screenshot { margin: 0; background: #0b1728; }
 .bnp-real-screenshot img { display: block; width: 100%; height: auto; }
 .bnp-real-screenshot figcaption { padding: 12px 18px; background: #edf1f8; color: #52627c; font-size: 10px; }
+.bnp-screenshot-scroll-hint { position: absolute; right: 14px; bottom: 12px; padding: 7px 10px; border-radius: 999px; background: rgba(20, 36, 62, .86); color: white; font-size: 10px; pointer-events: none; }
 .bnp-preview-copy h3 { font-size: 30px; max-width: 340px; }
 .bnp-preview-copy > p { color: var(--bnp-muted); margin-top: 20px; font-size: 15px; }
 .bnp-preview-copy ul { margin: 24px 0; display: grid; gap: 12px; }
@@ -25,5 +28,7 @@
   .bnp-preview-copy h3 { max-width: none; }
   .bnp-preview-tabs { gap: 18px; }
   .bnp-preview-tabs button { font-size: 11px; line-height: 1.5; }
+  .bnp-screenshot-scroll { height: min(330px, 72vw); }
+  .bnp-screenshot-scroll-hint { right: 10px; bottom: 10px; font-size: 9px; }
 }
 @keyframes bnp-preview-enter { from { opacity: .3; translate: 0 10px; } to { opacity: 1; translate: 0 0; } }
