@@ -1,4 +1,4 @@
-const captureVersion = '?v=20261014'
+const captureVersion = '?v=20261014-2'
 
 export const tabs = [
   { id: 'tienda', label: 'Tienda online', eyebrow: 'UNA VIDRIERA QUE PODÉS COMPARTIR', title: 'Tus productos, listos para descubrir.', text: 'Un catálogo con fotos, categorías y ofertas. Tus clientes eligen, arman su carrito y continúan por el canal de compra que configures.', bullets: ['Tu marca al frente', 'Carrito y cupones', 'Mercado Pago o pedidos por WhatsApp'], image: `/images/company/storefront-light-full.png${captureVersion}`, alt: 'Captura clara y completa de la tienda online de demostración de Cesar Electrónica' },
