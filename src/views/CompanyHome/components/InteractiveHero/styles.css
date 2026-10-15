@@ -22,7 +22,7 @@
 .bnp-hero-orbit::before { top: 17%; left: 10%; }
 .bnp-hero-orbit::after { bottom: 22%; right: 6%; background: #5aa984; }
 .bnp-hero-caption { position: absolute; top: 7%; left: 0; width: 100%; text-align: center; font-size: 9px; font-weight: 800; letter-spacing: .2em; color: #4e628a; }
-.bnp-hero-art { position: absolute; inset: 0 -5%; }
+.bnp-hero-art { position: absolute; inset: 0 -5%; will-change: transform; }
 .bnp-hero-art img { width: 100%; height: auto; }
 .bnp-hero-label { position: absolute; bottom: 7%; left: 0; display: flex; align-items: center; gap: 12px; padding: 14px 18px; background: #ffffffed; border: 1px solid white; box-shadow: 0 12px 36px #14243e12; border-radius: 12px; transform: translate3d(var(--bnp-depth-x, 0px), var(--bnp-depth-y, 0px), 0); }
 .bnp-hero-label > span { background: var(--bnp-mint); border-radius: 8px; display: grid; place-items: center; width: 36px; height: 36px; }
