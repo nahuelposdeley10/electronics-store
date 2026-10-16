@@ -10,11 +10,11 @@ export function setupHeroDepth(surface, layer) {
   let scrollY = 0
   let previousTime = 0
   const paint = () => {
-    layer.style.transform = `perspective(1000px) rotateX(${-y * 4}deg) rotateY(${x * 6}deg) translate3d(${x * 8}px, ${y * 5 + scrollY}px, 0)`
-    surface.style.setProperty('--bnp-depth-x', `${x * 16}px`)
-    surface.style.setProperty('--bnp-depth-y', `${y * 12}px`)
-    surface.style.setProperty('--bnp-light-x', `${x * 42}px`)
-    surface.style.setProperty('--bnp-light-y', `${y * 32}px`)
+    layer.style.transform = `perspective(900px) rotateX(${-y * 6}deg) rotateY(${x * 10}deg) translate3d(${x * 12}px, ${y * 8 + scrollY}px, 0)`
+    surface.style.setProperty('--bnp-depth-x', `${x * 22}px`)
+    surface.style.setProperty('--bnp-depth-y', `${y * 16}px`)
+    surface.style.setProperty('--bnp-light-x', `${x * 58}px`)
+    surface.style.setProperty('--bnp-light-y', `${y * 44}px`)
   }
   const tick = (time) => {
     const delta = previousTime ? Math.min(time - previousTime, 50) : 16.67
@@ -50,7 +50,7 @@ export function setupHeroDepth(surface, layer) {
     const sceneCenter = rect.top + rect.height * .5
     const range = Math.max(window.innerHeight, rect.height)
     const progress = Math.max(-1, Math.min(1, (viewportCenter - sceneCenter) / range))
-    targetScrollY = progress * 22
+    targetScrollY = progress * 42
     queue()
   }
   const resetMotion = () => {

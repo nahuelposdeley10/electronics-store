@@ -1,4 +1,5 @@
-.bnp-preview-tabs { display: flex; gap: 26px; border-bottom: 1px solid var(--bnp-line); margin-bottom: 38px; position: relative; overflow-x: auto; scrollbar-width: thin; }
+.bnp-preview-tabs { display: flex; gap: 26px; border-bottom: 1px solid var(--bnp-line); margin-bottom: 38px; position: relative; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; -ms-overflow-style: none; }
+.bnp-preview-tabs::-webkit-scrollbar { display: none; }
 .bnp-preview-tabs::after { content: ''; position: absolute; left: 0; bottom: -1px; height: 3px; width: var(--bnp-tab-width, 0px); background: var(--bnp-blue); border-radius: 3px; transform: translateX(var(--bnp-tab-x, 0px)); transition: transform .35s cubic-bezier(.2,.7,.2,1), width .35s; pointer-events: none; }
 .bnp-preview-tabs button { flex: 0 0 auto; padding: 16px 0; color: var(--bnp-muted); font-size: 14px; font-weight: 700; border-bottom: 3px solid transparent; white-space: nowrap; }
 .bnp-preview-tabs button[aria-selected=true] { color: var(--bnp-blue); }

@@ -113,3 +113,14 @@ código debe respetarla.
 ## Skill de experiencia del usuario final
 
 Para cambios en navegación, dashboard, KPIs, iconos, formularios, estados, tienda pública, carrito, checkout, accesibilidad o diseño responsive, consultar y aplicar `.agents/skills/experiencia-usuario-final/SKILL.md` antes de implementar. Su objetivo es priorizar la facilidad de uso para comerciantes, empleados, superadministradores y compradores, sin alterar permisos ni lógica de negocio.
+
+## Coordinación de agentes Codex
+
+- La configuración del proyecto vive en `.codex/config.toml` y los agentes especializados en `.codex/agents/`. Usar los nombres declarados allí como roles reales de Codex, no como una lista de prompts manuales.
+- Delegar en paralelo cuando los scopes sean independientes y exista trabajo suficiente para justificarlo. El coordinador debe consolidar resultados y ejecutar la verificación final.
+- Nunca permitir dos agentes escritores en el mismo checkout al mismo tiempo. Para cambios paralelos usar worktrees administrados o scopes de archivos estrictamente disjuntos; los agentes de lectura pueden inspeccionar sin modificar.
+- `pele-qa` y `neuer-security` trabajan en modo read-only por defecto. Cualquier excepción requiere autorización explícita, un archivo o scope concreto y una validación posterior.
+- `maradona-architect` define límites y dependencias antes de abrir trabajo paralelo; `messi-backend`, `ronaldo-frontend` y `zidane-database` solo escriben dentro del scope asignado y no deben pisarse.
+- Preservar siempre tenant isolation por `adminId`, roles, permisos, contratos API, secretos, cambios ajenos y `dist-check/`. No usar resets, clean destructivo, drops de base, ni sobrescrituras amplias.
+- Ningún agente hace commit, push, deploy, sincronización de producción o cambios en servidores sin autorización explícita del usuario y verificación separada de local, Git y producción.
+- Toda delegación debe devolver archivos/símbolos tocados, evidencia, pruebas ejecutadas y bloqueos; no declarar producción actualizada por una validación local.
