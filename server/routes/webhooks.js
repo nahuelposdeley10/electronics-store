@@ -15,8 +15,11 @@ import { recordSubscriptionPayment } from '../lib/subscription-payments.js'
 import { getSettings } from '../lib/settings.js'
 import { sendSubscriptionPaymentIssueEmail } from '../services/email.js'
 import { issueArcaOrder, publicArcaError } from '../services/arca.js'
+import whatsappWebhookRouter from './whatsapp-webhook.js'
 
 const router = express.Router()
+
+router.use('/whatsapp', whatsappWebhookRouter)
 
 const AMOUNT_TOLERANCE = 0.01
 

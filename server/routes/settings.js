@@ -9,8 +9,11 @@ import { User } from '../models/User.js'
 import { getTenantPlan } from '../lib/plans.js'
 import { getArcaStatus, publicArcaError, saveArcaCredentials, testArcaConnection } from '../services/arca.js'
 import { ArcaCredential } from '../models/ArcaCredential.js'
+import whatsappAdminRouter from './whatsapp-admin.js'
 
 const router = express.Router()
+
+router.use(whatsappAdminRouter)
 
 const upload = multer({
   storage: multer.memoryStorage(),

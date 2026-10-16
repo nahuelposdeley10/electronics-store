@@ -82,6 +82,7 @@ const RolesScreen = lazyNamed(() => import('./components/users'), 'RolesScreen')
 const PaymentsScreen = lazyNamed(() => import('./components/settings'), 'PaymentsScreen')
 const StoreScreen = lazyNamed(() => import('./components/settings'), 'StoreScreen')
 const GeneralScreen = lazyNamed(() => import('./components/settings'), 'GeneralScreen')
+const WhatsAppSellerScreen = lazy(() => import('./components/whatsappSeller'))
 const AppearanceScreen = lazy(() => import('./components/appearance'))
 const StoreHub = lazy(() => import('./components/storeHub'))
 const Onboarding = lazy(() => import('./components/onboarding'))
@@ -117,6 +118,7 @@ const SCREEN_PERMS = {
   'settings-hub': 'settings.manage',
   'settings-general': 'settings.manage',
   'settings-appearance': 'settings.manage',
+  'settings-whatsapp': 'settings.manage',
   'report-sales': 'reports.view',
   'report-products': 'reports.view',
   'report-profit': 'reports.view',
@@ -534,6 +536,7 @@ export default function Dashboard({ onExit }) {
         { id: 'settings-users', label: 'Usuarios', require: 'users.manage' },
         { id: 'settings-roles', label: 'Permisos por usuario', require: 'settings.manage' },
         { id: 'settings-payments', label: 'Medios de pago', require: 'settings.manage' },
+        { id: 'settings-whatsapp', label: 'Vendedor IA por WhatsApp', require: 'settings.manage' },
       ],
     },
   ].filter((item) => !item.children || item.children.length > 0)
@@ -573,6 +576,7 @@ export default function Dashboard({ onExit }) {
     'settings-users': IconUsers,
     'settings-roles': IconShield,
     'settings-payments': IconCard,
+    'settings-whatsapp': IconPhone,
   }
   const visibleNav = NAV.map((item) => ({
     ...item,
@@ -937,6 +941,7 @@ export default function Dashboard({ onExit }) {
         {gate === 'ready' && activeScreen === 'settings-content' && <StoreScreen mode="content" />}
         {gate === 'ready' && activeScreen === 'settings-hub' && <StoreHub onView={changeScreen} canView={canView} storeUrl={user?.role === 'admin' && user?.businessSlug ? storeUrl() : null} />}
         {gate === 'ready' && activeScreen === 'settings-general' && <GeneralScreen />}
+        {gate === 'ready' && activeScreen === 'settings-whatsapp' && <WhatsAppSellerScreen onView={changeScreen} />}
         {gate === 'ready' && activeScreen === 'settings-appearance' && <AppearanceScreen key={superTenant || user?.id} />}
         </Fragment>
         </Suspense>

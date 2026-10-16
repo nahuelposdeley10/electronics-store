@@ -21,6 +21,7 @@ import cashRouter from './routes/cash.js'
 import subscriptionsRouter from './routes/subscriptions.js'
 import onboardingRouter from './routes/onboarding.js'
 import commercialSubscriptionsRouter from './routes/commercial-subscriptions.js'
+import { captureWhatsappRawBody } from './routes/whatsapp-webhook.js'
 import { indexingHeaders } from './middleware/indexing.js'
 import { requireAuth, requireSubscriptionAccess } from './middleware/auth.js'
 
@@ -36,7 +37,9 @@ function requestLogger(req, res, next) {
   const start = process.hrtime.bigint()
   res.on('finish', () => {
     const ms = Number(process.hrtime.bigint() - start) / 1e6
-    console.log(`${req.method} ${req.originalUrl} -> ${res.statusCode} (${ms.toFixed(1)}ms)`)
+    // Query strings can carry verification tokens or tenant selectors. Keep
+    // request logs free of those values; the route path is enough for tracing.
+    console.log(`${req.method} ${req.path} -> ${res.statusCode} (${ms.toFixed(1)}ms)`)
   })
   next()
 }
@@ -96,7 +99,9 @@ export function createApp() {
     }),
   )
   app.use(requestLogger)
-  app.use(express.json({ limit: env.bodyLimit }))
+  // Meta signs the exact bytes it sends. Keep the raw body available for the
+  // WhatsApp webhook while preserving the parsed JSON body for every route.
+  app.use(express.json({ limit: env.bodyLimit, verify: captureWhatsappRawBody }))
   app.use(express.urlencoded({ extended: true, limit: env.bodyLimit }))
 
   app.get('/api/health', (req, res) => {
