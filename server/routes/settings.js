@@ -13,8 +13,6 @@ import whatsappAdminRouter from './whatsapp-admin.js'
 
 const router = express.Router()
 
-router.use(whatsappAdminRouter)
-
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 },
@@ -57,6 +55,11 @@ router.get('/settings/public', requirePublicTenant, async (req, res) => {
     return res.status(500).json({ error: 'No se pudieron leer los datos de la tienda' })
   }
 })
+
+// Keep the public settings endpoint reachable without authentication. The
+// WhatsApp admin router has an auth middleware that must only run for its own
+// /admin/whatsapp routes.
+router.use(whatsappAdminRouter)
 
 router.get('/admin/settings', requireAuth, requirePermission('settings.manage'), async (req, res) => {
   try {
