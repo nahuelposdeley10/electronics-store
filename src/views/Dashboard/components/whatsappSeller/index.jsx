@@ -7,6 +7,7 @@ import {
   ToggleRow,
 } from '../common'
 import {
+  IconArrow,
   IconChart,
   IconCheck,
   IconClock,
@@ -29,6 +30,14 @@ const EMPTY_FORM = {
   businessAccountId: '',
   displayPhoneNumber: '',
   accessToken: '',
+}
+
+const WHATSAPP_GUIDE_LINKS = {
+  metaSetup: 'https://developers.facebook.com/apps/1427201806174669/use_cases/customize/wa-configurations-v2/?use_case_enum=WHATSAPP_BUSINESS_MESSAGING&product_route=whatsapp-business&business_id=3490564327784794&selected_tab=wa-configurations-v2',
+  manager: 'https://business.facebook.com/latest/settings/whatsapp_account?business_id=3490564327784794&selected_asset_id=991739800624988&selected_asset_type=whatsapp-business-account&detail_view_tab=PHONE_NUMBERS',
+  docs: 'https://developers.facebook.com/docs/whatsapp/cloud-api/get-started',
+  webhookDocs: 'https://developers.facebook.com/docs/graph-api/webhooks/getting-started',
+  video: 'https://www.youtube.com/watch?v=N5LLmBtcfCs',
 }
 
 function formFromData(data) {
@@ -196,6 +205,77 @@ function ConversationsPreview({ conversations }) {
   )
 }
 
+function WhatsAppSetupGuide() {
+  return (
+    <section className="wa-ai-card wa-ai-guide-card" aria-labelledby="wa-ai-guide-title">
+      <div className="wa-ai-card-heading">
+        <div>
+          <span className="wa-ai-kicker">Ayuda para el dueño</span>
+          <h2 id="wa-ai-guide-title">Guía para conectar WhatsApp</h2>
+        </div>
+        <span className="wa-ai-planned-badge"><IconClock aria-hidden="true" /> Guardala para volver después</span>
+      </div>
+      <div className="wa-ai-guide-body">
+        <p className="wa-ai-guide-intro">Si se cierra Meta o se pierde el paso, retomá desde estos enlaces. La pantalla te indica exactamente qué completar.</p>
+        <div className="wa-ai-guide-steps">
+          <article className="wa-ai-guide-step">
+            <span className="wa-ai-guide-number">1</span>
+            <div>
+              <strong>Abrir la configuración de Meta</strong>
+              <p>Entrá al caso de uso de WhatsApp y elegí <em>Paso 2. Configuración de producción</em>.</p>
+            </div>
+          </article>
+          <article className="wa-ai-guide-step">
+            <span className="wa-ai-guide-number">2</span>
+            <div>
+              <strong>Configurar el webhook</strong>
+              <p>En <em>Configurar Webhooks</em>, usá esta URL pública:</p>
+              <code>https://www.tiendabnp.com/api/whatsapp/webhook</code>
+            </div>
+          </article>
+          <article className="wa-ai-guide-step">
+            <span className="wa-ai-guide-number">3</span>
+            <div>
+              <strong>Verificar y guardar</strong>
+              <p>Completá el identificador de verificación del servidor y presioná <em>Verificar y guardar</em>.</p>
+            </div>
+          </article>
+          <article className="wa-ai-guide-step">
+            <span className="wa-ai-guide-number">4</span>
+            <div>
+              <strong>Revisar el número</strong>
+              <p>En WhatsApp Manager podés confirmar que el número y la cuenta estén asociados.</p>
+            </div>
+          </article>
+        </div>
+        <div className="wa-ai-guide-links" aria-label="Enlaces de ayuda">
+          <a href={WHATSAPP_GUIDE_LINKS.metaSetup} target="_blank" rel="noreferrer">
+            <span><strong>Abrir configuración de Meta</strong><small>Paso 2 listo para completar</small></span>
+            <IconArrow aria-hidden="true" />
+          </a>
+          <a href={WHATSAPP_GUIDE_LINKS.manager} target="_blank" rel="noreferrer">
+            <span><strong>Abrir WhatsApp Manager</strong><small>Revisar número y cuenta de negocio</small></span>
+            <IconArrow aria-hidden="true" />
+          </a>
+          <a href={WHATSAPP_GUIDE_LINKS.docs} target="_blank" rel="noreferrer">
+            <span><strong>Ver guía visual oficial</strong><small>Documentación de Meta</small></span>
+            <IconArrow aria-hidden="true" />
+          </a>
+          <a href={WHATSAPP_GUIDE_LINKS.webhookDocs} target="_blank" rel="noreferrer">
+            <span><strong>Ver ayuda de Webhooks</strong><small>Qué recibe Meta y cómo verificarlo</small></span>
+            <IconArrow aria-hidden="true" />
+          </a>
+          <a href={WHATSAPP_GUIDE_LINKS.video} target="_blank" rel="noreferrer">
+            <span><strong>Ver video paso a paso</strong><small>Video externo; la interfaz puede cambiar</small></span>
+            <IconArrow aria-hidden="true" />
+          </a>
+        </div>
+        <p className="wa-ai-guide-warning"><IconShield aria-hidden="true" /> Nunca compartas el token de Meta ni el identificador de verificación por WhatsApp o correo.</p>
+      </div>
+    </section>
+  )
+}
+
 function WhatsAppSellerScreen({ onView }) {
   const [data, setData] = useState(null)
   const [form, setForm] = useState(EMPTY_FORM)
@@ -356,6 +436,8 @@ function WhatsAppSellerScreen({ onView }) {
           </div>
         </div>
       </section>
+
+      <WhatsAppSetupGuide />
 
       <div className="wa-ai-capabilities">
         <Capability Icon={IconChart} title="Consulta datos reales">Productos, precios y stock se consultan desde la tienda antes de responder.</Capability>
