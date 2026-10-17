@@ -10,6 +10,7 @@ import { getTenantPlan } from '../lib/plans.js'
 import { getArcaStatus, publicArcaError, saveArcaCredentials, testArcaConnection } from '../services/arca.js'
 import { ArcaCredential } from '../models/ArcaCredential.js'
 import whatsappAdminRouter from './whatsapp-admin.js'
+import { getWhatsappConfig } from '../lib/whatsapp-config.js'
 
 const router = express.Router()
 
@@ -47,6 +48,15 @@ router.get('/settings/public', requirePublicTenant, async (req, res) => {
           settings.payments?.online !== false &&
           plan.includes('onlinePayments') &&
           Boolean(settings.payments?.mercadopago?.accessToken),
+      }
+    }
+    // El carrito debe iniciar los pedidos en el número conectado al bot.
+    // Solo se publica el número visible; nunca se exponen tokens ni secretos.
+    if (tenant) {
+      const whatsapp = await getWhatsappConfig(tenant)
+      body.whatsapp = {
+        enabled: whatsapp.enabled === true,
+        displayPhoneNumber: whatsapp.displayPhoneNumber || null,
       }
     }
     return res.json(body)

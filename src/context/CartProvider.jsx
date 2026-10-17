@@ -70,7 +70,10 @@ export default function CartProvider({ children }) {
               : 300000,
         })
       }
-      if (data.store?.whatsapp) setStoreWhatsapp(String(data.store.whatsapp))
+      const botWhatsapp = data.whatsapp?.enabled && data.whatsapp?.displayPhoneNumber
+        ? data.whatsapp.displayPhoneNumber
+        : data.store?.whatsapp
+      if (botWhatsapp) setStoreWhatsapp(String(botWhatsapp))
       if (data.payments?.mercadopago) {
         setOnlinePayEnabled(data.payments.mercadopago.onlineEnabled !== false)
       }
