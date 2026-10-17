@@ -5,6 +5,7 @@ import InteractiveHero from './components/InteractiveHero'
 import ProductPreview from './components/ProductPreview'
 import Features from './components/Features'
 import Payments from './components/Payments'
+import WhatsAppBot from './components/WhatsAppBot'
 import GettingStarted from './components/GettingStarted'
 import Pricing from './components/Pricing'
 import Faq from './components/Faq'
@@ -40,6 +41,7 @@ export default function CompanyHome({ legacyPlans = false, initialYear = current
         <ProductPreview />
         <Features />
         <Payments />
+        <WhatsAppBot />
         <GettingStarted />
         <Pricing />
         <Faq />

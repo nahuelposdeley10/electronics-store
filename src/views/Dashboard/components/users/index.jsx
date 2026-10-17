@@ -552,6 +552,7 @@ function UsersScreen({ allowBusinessCreate = false }) {
         if (form.password) payload.password = form.password
         if (form.role === 'operator' && form.adminId) payload.adminId = form.adminId
         if (form.role === 'admin') payload.businessSlug = String(form.businessSlug || '').trim()
+        if (isSuper && form.role === 'admin') payload.planCode = form.planCode || 'inicial'
 
         await apiPut(`/api/admin/users/${editing}`, payload)
         showToast('Usuario actualizado.', 'success')

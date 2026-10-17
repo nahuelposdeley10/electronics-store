@@ -1,0 +1,28 @@
+.bnp-bot { display: grid; grid-template-columns: .9fr 1.1fr; gap: 88px; align-items: center; background: white; border-block: 1px solid var(--bnp-line); }
+.bnp-bot-copy > p { max-width: 530px; color: var(--bnp-muted); font-size: 15px; margin-top: 22px; }
+.bnp-bot-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 16px 22px; margin-top: 30px; }
+.bnp-bot-actions .bnp-text-link { font-size: 12px; }
+.bnp-bot-note { display: flex; align-items: flex-start; gap: 8px; max-width: 480px; font-size: 11px !important; }
+.bnp-bot-note svg { width: 16px; color: #297554; margin-top: 3px; }
+.bnp-bot-card { overflow: hidden; border: 1px solid var(--bnp-line); border-radius: 18px; background: var(--bnp-paper); box-shadow: 0 20px 50px #14243e12; }
+.bnp-bot-card-head { display: flex; align-items: center; gap: 12px; padding: 20px 22px; background: var(--bnp-ink); color: white; }
+.bnp-bot-avatar { display: grid; width: 42px; height: 42px; place-items: center; border-radius: 50%; background: var(--bnp-blue); }
+.bnp-bot-avatar svg { width: 20px; }
+.bnp-bot-card-head strong, .bnp-bot-card-head span { display: block; }
+.bnp-bot-card-head strong { font-size: 14px; }
+.bnp-bot-card-head div > span { margin-top: 2px; color: #b8c5d9; font-size: 10px; }
+.bnp-bot-status { margin-left: auto; padding: 5px 8px; border: 1px solid #91e1bc; border-radius: 999px; color: #b5f1d1; font-size: 9px; font-weight: 800; letter-spacing: .08em; }
+.bnp-bot-chat { display: grid; gap: 12px; padding: 24px 22px 20px; background: #edf3ff; }
+.bnp-bot-chat small { color: var(--bnp-muted); font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.bnp-bot-message { max-width: 78%; margin: 0; padding: 12px 14px; border-radius: 12px; font-size: 12px; line-height: 1.5; }
+.bnp-bot-message-client { justify-self: start; background: white; color: var(--bnp-ink); border-top-left-radius: 3px; }
+.bnp-bot-message-agent { justify-self: end; background: var(--bnp-blue); color: white; border-top-right-radius: 3px; }
+.bnp-bot-capabilities { display: grid; gap: 14px; padding: 20px 22px 22px; background: white; }
+.bnp-bot-capabilities > div { display: flex; align-items: center; gap: 11px; }
+.bnp-bot-capabilities svg { width: 18px; height: 18px; color: var(--bnp-blue); }
+.bnp-bot-capabilities span { display: grid; gap: 1px; }
+.bnp-bot-capabilities strong { font-size: 11px; }
+.bnp-bot-capabilities small { color: var(--bnp-muted); font-size: 10px; }
+@media (max-width: 1000px) { .bnp-bot { gap: 40px; } }
+@media (max-width: 760px) { .bnp-bot { grid-template-columns: 1fr; gap: 42px; } .bnp-bot-card { max-width: 600px; } }
+@media (max-width: 460px) { .bnp-bot-card-head, .bnp-bot-chat, .bnp-bot-capabilities { padding-inline: 16px; } .bnp-bot-status { font-size: 8px; } .bnp-bot-message { max-width: 88%; } }

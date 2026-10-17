@@ -370,8 +370,9 @@ export async function permissionsForRole(role, tenant) {
 export async function permissionsForUser(user, tenant) {
   if (!user) return []
   if (user.role === 'superadmin') return [...ALL_PERMISSIONS]
-  const subscription = tenant && mongoose.connection.readyState === 1 && mongoose.Types.ObjectId.isValid(tenant)
-    ? await Subscription.findOne({ adminId: tenant }).select('planCode plan').lean()
+  const resolvedTenant = tenant || (user.role === 'admin' ? user._id : null)
+  const subscription = resolvedTenant && mongoose.connection.readyState === 1 && mongoose.Types.ObjectId.isValid(resolvedTenant)
+    ? await Subscription.findOne({ adminId: resolvedTenant }).select('planCode plan').lean()
     : null
   const planCode = inferPlanCode(subscription)
   const planPermissions = planCode ? permissionsForPlan(planCode) : null

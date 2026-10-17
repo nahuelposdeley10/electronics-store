@@ -94,7 +94,7 @@ router.get('/stock', async (req, res) => {
 
 /* ---------------- Movimientos ---------------- */
 
-router.get('/movements', async (req, res) => {
+router.get('/movements', requirePermission('inventory.write'), async (req, res) => {
   try {
     const tenant = requireTenantIdOf(req)
     const { page, limit } = parsePagination(req.query)
@@ -305,7 +305,7 @@ router.post('/physical', requirePermission('inventory.write'), async (req, res) 
 
 /* ---------------- Compras a proveedores ---------------- */
 
-router.get('/purchases', async (req, res) => {
+router.get('/purchases', requirePermission('inventory.write'), async (req, res) => {
   try {
     const tenant = requireTenantIdOf(req)
     const { page, limit } = parsePagination(req.query)

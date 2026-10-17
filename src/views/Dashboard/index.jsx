@@ -101,7 +101,7 @@ const SCREEN_PERMS = {
   'sales-quotes': 'quotes.delete',
   'stock-adjustments': 'inventory.write',
   'stock-overview': 'inventory.read',
-  'stock-movements': 'inventory.read',
+  'stock-movements': 'inventory.write',
   'stock-purchases': 'inventory.write',
   'stock-min': 'inventory.write',
   'stock-physical': 'inventory.write',
@@ -485,7 +485,7 @@ export default function Dashboard({ onExit }) {
       prefix: 'stock-',
       children: [
         { id: 'stock-overview', label: 'Stock' },
-        { id: 'stock-movements', label: 'Movimientos' },
+        { id: 'stock-movements', label: 'Movimientos', require: 'inventory.write' },
         { id: 'stock-adjustments', label: 'Ajustes', require: 'inventory.write' },
         { id: 'stock-purchases', label: 'Compras', require: 'inventory.write' },
         { id: 'stock-min', label: 'Stock mínimo', require: 'inventory.write' },

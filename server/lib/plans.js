@@ -7,6 +7,7 @@ export const PLAN_PERMISSIONS = {
     'catalog.manage',
     'coupons.manage',
     'offers.manage',
+    'inventory.read',
   ],
   profesional: [
     'settings.manage',

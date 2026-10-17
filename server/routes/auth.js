@@ -77,7 +77,8 @@ router.post('/login', loginLimiter, async (req, res) => {
 router.get('/me', requireAuth, async (req, res) => {
   try {
     const user = await User.findById(req.user.sub).lean()
-    const perms = await permissionsForUser(user, req.user.adminId || user?.adminId)
+    const tenant = req.user.role === 'admin' ? req.user.sub : req.user.adminId || user?.adminId
+    const perms = await permissionsForUser(user, tenant)
     const plan = user?.role === 'admin'
       ? inferPlanCode(await Subscription.findOne({ adminId: user._id }).select('planCode plan').lean())
       : user?.role === 'operator'

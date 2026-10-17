@@ -32,7 +32,8 @@ router.use(requireAuth)
 async function requireOverviewAccess(req, res, next) {
   try {
     const user = await User.findById(req.user.sub).lean()
-    const permissions = await permissionsForUser(user, req.user.adminId)
+    const tenant = req.user.role === 'admin' ? req.user.sub : req.user.adminId
+    const permissions = await permissionsForUser(user, tenant)
     if (canAccessOverview(user?.role, permissions)) return next()
     return res.status(403).json({ error: 'No tenés permiso para ver el panel' })
   } catch {

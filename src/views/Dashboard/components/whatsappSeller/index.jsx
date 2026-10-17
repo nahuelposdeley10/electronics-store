@@ -138,8 +138,8 @@ function ConfigurationForm({ data, form, setForm, onSubmit, saving, onView, form
         <div className="wa-ai-form-section">
           <h3>Respuesta automática</h3>
           <ToggleRow
-            label="Activar atención automática de este negocio"
-            hint="Guardar esta preferencia no envía mensajes si la conexión o el proveedor todavía no están listos."
+            label="Activar o deshabilitar el bot de WhatsApp"
+            hint="Cuando está activo, el bot puede responder mensajes entrantes. Guardar esta preferencia no envía mensajes si la conexión o el proveedor todavía no están listos."
             checked={form.enabled}
             onChange={(enabled) => setForm((current) => ({ ...current, enabled }))}
           />
