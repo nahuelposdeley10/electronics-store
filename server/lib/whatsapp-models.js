@@ -20,8 +20,8 @@ async function loadModels() {
       return mongoose.models[name] || null
     }
     const [Conversation, Message] = await Promise.all([
-      load('WhatsappConversation', '../models/WhatsAppConversation.js'),
-      load('WhatsappMessage', '../models/WhatsAppMessage.js'),
+      load('WhatsAppConversation', '../models/WhatsAppConversation.js'),
+      load('WhatsAppMessage', '../models/WhatsAppMessage.js'),
     ])
     return { Conversation, Message }
   })()
