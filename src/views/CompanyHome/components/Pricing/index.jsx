@@ -27,7 +27,7 @@ export default function Pricing() {
     } catch (error) { setState({ loading: false, error: error.message, delivery: null }) }
   }
   return <section className="bnp-pricing bnp-wrap bnp-section" id="planes" aria-labelledby="bnp-plans-title">
-    <div className="bnp-section-intro"><span className="bnp-eyebrow">UN PLAN PARA TU MOMENTO</span><h2 id="bnp-plans-title">Empezá con lo que necesitás.<br />Sumá cuando lo necesites.</h2><p>Elegí un plan y probalo gratis durante 14 días. Primero creás tu cuenta; cuando termine la prueba te enviamos el link para suscribirte.</p></div>
+    <div className="bnp-section-intro"><span className="bnp-eyebrow">UN PLAN PARA TU MOMENTO</span><h2 id="bnp-plans-title">Empezá con lo que necesitás.<br />Sumá cuando lo necesites.</h2><p>Elegí la base de tu negocio y probala gratis durante 14 días. Después podés sumar el vendedor IA por WhatsApp como módulo adicional.</p></div>
     <div className="bnp-plans-grid">{plans.map((plan) => <article className={`bnp-plan bnp-plan-${plan.id}`} key={plan.id} aria-labelledby={`bnp-plan-${plan.id}`}>
       <span className="bnp-plan-label">{plan.label}</span><h3 id={`bnp-plan-${plan.id}`}>{plan.name}</h3><p className="bnp-plan-description">{plan.description}</p>
       <div className="bnp-plan-price"><strong>{formatPrice(plan.price)}</strong><span>/mes</span></div><small className="bnp-plan-currency">Pesos argentinos · Abono mensual</small><span className="bnp-plan-trial">14 días gratis · Sin cobro ahora</span>

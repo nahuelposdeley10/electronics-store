@@ -5,9 +5,8 @@ import InteractiveHero from './components/InteractiveHero'
 import ProductPreview from './components/ProductPreview'
 import Features from './components/Features'
 import Payments from './components/Payments'
-import WhatsAppBot from './components/WhatsAppBot'
 import GettingStarted from './components/GettingStarted'
-import Pricing from './components/Pricing'
+import OfferTabs from './components/OfferTabs'
 import Faq from './components/Faq'
 import Closing from './components/Closing'
 import BrandLogo from '@/components/BrandLogo'
@@ -41,9 +40,8 @@ export default function CompanyHome({ legacyPlans = false, initialYear = current
         <ProductPreview />
         <Features />
         <Payments />
-        <WhatsAppBot />
+        <OfferTabs />
         <GettingStarted />
-        <Pricing />
         <Faq />
         <Closing />
       </main>

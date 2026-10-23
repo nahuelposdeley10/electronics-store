@@ -1,0 +1,39 @@
+.bnp-bot-chat { display: grid; gap: 10px; padding: 16px 18px 16px; background: #edf3ff; }
+.bnp-bot-chat-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.bnp-bot-chat-heading small, .bnp-bot-chat-heading strong { display: block; }
+.bnp-bot-chat-heading small { color: var(--bnp-muted); font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
+.bnp-bot-chat-heading strong { margin-top: 4px; color: var(--bnp-ink); font-size: 13px; }
+.bnp-bot-live { display: inline-flex; align-items: center; gap: 6px; color: #297554; font-size: 11px; font-weight: 800; }
+.bnp-bot-live i { width: 7px; height: 7px; border-radius: 50%; background: #37b978; box-shadow: 0 0 0 4px #37b97820; }
+.bnp-bot-scenarios { display: flex; gap: 7px; overflow-x: auto; padding: 2px 0 4px; scrollbar-width: thin; }
+.bnp-bot-scenario { min-height: 34px; padding: 6px 11px; border: 1px solid #d7e1f4; border-radius: 999px; background: white; color: var(--bnp-muted); cursor: pointer; font: inherit; font-size: 10px; font-weight: 800; white-space: nowrap; transition: border-color .2s, background .2s, color .2s, transform .2s; }
+.bnp-bot-scenario:hover { border-color: #9db4ed; color: var(--bnp-blue); transform: translateY(-1px); }
+.bnp-bot-scenario.is-active { border-color: var(--bnp-blue); background: var(--bnp-blue); color: white; }
+.bnp-bot-conversation { display: grid; gap: 8px; min-height: 190px; align-content: start; }
+.bnp-bot-message-row { display: grid; max-width: 86%; opacity: 0; transform: translateY(9px); transition: opacity .42s ease var(--message-delay), transform .42s ease var(--message-delay); }
+.bnp-bot-message-row-client { justify-self: start; }
+.bnp-bot-message-row-agent { justify-self: end; }
+.bnp-bot-message-row.is-visible { opacity: 1; transform: translateY(0); }
+.bnp-bot-message-meta { display: flex; align-items: center; gap: 7px; margin: 0 4px 4px; color: var(--bnp-muted); font-size: 10px; }
+.bnp-bot-message-row-agent .bnp-bot-message-meta { justify-content: flex-end; }
+.bnp-bot-message-avatar { display: inline-grid; width: 17px; height: 17px; place-items: center; border-radius: 50%; background: #d7e3ff; color: var(--bnp-blue); font-size: 7px; font-weight: 900; letter-spacing: -.02em; }
+.bnp-bot-message-row-agent .bnp-bot-message-avatar { background: var(--bnp-blue); color: white; }
+.bnp-bot-message-meta span { font-weight: 800; }
+.bnp-bot-message-meta time { opacity: .8; }
+.bnp-bot-message { max-width: 100%; margin: 0; padding: 9px 11px; border-radius: 10px; font-size: 12px; line-height: 1.5; }
+.bnp-bot-message-client { justify-self: start; background: white; color: var(--bnp-ink); border-top-left-radius: 3px; box-shadow: 0 4px 12px #14243e0b; }
+.bnp-bot-message-agent { justify-self: end; background: var(--bnp-blue); color: white; border-top-right-radius: 3px; box-shadow: 0 5px 14px #315cf52b; }
+.bnp-bot-typing { display: inline-flex; gap: 3px; margin-right: 6px; vertical-align: 1px; opacity: .9; }
+.bnp-bot-typing i { width: 3px; height: 3px; border-radius: 50%; background: currentColor; animation: bnp-bot-typing-pulse 1.1s ease-in-out infinite; }
+.bnp-bot-typing i:nth-child(2) { animation-delay: .14s; }
+.bnp-bot-typing i:nth-child(3) { animation-delay: .28s; }
+.bnp-bot-message-status { justify-self: end; margin: 3px 4px 0; color: #617595; font-size: 10px; }
+.bnp-bot-demo-actions { display: grid; gap: 7px; padding-top: 3px; border-top: 1px solid #d8e2f4; }
+.bnp-bot-demo-actions > span { color: var(--bnp-muted); font-size: 11px; font-weight: 800; }
+.bnp-bot-demo-actions > div { display: flex; flex-wrap: wrap; gap: 8px; }
+.bnp-bot-demo-action { min-height: 34px; padding: 7px 11px; border: 1px solid #b8c9e6; border-radius: 8px; background: white; color: var(--bnp-blue); cursor: pointer; font: inherit; font-size: 10px; font-weight: 800; transition: background .2s, border-color .2s, transform .2s; }
+.bnp-bot-demo-action:hover, .bnp-bot-demo-action:focus-visible { border-color: var(--bnp-blue); background: #f8faff; transform: translateY(-1px); }
+.bnp-bot-action-feedback { margin: 0; color: #31506f; font-size: 11px; line-height: 1.5; }
+@media (prefers-reduced-motion: reduce) { .bnp-bot-message-row, .bnp-bot-scenario, .bnp-bot-demo-action { transition: none; } .bnp-bot-message-row { transform: none; } }
+@keyframes bnp-bot-typing-pulse { 0%, 100% { transform: translateY(0); opacity: .45; } 50% { transform: translateY(-2px); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .bnp-bot-typing i { animation: none; } }

@@ -1,1 +1,1 @@
-export const links = [['#funciones', 'Funcionalidades'], ['#bot', 'Bot por WhatsApp'], ['#como-funciona', 'Cómo funciona'], ['#planes', 'Planes'], ['#preguntas', 'Preguntas frecuentes']]
+export const links = [['#funciones', 'Funcionalidades'], ['#planes', 'Planes'], ['#bot', 'Bot por WhatsApp'], ['#como-funciona', 'Cómo funciona'], ['#preguntas', 'Preguntas frecuentes']]

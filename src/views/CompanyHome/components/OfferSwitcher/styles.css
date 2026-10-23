@@ -1,0 +1,8 @@
+.bnp-offer-switcher { display: flex; gap: 26px; position: relative; overflow-x: auto; overflow-y: hidden; margin-bottom: 38px; border-bottom: 1px solid var(--bnp-line); scrollbar-width: none; -ms-overflow-style: none; }
+.bnp-offer-switcher::-webkit-scrollbar { display: none; }
+.bnp-offer-switcher::after { position: absolute; right: auto; bottom: -1px; left: 0; width: var(--bnp-tab-width, 0px); height: 3px; border-radius: 3px; background: var(--bnp-blue); content: ''; pointer-events: none; transform: translateX(var(--bnp-tab-x, 0px)); transition: transform .35s cubic-bezier(.2,.7,.2,1), width .35s; }
+.bnp-offer-switcher-option { flex: 0 0 auto; min-height: 52px; padding: 16px 0; border: 0; border-bottom: 3px solid transparent; background: transparent; color: var(--bnp-muted); cursor: pointer; font: inherit; font-size: 14px; font-weight: 700; line-height: 1.35; white-space: nowrap; transition: color .2s; }
+.bnp-offer-switcher-option:hover, .bnp-offer-switcher-option:focus-visible { color: var(--bnp-blue); }
+.bnp-offer-switcher-option[aria-selected=true] { color: var(--bnp-blue); }
+@media (max-width: 760px) { .bnp-offer-switcher { gap: 18px; margin-bottom: 32px; } .bnp-offer-switcher-option { font-size: 11px; } }
+@media (prefers-reduced-motion: reduce) { .bnp-offer-switcher-option { transition: none; } .bnp-offer-switcher::after { transition: none; } }

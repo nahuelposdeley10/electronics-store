@@ -1,0 +1,5 @@
+.bnp-offer-tabs { position: relative; }
+.bnp-offer-tabs-menu { padding-top: 28px; }
+.bnp-offer-tabs-menu .bnp-offer-switcher { margin-bottom: 0; }
+.bnp-offer-tabs-panel > .bnp-section { padding-top: 38px; }
+@media (max-width: 900px) { .bnp-offer-tabs-menu { padding-top: 18px; } .bnp-offer-tabs-panel > .bnp-section { padding-top: 32px; } }
